@@ -1,0 +1,17 @@
+{
+  "name": "@cal/schemas",
+  "version": "0.0.1",
+  "private": true,
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@cal/config": "workspace:*",
+    "typescript": "~5.9.2"
+  }
+}

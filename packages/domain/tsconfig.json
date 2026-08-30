@@ -1,0 +1,4 @@
+{
+  "extends": "@cal/config/tsconfig.package.json",
+  "include": ["src"]
+}

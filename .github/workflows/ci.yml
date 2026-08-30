@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  static:
+    name: Lint, types, unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Format
+        run: pnpm format:check
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Unit tests
+        run: pnpm test
+
+  database:
+    name: Migrations and RLS
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      # Applies every migration from scratch, which also proves they are
+      # replayable in order on an empty database.
+      - name: Start Supabase
+        run: supabase start
+
+      # RLS mistakes are silent in the app, so they are gated here.
+      - name: Database tests
+        run: supabase test db
+
+      - name: Check generated types are current
+        run: |
+          supabase gen types typescript --local > /tmp/database.types.ts
+          if ! diff -q /tmp/database.types.ts packages/types/src/database.types.ts > /dev/null; then
+            echo "::error::Database types are stale. Run 'pnpm db:types' and commit the result."
+            diff /tmp/database.types.ts packages/types/src/database.types.ts || true
+            exit 1
+          fi

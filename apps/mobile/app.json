@@ -1,0 +1,54 @@
+{
+  "expo": {
+    "name": "Calendar",
+    "slug": "calendar-app",
+    "version": "0.1.0",
+    "scheme": "calendarapp",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.example.calendarapp",
+      "usesAppleSignIn": true,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSCalendarsFullAccessUsageDescription": "Show your device calendar events alongside the ones you create here.",
+        "NSRemindersFullAccessUsageDescription": "Import your Apple Reminders as tasks."
+      }
+    },
+    "android": {
+      "package": "com.example.calendarapp",
+      "adaptiveIcon": { "backgroundColor": "#0B0B0F" },
+      "edgeToEdgeEnabled": true
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-apple-authentication",
+      [
+        "expo-notifications",
+        {
+          "color": "#6E8BFF"
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#0B0B0F",
+          "dark": { "backgroundColor": "#0B0B0F" },
+          "resizeMode": "contain"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "00000000-0000-0000-0000-000000000000"
+      }
+    }
+  }
+}
