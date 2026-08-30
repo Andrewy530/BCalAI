@@ -1,3 +1,3 @@
-export { TaskReminderSync } from './components/TaskReminderSync';
-export { useTaskReminders } from './hooks/useTaskReminders';
+export { ReminderSync } from './components/ReminderSync';
+export { useReminderSync } from './hooks/useReminderSync';
 export { NotificationSettingsCard } from './components/NotificationSettingsCard';

@@ -1,8 +1,9 @@
 import { View } from 'react-native';
 
-import { BottomSheet, Chip, Text, useTheme } from '@cal/ui';
+import { BottomSheet, Button, Chip, Text, useTheme } from '@cal/ui';
 
 import { QuickAddTaskForm } from '../../features/tasks/components/QuickAddTaskForm';
+import { useEventEditorStore } from '../../store/event-editor.store';
 import { type QuickAddMode, useQuickAddStore } from '../../store/quick-add.store';
 
 const MODES: {
@@ -19,12 +20,19 @@ const MODES: {
  * Quick Add is the app's fastest path from thought to captured item, so it is
  * a sheet rather than a screen — the context behind it stays visible.
  *
- * The task lane is live as of Sprint 1. Events and time blocks arrive with the
- * internal calendar in Sprint 2.
+ * Tasks capture inline. Events hand off to the full event editor, which needs
+ * a start, an end, and a calendar — there is no honest one-field version of
+ * that, and a half-filled event is worse than one extra tap.
  */
 export function QuickAddSheet() {
   const theme = useTheme();
   const { isOpen, mode, seedDateKey, close, setMode } = useQuickAddStore();
+  const openEventEditor = useEventEditorStore((state) => state.openNew);
+
+  const handOffToEventEditor = () => {
+    close();
+    openEventEditor(seedDateKey ? new Date(`${seedDateKey}T09:00:00`) : undefined);
+  };
 
   return (
     <BottomSheet visible={isOpen} onClose={close} title="Quick add">
@@ -42,11 +50,16 @@ export function QuickAddSheet() {
 
       {mode === 'task' ? (
         <QuickAddTaskForm onCaptured={close} seedDateKey={seedDateKey} />
+      ) : mode === 'event' ? (
+        <View style={{ gap: theme.spacing.lg }}>
+          <Text variant="callout" color="secondary">
+            Add a commitment with a fixed time.
+          </Text>
+          <Button label="New event" fullWidth onPress={handOffToEventEditor} />
+        </View>
       ) : (
         <Text variant="callout" color="secondary">
-          {mode === 'event'
-            ? 'Events arrive with the calendar in the next sprint.'
-            : 'Time blocks arrive with the calendar in the next sprint.'}
+          Time blocks arrive with the scheduling engine in a later sprint.
         </Text>
       )}
     </BottomSheet>

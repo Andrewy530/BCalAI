@@ -7,10 +7,10 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { ThemeProvider } from '@cal/ui';
 
-import { QuickAddSheet } from '../src/components/app-shell/QuickAddSheet';
+import { AppSheets } from '../src/components/app-shell/AppSheets';
 import { TaskEditorHost } from '../src/components/app-shell/TaskEditorHost';
 import { AuthProvider, useAuth } from '../src/features/auth';
-import { TaskReminderSync } from '../src/features/notifications';
+import { ReminderSync } from '../src/features/notifications';
 import { ErrorBoundary } from '../src/lib/errors/ErrorBoundary';
 import { queryClient } from '../src/lib/query/query-client';
 
@@ -52,9 +52,9 @@ export default function RootLayout() {
                   <Stack.Screen name="(auth)" />
                   <Stack.Screen name="(tabs)" />
                 </Stack>
-                <QuickAddSheet />
+                <AppSheets />
                 <TaskEditorHost />
-                <TaskReminderSync />
+                <ReminderSync />
               </ErrorBoundary>
             </AuthProvider>
           </QueryClientProvider>
