@@ -115,9 +115,7 @@ export async function fetchTasks(options?: {
 
   // Filters must be applied before ordering: `.order()` narrows the builder to
   // a transform builder, which no longer accepts `.in()`.
-  const filtered = options?.openOnly
-    ? selection.in('status', ['open', 'scheduled'])
-    : selection;
+  const filtered = options?.openOnly ? selection.in('status', ['open', 'scheduled']) : selection;
 
   const { data, error } = await filtered
     .order('due_at', { ascending: true, nullsFirst: false })
@@ -126,7 +124,34 @@ export async function fetchTasks(options?: {
   if (error) throw toAppError(error);
 
   return (data ?? []).map((row) => {
-    const { task_tags: taskTags, ...task } = row as Record<string, unknown> & {
+    const { task_tags: taskTags, ...task } = row as unknown as Record<string, unknown> & {
+      task_tags?: { tag_id: string }[];
+    };
+    return {
+      ...taskRowSchema.parse(task),
+      tagIds: (taskTags ?? []).map((link) => link.tag_id),
+    };
+  });
+}
+
+/** Search open, completed, and scheduled tasks without returning archived work. */
+export async function searchTasks(query: string): Promise<TaskWithTags[]> {
+  const safeQuery = escapeSearchQuery(query);
+  if (!safeQuery) return [];
+
+  const pattern = `%${safeQuery}%`;
+  const { data, error } = await supabase
+    .from('tasks')
+    .select(`${TASK_COLUMNS}, task_tags(tag_id)`)
+    .neq('status', 'archived')
+    .or(`title.ilike.${pattern},description.ilike.${pattern}`)
+    .order('updated_at', { ascending: false })
+    .limit(50);
+
+  if (error) throw toAppError(error);
+
+  return (data ?? []).map((row) => {
+    const { task_tags: taskTags, ...task } = row as unknown as Record<string, unknown> & {
       task_tags?: { tag_id: string }[];
     };
     return {
@@ -145,7 +170,7 @@ export async function fetchTask(id: string): Promise<TaskWithTags> {
 
   if (error) throw toAppError(error);
 
-  const { task_tags: taskTags, ...task } = data as Record<string, unknown> & {
+  const { task_tags: taskTags, ...task } = data as unknown as Record<string, unknown> & {
     task_tags?: { tag_id: string }[];
   };
   return { ...taskRowSchema.parse(task), tagIds: (taskTags ?? []).map((link) => link.tag_id) };
@@ -282,6 +307,15 @@ async function replaceTaskTags(taskId: string, tagIds: readonly string[]): Promi
     .from('task_tags')
     .insert(tagIds.map((tagId) => ({ task_id: taskId, tag_id: tagId })));
   if (error) throw toAppError(error);
+}
+
+/** Prevent user text from changing the PostgREST `or(...)` expression. */
+function escapeSearchQuery(query: string): string {
+  return query
+    .trim()
+    .replace(/[\\%_,()]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 // ---------------------------------------------------------------------------

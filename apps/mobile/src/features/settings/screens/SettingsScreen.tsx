@@ -1,5 +1,3 @@
-import { Alert, View } from 'react-native';
-
 import {
   Avatar,
   Badge,
@@ -11,21 +9,28 @@ import {
   Text,
   useTheme,
 } from '@cal/ui';
+import { useState } from 'react';
+import { Alert, View } from 'react-native';
 
 import { useAuth, useAuthActions } from '../../auth';
 import { NotificationSettingsCard } from '../../notifications';
+import {
+  PlanningPreferencesSheet,
+  type PlanningPreference,
+} from '../components/PlanningPreferencesSheet';
 import { useProfile } from '../hooks/useProfile';
 
 /**
  * Identity, planning preferences, reminders, and the destructive actions.
- * Rows without a destination are marked so nobody has to guess whether they
- * are broken or simply unbuilt.
+ * Future connections are marked so nobody has to guess whether they are
+ * unavailable or simply unbuilt.
  */
 export function SettingsScreen() {
   const theme = useTheme();
   const { email } = useAuth();
   const { data: profile, isLoading } = useProfile();
   const { signOut } = useAuthActions();
+  const [preference, setPreference] = useState<PlanningPreference | null>(null);
 
   if (isLoading) return <LoadingState fullScreen />;
 
@@ -56,21 +61,21 @@ export function SettingsScreen() {
           title="Time zone"
           meta={profile?.timezone ?? 'UTC'}
           showChevron
-          onPress={() => undefined}
+          onPress={() => setPreference('timezone')}
         />
         <Divider inset />
         <ListRow
           title="Week starts on"
           meta={profile?.weekStartsOn === 1 ? 'Monday' : 'Sunday'}
           showChevron
-          onPress={() => undefined}
+          onPress={() => setPreference('weekStartsOn')}
         />
         <Divider inset />
         <ListRow
           title="Clock"
           meta={profile?.hourCycle === 'h23' ? '24-hour' : '12-hour'}
           showChevron
-          onPress={() => undefined}
+          onPress={() => setPreference('hourCycle')}
         />
         <Divider inset />
         <ListRow
@@ -78,14 +83,14 @@ export function SettingsScreen() {
           subtitle="Used when finding time for flexible work"
           meta={`${profile?.workingHours.length ?? 0} days`}
           showChevron
-          onPress={() => undefined}
+          onPress={() => setPreference('workingHours')}
         />
         <Divider inset />
         <ListRow
           title="Default task duration"
           meta={`${profile?.defaultTaskMinutes ?? 30} min`}
           showChevron
-          onPress={() => undefined}
+          onPress={() => setPreference('defaultTaskMinutes')}
         />
       </Card>
 
@@ -126,6 +131,13 @@ export function SettingsScreen() {
           Deleting your account removes your data and revokes every calendar connection.
         </Text>
       </View>
+
+      <PlanningPreferencesSheet
+        visible={preference !== null}
+        preference={preference}
+        profile={profile}
+        onClose={() => setPreference(null)}
+      />
     </View>
   );
 }

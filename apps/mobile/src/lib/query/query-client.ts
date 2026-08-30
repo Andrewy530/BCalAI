@@ -59,6 +59,8 @@ export const queryKeys = {
     tags: () => ['tasks', 'tags'] as const,
   },
 
+  search: (query: string) => ['search', query] as const,
+
   integrations: {
     all: () => ['integrations'] as const,
   },

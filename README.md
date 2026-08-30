@@ -12,41 +12,47 @@ Architecture decisions live in [`docs/`](docs/). Coding rules are in
 
 ## Status
 
-**Sprint 1 — tasks and quick capture.** On top of the Sprint 0 foundation, the
-app now works as a real reminder product: capture a task in seconds, give it a
-due date, priority and estimate, complete it, and get a local notification when
-it is due.
+**Sprint 3 — Today + polish implemented.** Sprints 0 through 3 are implemented.
+The app now has a working internal calendar with day, week, month, and agenda
+views, event CRUD, recurrence, calendar colors, local event alerts, a live Today
+dashboard, combined event/task search, and functional planning preferences.
 
-> **Not yet verified on a device.** Nothing in this repository has been
-> installed, type-checked, or run — see [Prerequisites](#prerequisites). Treat
-> the code as reviewed-by-eye but untested until `pnpm verify` passes.
+> **Device verification is still outstanding.** The workspace dependencies are
+> installed and the focused automated checks pass, but there is no generated
+> native iOS project yet. Treat the app as not device-verified until the Expo
+> development build runs on an iOS simulator or device.
 
-| Area | State |
-| --- | --- |
-| Monorepo, TypeScript strict, ESLint, Prettier, CI | Done |
-| Design tokens + UI primitives (`@cal/ui`) | Done |
-| Database schema, RLS, pgTAP tests | Done |
-| Auth (email, Apple), session, account deletion | Done |
-| Deterministic availability engine (`@cal/domain`) | Done, unit-tested |
-| Task inbox, editor, completion, snooze, delete | Done — Sprint 1 |
-| Quick Add (task lane) | Done — Sprint 1 |
-| Local task reminders + notification actions | Done — Sprint 1 |
-| Calendar views, event CRUD, Today, search | Shells only — Sprints 2–3 |
-| Google / Microsoft sync | Sprints 4–5 |
-| AI Find Time, RevenueCat | Sprint 6 |
+| Area                                                                          | State                     |
+| ----------------------------------------------------------------------------- | ------------------------- |
+| Monorepo, TypeScript strict, ESLint, Prettier, CI                             | Done                      |
+| Design tokens + UI primitives (`@cal/ui`)                                     | Done                      |
+| Database schema, RLS, pgTAP tests                                             | Done                      |
+| Auth (email, Apple), session, account deletion                                | Done                      |
+| Deterministic availability engine (`@cal/domain`)                             | Done, unit-tested         |
+| Task inbox, editor, completion, snooze, delete                                | Done — Sprint 1           |
+| Quick Add (task lane)                                                         | Done — Sprint 1           |
+| Local task reminders + notification actions                                   | Done — Sprint 1           |
+| Calendar views, event CRUD, recurrence, alerts, calendar colors               | Done — Sprint 2           |
+| Today dashboard, merged timeline, overdue/unscheduled work, free-time summary | Done — Sprint 3           |
+| Search across event/task titles, notes, and locations                         | Done — Sprint 3           |
+| Settings planning preferences                                                 | Done — Sprint 3           |
+| Google / Microsoft sync                                                       | Not started — Sprints 4–5 |
+| AI Find Time, RevenueCat                                                      | Not started — Sprint 6    |
+
+The live implementation handoff is [`docs/sprint-3-active.md`](docs/sprint-3-active.md).
 
 ---
 
 ## Prerequisites
 
-| Tool | Version | Install |
-| --- | --- | --- |
-| Node.js | 20.18+ | https://nodejs.org (or `nvm install 20`) |
-| pnpm | 9+ | `corepack enable && corepack prepare pnpm@9.12.0 --activate` |
-| Docker Desktop | latest | Required by the local Supabase stack |
-| Supabase CLI | 1.200+ | `brew install supabase/tap/supabase` |
-| Xcode | 16+ | Mac App Store, for the iOS build |
-| Watchman | latest | `brew install watchman` (optional, faster reloads) |
+| Tool           | Version | Install                                                      |
+| -------------- | ------- | ------------------------------------------------------------ |
+| Node.js        | 20.18+  | https://nodejs.org (or `nvm install 20`)                     |
+| pnpm           | 9+      | `corepack enable && corepack prepare pnpm@9.12.0 --activate` |
+| Docker Desktop | latest  | Required by the local Supabase stack                         |
+| Supabase CLI   | 1.200+  | `brew install supabase/tap/supabase`                         |
+| Xcode          | 16+     | Mac App Store, for the iOS build                             |
+| Watchman       | latest  | `brew install watchman` (optional, faster reloads)           |
 
 ## First-time setup
 
@@ -81,13 +87,17 @@ pnpm db:types
 
 This project uses an **Expo development build**, not Expo Go — it depends on
 native modules (Apple sign-in, notifications, secure storage) that Expo Go
-cannot load. Build the dev client once per machine:
+cannot load. There is currently no hosted demo or TestFlight build in the
+repository. The first real preview is a local iOS simulator or device.
+
+Build the dev client once per Mac:
 
 ```bash
 pnpm --filter @cal/mobile exec expo run:ios
 ```
 
-After that, day to day:
+That generates the native iOS project and installs the development build. After
+that, day to day:
 
 ```bash
 pnpm mobile

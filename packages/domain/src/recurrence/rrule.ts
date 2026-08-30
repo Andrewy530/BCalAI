@@ -87,8 +87,9 @@ export function parseRRule(input: string): RecurrenceRule | null {
 
   let until: Date | undefined;
   if (parts.has('UNTIL')) {
-    until = parseUntil(parts.get('UNTIL') as string);
-    if (!until) return null;
+    const parsedUntil = parseUntil(parts.get('UNTIL') as string);
+    if (!parsedUntil) return null;
+    until = parsedUntil;
   }
 
   // COUNT and UNTIL are mutually exclusive under RFC 5545.
@@ -190,20 +191,7 @@ export function describeRRule(rule: RecurrenceRule): string {
   return base;
 }
 
-const MONTHS = [
-  'Jan',
-  'Feb',
-  'Mar',
-  'Apr',
-  'May',
-  'Jun',
-  'Jul',
-  'Aug',
-  'Sep',
-  'Oct',
-  'Nov',
-  'Dec',
-];
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 const WEEKDAY_NAMES = [
   'Sunday',

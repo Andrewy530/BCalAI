@@ -180,21 +180,32 @@ export async function fetchEventsInWindow(start: Date, end: Date): Promise<Calen
   return (data ?? []).map((row) => eventRowSchema.parse(row));
 }
 
-export async function fetchEvent(id: string): Promise<CalendarEvent> {
+/** Search internal and provider event copies by title, notes, or location. */
+export async function searchEvents(query: string): Promise<CalendarEvent[]> {
+  const safeQuery = escapeSearchQuery(query);
+  if (!safeQuery) return [];
+
+  const pattern = `%${safeQuery}%`;
   const { data, error } = await supabase
     .from('events')
     .select(EVENT_COLUMNS)
-    .eq('id', id)
-    .single();
+    .neq('status', 'cancelled')
+    .or(`title.ilike.${pattern},description.ilike.${pattern},location.ilike.${pattern}`)
+    .order('start_at', { ascending: true })
+    .limit(50);
+
+  if (error) throw toAppError(error);
+  return (data ?? []).map((row) => eventRowSchema.parse(row));
+}
+
+export async function fetchEvent(id: string): Promise<CalendarEvent> {
+  const { data, error } = await supabase.from('events').select(EVENT_COLUMNS).eq('id', id).single();
 
   if (error) throw toAppError(error);
   return eventRowSchema.parse(data);
 }
 
-export async function createEvent(
-  input: CreateEventInput,
-  userId: string,
-): Promise<CalendarEvent> {
+export async function createEvent(input: CreateEventInput, userId: string): Promise<CalendarEvent> {
   const parsed = createEventSchema.parse(input);
 
   const { data, error } = await supabase
@@ -257,4 +268,13 @@ export async function updateEvent(input: UpdateEventInput): Promise<CalendarEven
 export async function deleteEvent(id: string): Promise<void> {
   const { error } = await supabase.from('events').delete().eq('id', id);
   if (error) throw toAppError(error);
+}
+
+/** Prevent user text from changing the PostgREST `or(...)` expression. */
+function escapeSearchQuery(query: string): string {
+  return query
+    .trim()
+    .replace(/[\\%_,()]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }

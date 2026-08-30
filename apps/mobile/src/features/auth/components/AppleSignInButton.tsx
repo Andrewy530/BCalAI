@@ -1,8 +1,7 @@
+import { useTheme } from '@cal/ui';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { useEffect, useState } from 'react';
 import { Platform, StyleSheet } from 'react-native';
-
-import { useTheme } from '@cal/ui';
 
 export interface AppleSignInButtonProps {
   onPress: () => void;
@@ -34,7 +33,9 @@ export function AppleSignInButton({ onPress, disabled }: AppleSignInButtonProps)
       }
       cornerRadius={theme.radius.md}
       style={[styles.button, disabled && styles.disabled]}
-      onPress={disabled ? undefined : onPress}
+      onPress={() => {
+        if (!disabled) onPress();
+      }}
     />
   );
 }

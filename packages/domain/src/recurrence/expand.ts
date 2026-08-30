@@ -1,7 +1,6 @@
+import { parseRRule, type RecurrenceRule, type Weekday } from './rrule';
 import type { Interval } from '../time/interval';
 import { getZonedParts, zonedWallClockToUtc } from '../time/timezone';
-
-import { parseRRule, type RecurrenceRule, type Weekday } from './rrule';
 
 /**
  * Expanding a recurring event into the occurrences that fall in a window.
@@ -146,7 +145,9 @@ function* generateDates(
 
     case 'WEEKLY': {
       const days: Weekday[] =
-        rule.byDay.length > 0 ? [...rule.byDay].sort((a, b) => a - b) : [anchor.weekday as Weekday];
+        rule.byDay.length > 0
+          ? [...rule.byDay].sort((a, b) => ((a + 6) % 7) - ((b + 6) % 7))
+          : [anchor.weekday as Weekday];
 
       const anchorDay = daysFromEpoch(anchor);
       const anchorWeek = weekIndexOf(anchorDay);
@@ -169,7 +170,8 @@ function* generateDates(
     }
 
     case 'MONTHLY': {
-      const monthDays = rule.byMonthDay.length > 0 ? [...rule.byMonthDay].sort((a, b) => a - b) : [anchor.day];
+      const monthDays =
+        rule.byMonthDay.length > 0 ? [...rule.byMonthDay].sort((a, b) => a - b) : [anchor.day];
       const anchorMonths = anchor.year * 12 + (anchor.month - 1);
       const windowMonths = windowStartParts.year * 12 + (windowStartParts.month - 1);
 
@@ -187,7 +189,10 @@ function* generateDates(
           // RFC 5545: a date that does not exist in this month is skipped, not
           // clamped. 31 Jan monthly means Jan, Mar, May… never 28 Feb.
           if (day > daysInMonth(year, month)) continue;
-          if (year < anchor.year || (year === anchor.year && month === anchor.month && day < anchor.day)) {
+          if (
+            year < anchor.year ||
+            (year === anchor.year && month === anchor.month && day < anchor.day)
+          ) {
             continue;
           }
           yield { year, month, day };
@@ -227,6 +232,6 @@ function fromEpochDays(days: number): DateParts {
 }
 
 /** 1 Jan 1970 was a Thursday, so Monday-of-that-week is 3 days earlier. */
-const mondayOffset = (epochDay: number): number => ((epochDay + 3) % 7 + 7) % 7;
+const mondayOffset = (epochDay: number): number => (((epochDay + 3) % 7) + 7) % 7;
 
 const weekIndexOf = (epochDay: number): number => Math.floor((epochDay + 3) / 7);

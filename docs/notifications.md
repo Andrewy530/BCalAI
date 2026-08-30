@@ -1,19 +1,19 @@
 # Notifications
 
-How reminders are decided, scheduled, and handled. Sprint 1 covers local
-notifications only; server-driven push arrives when there is behaviour the
-device cannot compute on its own (a synced event changing while the app is
-closed, for example).
+How reminders are decided, scheduled, and handled. Sprint 1 covers local task
+notifications, and Sprint 2 adds local event alerts. Server-driven push arrives
+when there is behaviour the device cannot compute on its own (a synced event
+changing while the app is closed, for example).
 
 ---
 
 ## The split that matters
 
-| Layer | Where | Responsibility |
-| --- | --- | --- |
-| Rules | `@cal/domain` → `tasks/reminders.ts` | *When* a reminder should fire. Pure, unit-tested, no platform imports. |
-| Platform | `apps/mobile/src/lib/notifications/` | *How* to talk to the OS: permission, schedule, cancel, read pending. |
-| Orchestration | `apps/mobile/src/features/notifications/` | Wiring the two together and reacting to taps. |
+| Layer         | Where                                     | Responsibility                                                         |
+| ------------- | ----------------------------------------- | ---------------------------------------------------------------------- |
+| Rules         | `@cal/domain` → `tasks/reminders.ts`      | _When_ a reminder should fire. Pure, unit-tested, no platform imports. |
+| Platform      | `apps/mobile/src/lib/notifications/`      | _How_ to talk to the OS: permission, schedule, cancel, read pending.   |
+| Orchestration | `apps/mobile/src/features/notifications/` | Wiring the two together and reacting to taps.                          |
 
 The rules layer never imports `expo-notifications`, which is why DST behaviour,
 lead times, and the "never schedule into the past" guarantee can be tested in
@@ -26,12 +26,12 @@ milliseconds with no simulator.
 At most **one** reminder per task. A second notification for the same item is
 noise, and the Today screen already provides the daily overview.
 
-| Task shape | Reminder | Key |
-| --- | --- | --- |
-| Due date **with** a time | `minutesBefore` ahead of the due time (default 10) | `task:<id>:due` |
-| Due date, **no** time | Morning of the due day, at `allDayMinute` (default 09:00 local) | `task:<id>:allday` |
-| No due date | None | — |
-| Completed or archived | None | — |
+| Task shape               | Reminder                                                        | Key                |
+| ------------------------ | --------------------------------------------------------------- | ------------------ |
+| Due date **with** a time | `minutesBefore` ahead of the due time (default 10)              | `task:<id>:due`    |
+| Due date, **no** time    | Morning of the due day, at `allDayMinute` (default 09:00 local) | `task:<id>:allday` |
+| No due date              | None                                                            | —                  |
+| Completed or archived    | None                                                            | —                  |
 
 Two rules apply to every case:
 
@@ -40,16 +40,26 @@ Two rules apply to every case:
 - **Fire times are computed in the user's planning zone**, not the device's, so
   a trip does not move every morning reminder.
 
+Events can have zero or more selected alert offsets. Each selected offset is
+planned for every event occurrence inside the 30-day scheduling horizon. A
+recurring event is expanded from its master row before alerts are planned.
+
+| Event shape                | Reminder                                     | Key                                      |
+| -------------------------- | -------------------------------------------- | ---------------------------------------- |
+| Event with selected alerts | Each selected offset before the event starts | `event:<id>:<occurrenceIndex>:<minutes>` |
+| No alerts or cancelled     | None                                         | —                                        |
+
 ---
 
 ## Reconciliation, not rebuilding
 
-`useTaskReminders` diffs the desired set against what is actually pending:
+`useReminderSync` diffs the combined desired set against what is actually
+pending:
 
 ```text
-tasks (TanStack Query)
+tasks + events (TanStack Query)
       ↓
-planReminders(tasks, { now, timeZone, preferences })
+planReminders(…) + planEventAlerts(…)
       ↓
 capReminders(…)                    ← iOS allows 64 pending; we keep 48
       ↓
@@ -62,13 +72,14 @@ Rebuilding the whole queue on every change would burn the OS budget and cause
 visible flicker in Notification Centre. The diff ignores sub-second drift so a
 plain refetch does not churn anything.
 
-The reconcile runs when the task list changes and again on app foreground —
-time passes while the app is closed, and past reminders need to fall away.
-A ref serialises the two so they cannot interleave and double-schedule.
+The reconcile runs when the task or event collections change and again on app
+foreground — time passes while the app is closed, and past reminders need to
+fall away. A ref serialises the two so they cannot interleave and
+double-schedule.
 
 **Identifiers are our own keys**, not OS-generated ones. That is what makes
 `scheduleReminder` idempotent: it cancels the key first, so re-running the sync
-can never leave two notifications for one task.
+can never leave duplicate notifications for one task or event occurrence.
 
 ---
 
@@ -92,11 +103,11 @@ The reconcile checks permission every run and quietly does nothing without it.
 
 Registered once at startup as the `task-reminder` category:
 
-| Action | Behaviour | Opens the app |
-| --- | --- | --- |
-| Tap the body | Deep-links to the task in the inbox | Yes |
-| **Mark done** | Completes the task in place | No |
-| **Snooze 1 hour** | Moves the due time forward an hour | No |
+| Action            | Behaviour                           | Opens the app |
+| ----------------- | ----------------------------------- | ------------- |
+| Tap the body      | Deep-links to the task in the inbox | Yes           |
+| **Mark done**     | Completes the task in place         | No            |
+| **Snooze 1 hour** | Moves the due time forward an hour  | No            |
 
 Deep links carry `taskId` as a route parameter. `useOpenTaskFromParam` opens the
 editor and then clears the parameter — without clearing, navigating away and
@@ -107,7 +118,7 @@ back would pop the editor open again.
 ## Preferences
 
 Stored per device in `AsyncStorage` under `reminder-preferences.v1`, not on the
-profile. Notifications are scheduled *on this device*, so "10 minutes before" on
+profile. Notifications are scheduled _on this device_, so "10 minutes before" on
 a phone and on a future tablet are legitimately different answers. Stored values
 are merged over the defaults on read, so a newly added preference gets its
 default rather than arriving as `undefined`.
@@ -118,9 +129,11 @@ Server-side push, when it lands, will need its own account-level setting.
 
 ## Testing
 
-`packages/domain/src/tasks/reminders.test.ts` covers the rules: lead times, the
+`packages/domain/src/tasks/reminders.test.ts` covers task rules: lead times, the
 09:00 local morning slot either side of a DST boundary, past-time suppression,
-the preference switches, diffing, and the 48-reminder cap.
+the preference switches, diffing, and the 48-reminder cap. Event-alert rules
+are covered by `packages/domain/src/calendar/alerts.test.ts`, including
+recurring occurrences and namespaced keys.
 
 The platform layer is deliberately thin and is exercised on a device — there is
 no value in mocking `expo-notifications` to assert that it was called.
@@ -129,7 +142,6 @@ no value in mocking `expo-notifications` to assert that it was called.
 
 ## Not yet built
 
-- Event alerts (`events.alerts` already exists in the schema) — Sprint 2.
 - Server push for changes arriving while the app is closed — Sprint 4+.
 - Badge counts. Deliberately off: a permanent red dot on a planning app trains
   people to ignore it.

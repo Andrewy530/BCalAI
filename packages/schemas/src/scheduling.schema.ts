@@ -10,30 +10,42 @@ export const timeOfDayPreferenceSchema = z.enum(['morning', 'afternoon', 'evenin
  * free text. Intent is turned into these fields *before* slot generation, and
  * the engine alone decides what is actually free.
  */
-export const scheduleConstraintsSchema = z
-  .object({
-    durationMinutes: z.number().int().min(5).max(12 * 60),
-    windowStart: isoDateTimeSchema,
-    windowEnd: isoDateTimeSchema,
-    workingHours: workingHoursSchema,
-    timezone: z.string().min(1),
-    /** Minimum gap to leave either side of the new block. */
-    bufferMinutes: z.number().int().min(0).max(120).default(0),
-    /** Do not start a block before this local minute of day. */
-    earliestMinute: minuteOfDaySchema.optional(),
-    /** Do not end a block after this local minute of day. */
-    latestMinute: minuteOfDaySchema.optional(),
-    /** Slots are generated on this cadence, e.g. every 15 minutes. */
-    granularityMinutes: z.number().int().min(5).max(60).default(15),
-    /** Allow splitting the work across multiple shorter blocks. */
-    splittable: z.boolean().default(false),
-    minSplitMinutes: z.number().int().min(15).max(8 * 60).default(30),
-    preferredTimeOfDay: timeOfDayPreferenceSchema.default('any'),
-  })
-  .refine((c) => new Date(c.windowEnd) > new Date(c.windowStart), {
+const scheduleConstraintsObject = z.object({
+  durationMinutes: z
+    .number()
+    .int()
+    .min(5)
+    .max(12 * 60),
+  windowStart: isoDateTimeSchema,
+  windowEnd: isoDateTimeSchema,
+  workingHours: workingHoursSchema,
+  timezone: z.string().min(1),
+  /** Minimum gap to leave either side of the new block. */
+  bufferMinutes: z.number().int().min(0).max(120).default(0),
+  /** Do not start a block before this local minute of day. */
+  earliestMinute: minuteOfDaySchema.optional(),
+  /** Do not end a block after this local minute of day. */
+  latestMinute: minuteOfDaySchema.optional(),
+  /** Slots are generated on this cadence, e.g. every 15 minutes. */
+  granularityMinutes: z.number().int().min(5).max(60).default(15),
+  /** Allow splitting the work across multiple shorter blocks. */
+  splittable: z.boolean().default(false),
+  minSplitMinutes: z
+    .number()
+    .int()
+    .min(15)
+    .max(8 * 60)
+    .default(30),
+  preferredTimeOfDay: timeOfDayPreferenceSchema.default('any'),
+});
+
+export const scheduleConstraintsSchema = scheduleConstraintsObject.refine(
+  (c) => new Date(c.windowEnd) > new Date(c.windowStart),
+  {
     message: 'The scheduling window must end after it starts',
     path: ['windowEnd'],
-  });
+  },
+);
 
 export const timeSlotSchema = z.object({
   startAt: isoDateTimeSchema,
@@ -44,7 +56,7 @@ export const aiScheduleRequestSchema = z.object({
   taskId: uuidSchema,
   /** Optional free-text steer, e.g. "not right after my morning class". */
   note: z.string().max(500).optional(),
-  constraints: scheduleConstraintsSchema.partial().optional(),
+  constraints: scheduleConstraintsObject.partial().optional(),
 });
 
 /**
