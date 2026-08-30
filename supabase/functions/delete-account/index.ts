@@ -1,6 +1,7 @@
 import { requireUser, adminClient } from '../_shared/auth/index.ts';
 import { EdgeError, withErrorHandling } from '../_shared/errors/index.ts';
 import { jsonResponse, preflight } from '../_shared/http/cors.ts';
+import { releaseProviderGrant } from '../_shared/providers/disconnect.ts';
 
 /**
  * Account deletion.
@@ -23,15 +24,17 @@ const handler = withErrorHandling(async (request) => {
   //    than orphaning a live OAuth grant with no record of it on our side.
   const { data: accounts, error: accountsError } = await admin
     .from('provider_accounts')
-    .select('id, provider, secret_reference_id')
+    .select('id, provider')
     .eq('user_id', user.id);
 
   if (accountsError) throw new EdgeError('UNKNOWN', 'Could not read connections.', 500);
 
   for (const account of accounts ?? []) {
-    // TODO(sprint-4/5): call the provider's revoke endpoint, then delete the
-    // Vault secret referenced by secret_reference_id.
-    console.log(JSON.stringify({ event: 'revoke_pending', provider: account.provider }));
+    // Stops change channels, revokes the grant, and removes the Vault secret.
+    // Best-effort inside: an unreachable provider must not trap a user in an
+    // account they have asked to delete.
+    await releaseProviderGrant(admin, account.id);
+    console.log(JSON.stringify({ event: 'provider_released', provider: account.provider }));
   }
 
   // 2. Delete the auth user. Cascades remove profile, calendars, events,

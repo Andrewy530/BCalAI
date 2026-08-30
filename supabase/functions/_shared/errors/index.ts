@@ -12,7 +12,12 @@ export type EdgeErrorCode =
   | 'VALIDATION_FAILED'
   | 'METHOD_NOT_ALLOWED'
   | 'SUBSCRIPTION_REQUIRED'
-  | 'AI_RATE_LIMITED';
+  | 'AI_RATE_LIMITED'
+  | 'NETWORK_UNAVAILABLE'
+  | 'GOOGLE_AUTH_EXPIRED'
+  | 'GOOGLE_SYNC_CURSOR_INVALID'
+  | 'EVENT_PROVIDER_CONFLICT'
+  | 'PROVIDER_RATE_LIMITED';
 
 export class EdgeError extends Error {
   constructor(
