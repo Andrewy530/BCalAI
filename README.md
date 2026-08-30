@@ -12,9 +12,14 @@ Architecture decisions live in [`docs/`](docs/). Coding rules are in
 
 ## Status
 
-**Sprint 0 — engineering foundation.** The workspace, design system, database
-schema with RLS, auth, and the app shell exist. The tab screens render polished
-empty states; the features behind them land in Sprints 1–6.
+**Sprint 1 — tasks and quick capture.** On top of the Sprint 0 foundation, the
+app now works as a real reminder product: capture a task in seconds, give it a
+due date, priority and estimate, complete it, and get a local notification when
+it is due.
+
+> **Not yet verified on a device.** Nothing in this repository has been
+> installed, type-checked, or run — see [Prerequisites](#prerequisites). Treat
+> the code as reviewed-by-eye but untested until `pnpm verify` passes.
 
 | Area | State |
 | --- | --- |
@@ -23,7 +28,10 @@ empty states; the features behind them land in Sprints 1–6.
 | Database schema, RLS, pgTAP tests | Done |
 | Auth (email, Apple), session, account deletion | Done |
 | Deterministic availability engine (`@cal/domain`) | Done, unit-tested |
-| Tasks, calendar views, Today, search | Shells only — Sprints 1–3 |
+| Task inbox, editor, completion, snooze, delete | Done — Sprint 1 |
+| Quick Add (task lane) | Done — Sprint 1 |
+| Local task reminders + notification actions | Done — Sprint 1 |
+| Calendar views, event CRUD, Today, search | Shells only — Sprints 2–3 |
 | Google / Microsoft sync | Sprints 4–5 |
 | AI Find Time, RevenueCat | Sprint 6 |
 

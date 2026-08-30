@@ -53,9 +53,10 @@ export const queryKeys = {
 
   tasks: {
     all: () => ['tasks'] as const,
-    inbox: () => ['tasks', 'inbox'] as const,
+    list: (openOnly: boolean) => ['tasks', 'list', openOnly] as const,
     detail: (id: string) => ['tasks', 'detail', id] as const,
     lists: () => ['tasks', 'lists'] as const,
+    tags: () => ['tasks', 'tags'] as const,
   },
 
   integrations: {

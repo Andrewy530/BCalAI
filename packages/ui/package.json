@@ -7,6 +7,7 @@
   "scripts": { "typecheck": "tsc --noEmit -p tsconfig.json" },
   "peerDependencies": {
     "@expo/vector-icons": "*",
+    "@react-native-community/datetimepicker": "*",
     "react": "*",
     "react-native": "*",
     "react-native-gesture-handler": "*",
@@ -16,6 +17,7 @@
   "devDependencies": {
     "@cal/config": "workspace:*",
     "@expo/vector-icons": "^15.0.0",
+    "@react-native-community/datetimepicker": "8.4.5",
     "@types/react": "~19.1.0",
     "react": "19.1.0",
     "react-native": "0.81.4",

@@ -13,12 +13,13 @@ import {
 } from '@cal/ui';
 
 import { useAuth, useAuthActions } from '../../auth';
+import { NotificationSettingsCard } from '../../notifications';
 import { useProfile } from '../hooks/useProfile';
 
 /**
- * Sprint 0 shell: identity, the preferences that already exist in the schema,
- * and the destructive actions. Rows without a destination are marked so nobody
- * has to guess whether they are broken or unbuilt.
+ * Identity, planning preferences, reminders, and the destructive actions.
+ * Rows without a destination are marked so nobody has to guess whether they
+ * are broken or simply unbuilt.
  */
 export function SettingsScreen() {
   const theme = useTheme();
@@ -87,6 +88,8 @@ export function SettingsScreen() {
           onPress={() => undefined}
         />
       </Card>
+
+      <NotificationSettingsCard />
 
       <Card eyebrow="Connections" padded={false}>
         <ListRow
