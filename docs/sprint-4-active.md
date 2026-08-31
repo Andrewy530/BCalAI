@@ -1,6 +1,6 @@
 # Sprint 4 — Active implementation tracker
 
-Status: **In progress**
+Status: **Implementation complete; nothing verified — no toolchain available**
 Last updated: **2026-08-30**
 
 This is the live handoff for the Sprint 4 implementation. Update the
@@ -35,6 +35,18 @@ above the adapter.
 - Not in this sprint: Microsoft/Graph, AI Find Time, RevenueCat, push
   notifications for background changes, widgets, TestFlight.
 
+## Known gaps
+
+- `packages/types/src/database.types.ts` is stale and must be regenerated.
+- Recurring-event *exceptions* are imported as individual provider events, but
+  Google's `EXDATE`/`RDATE` lines are dropped when the master's RRULE is stored.
+  A deleted single occurrence therefore relies on its own tombstone arriving.
+  Worth a targeted test once the stack runs.
+- `sync-run` drains the queue inside the request, which is fine for a handful of
+  calendars and will need moving to a background invocation if a user connects
+  many.
+- No Sentry breadcrumbs on the sync path yet; failures are console codes only.
+
 ## Design decisions taken here
 
 1. **Deno functions do not import `@cal/schemas`.** Provider wire formats are
@@ -55,23 +67,92 @@ above the adapter.
 
 - [x] Audit the existing schema, Edge Function helpers, and mobile structure.
 - [x] Create this active tracker.
-- [ ] Migration 0006: OAuth state, Vault token helpers, job claim/complete
-      RPCs, webhook channel lookup index, cron schedules.
-- [ ] Provider contract and shared adapter types.
-- [ ] Google adapter: token exchange/refresh, calendar list, event list,
+- [x] Migration 0006: OAuth state, Vault token helpers, job claim/complete RPCs,
+      webhook channel lookup index, client-safe health view.
+- [x] Migration 0007: the four cron schedules, guarded for local stacks.
+- [x] Provider contract and shared adapter types.
+- [x] Google adapter: token exchange/refresh, calendar list, event list,
       event write, watch channel.
-- [ ] Pure normalisation helpers and unit tests in `packages/domain`.
-- [ ] Edge Functions: OAuth start/callback, calendar selection, sync worker,
-      Google webhook, cron entry point, provider event write, disconnect.
-- [ ] Mobile `integrations` feature: API module, hooks, connection screen.
-- [ ] Settings connection rows become live; sync health is visible.
-- [ ] Event editor routes provider-owned events through the write path.
-- [ ] Run formatting, lint, typecheck, and unit tests; record exact results.
+- [x] Normalisation unit tests (Deno).
+- [x] Edge Functions: OAuth start/callback, calendar selection, import, sync
+      worker, Google webhook, cron entry point, provider event write, disconnect.
+- [x] Mobile `integrations` feature: API module, hooks, connection screen.
+- [x] Settings connection rows become live; sync health is visible.
+- [x] Event editor routes provider-owned events through the write path.
+- [x] Account deletion revokes for real, replacing the Sprint 4/5 TODO.
+- [ ] **Run formatting, lint, typecheck, and unit tests.** Blocked: no Node,
+      pnpm, or Deno on the machine, and no `node_modules`. Nothing below has
+      been compiled or executed.
+- [ ] Register the Google Cloud OAuth client and set the new secrets.
 - [ ] Device/simulator verification of the OAuth round trip.
 
 ## File map for the next model
 
-_Filled in as each slice lands._
+### The provider boundary
+
+- `supabase/functions/_shared/providers/types.ts` — the contract. `CalendarProvider`
+  for sync and writes, `ProviderAuth` for the connect flow.
+- `supabase/functions/_shared/providers/registry.ts` — the only place a provider
+  kind becomes an implementation. **This is the entire Sprint 5 seam.**
+- `supabase/functions/_shared/providers/accounts.ts` — access-token resolution
+  through Vault, and connection health.
+- `supabase/functions/_shared/providers/disconnect.ts` — releasing a grant.
+  Shared by explicit disconnect and account deletion, which must not differ.
+- `supabase/functions/_shared/providers/google/` — `auth`, `client`, `config`,
+  `normalise` (+ tests), `provider`, `schemas`, `wire`.
+- `supabase/functions/_shared/time/zoned.ts` — a deliberate, documented mirror of
+  `packages/domain/src/time/timezone.ts`. Deno cannot import the domain package
+  because it uses extensionless relative imports.
+
+### The sync engine
+
+- `supabase/functions/_shared/sync/engine.ts` — one calendar's sync, cursor to
+  rows, and watch registration. Provider-agnostic.
+- `supabase/functions/_shared/sync/upsert.ts` — idempotent writes into `events`.
+  Has no outward path at all, which is why an inbound event cannot loop.
+- `supabase/functions/_shared/sync/push.ts` — provider-first writes.
+- `supabase/functions/_shared/sync/worker.ts` — the only consumer of `sync_jobs`.
+- `supabase/functions/_shared/sync/jobs.ts` — enqueue/claim/complete + the
+  minute-bucketed idempotency key that collapses webhook bursts.
+- `supabase/functions/_shared/sync/window.ts` — how much calendar we import, and
+  where each provider posts notifications.
+
+### Edge Functions
+
+| Function | JWT | Purpose |
+| --- | --- | --- |
+| `oauth-google-start` | yes | Mint PKCE + state, return the consent URL |
+| `oauth-google-callback` | **no** | Exchange the code, store the token, 302 into the app |
+| `integrations-calendars` | yes | List an account's calendars and what is imported |
+| `integrations-import` | yes | Import/drop one calendar; first sync runs after the response |
+| `integrations-disconnect` | yes | Stop channels, revoke, delete |
+| `provider-event-write` | yes | Provider-first create/update/delete |
+| `sync-run` | yes | "Sync now" — enqueue and drain in one request |
+| `webhook-google` | **no** | Verify channel token, enqueue, acknowledge fast |
+| `sync-cron` | **no** | `?task=renew-watches\|retry-failed\|reconcile\|prune` |
+
+### Mobile
+
+- `apps/mobile/src/features/integrations/api/integrations.api.ts` — the only
+  module that knows how connections are read and changed.
+- `apps/mobile/src/features/integrations/hooks/useConnectProvider.ts` — the
+  OAuth round trip via `WebBrowser.openAuthSessionAsync`.
+- `apps/mobile/src/features/integrations/hooks/useIntegrations.ts` — server state.
+- `apps/mobile/src/features/integrations/screens/IntegrationsScreen.tsx` and
+  `components/{ConnectionCard,CalendarPickerSheet}.tsx`.
+- `apps/mobile/app/settings/integrations.tsx` — also the OAuth return target for
+  `calendarapp://settings/integrations`.
+- `apps/mobile/src/features/events/hooks/useEvents.ts` — every event mutation now
+  asks which calendar owns the row before deciding where the write goes.
+
+### Configuration
+
+New secrets in `.env.example`: `GOOGLE_OAUTH_REDIRECT_URI`, `APP_OAUTH_RETURN_URL`,
+`GOOGLE_WEBHOOK_URL`, `SYNC_CRON_SECRET`.
+
+Google Cloud console: register a **Web application** OAuth client (not an iOS
+one) whose redirect URI is the callback function. That is what keeps the client
+secret server-side and is why Google issues a refresh token at all.
 
 ## Acceptance criteria
 
@@ -93,7 +174,32 @@ _Filled in as each slice lands._
 
 ## Verification log
 
-_Recorded as work lands._
+**Nothing in this sprint has been executed.** The machine had no Node, pnpm, npx,
+or Deno binary and no installed `node_modules`, so none of the following ran:
+
+- `pnpm verify` (format, lint, typecheck, test) — not run.
+- `tsc --noEmit` for the mobile app or any package — not run.
+- `deno check` / `deno task test` for the Edge Functions — not run. The
+  normalisation tests in `providers/google/normalise.test.ts` are **written but
+  never executed**; treat a failure there as likely a bug in the test.
+- `supabase db reset` against migrations 0006 and 0007 — not run.
+- The Google OAuth round trip, a real webhook delivery, and an outward write —
+  never exercised against Google.
+
+Review was manual: imports were checked against the files they name, and the new
+code follows the conventions already in the repo. That is not a substitute for
+compiling it.
+
+### What to do first, on a machine with the toolchain
+
+1. `pnpm install`, then `pnpm verify`. Expect type errors to surface first in
+   `apps/mobile/src/features/events/hooks/useEvents.ts`, where the mutation
+   signatures changed, and in the new `integrations` feature.
+2. In `supabase/functions`: `deno task check` and `deno task test`.
+3. `pnpm db:reset` to prove 0006 applies, then `pnpm db:types` — the generated
+   `database.types.ts` is now stale, since it predates `oauth_states`, the new
+   `calendar_sync_states` columns, and `calendar_sync_health`.
+4. Only then attempt the OAuth round trip.
 
 ## Handoff prompt
 

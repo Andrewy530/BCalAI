@@ -1,3 +1,4 @@
+import type { ProviderAccount } from '@cal/schemas';
 import {
   Avatar,
   Badge,
@@ -9,10 +10,12 @@ import {
   Text,
   useTheme,
 } from '@cal/ui';
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { Alert, View } from 'react-native';
 
 import { useAuth, useAuthActions } from '../../auth';
+import { useConnections } from '../../integrations/hooks/useIntegrations';
 import { NotificationSettingsCard } from '../../notifications';
 import {
   PlanningPreferencesSheet,
@@ -21,14 +24,15 @@ import {
 import { useProfile } from '../hooks/useProfile';
 
 /**
- * Identity, planning preferences, reminders, and the destructive actions.
- * Future connections are marked so nobody has to guess whether they are
- * unavailable or simply unbuilt.
+ * Identity, planning preferences, reminders, connections, and the destructive
+ * actions. Anything still unbuilt is badged rather than hidden, so nobody has
+ * to guess whether it is unavailable or simply not written yet.
  */
 export function SettingsScreen() {
   const theme = useTheme();
   const { email } = useAuth();
   const { data: profile, isLoading } = useProfile();
+  const { data: connections = [] } = useConnections();
   const { signOut } = useAuthActions();
   const [preference, setPreference] = useState<PlanningPreference | null>(null);
 
@@ -98,17 +102,11 @@ export function SettingsScreen() {
 
       <Card eyebrow="Connections" padded={false}>
         <ListRow
-          title="Google Calendar"
-          subtitle="Two-way sync for your Google calendars"
-          trailing={<Badge label="Sprint 4" />}
-          disabled
-        />
-        <Divider inset />
-        <ListRow
-          title="Outlook Calendar"
-          subtitle="Two-way sync via Microsoft Graph"
-          trailing={<Badge label="Sprint 5" />}
-          disabled
+          title="Calendar accounts"
+          subtitle={connectionSummary(connections)}
+          meta={connections.length > 0 ? String(connections.length) : undefined}
+          showChevron
+          onPress={() => router.push('/settings/integrations')}
         />
         <Divider inset />
         <ListRow
@@ -140,4 +138,20 @@ export function SettingsScreen() {
       />
     </View>
   );
+}
+
+/**
+ * The row's subtitle carries the state that matters at a glance: a connection
+ * that needs re-authorising is the one thing a user cannot discover for
+ * themselves, so it outranks the count.
+ */
+function connectionSummary(connections: ProviderAccount[]): string {
+  if (connections.length === 0) return 'Sync Google Calendar';
+
+  const attention = connections.filter((account) => account.status !== 'active').length;
+  if (attention > 0) {
+    return attention === 1 ? '1 account needs reconnecting' : `${attention} accounts need reconnecting`;
+  }
+
+  return connections.length === 1 ? '1 account connected' : `${connections.length} accounts connected`;
 }

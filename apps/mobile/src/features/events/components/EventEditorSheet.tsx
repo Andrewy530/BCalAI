@@ -176,7 +176,8 @@ export function EventEditorSheet({
   };
 
   const handleDelete = () => {
-    if (!eventId) return;
+    if (!eventId || !form.calendarId) return;
+    const calendarId = form.calendarId;
     const isSeries = form.recurrenceRule !== null;
 
     Alert.alert(
@@ -190,7 +191,7 @@ export function EventEditorSheet({
           text: 'Delete',
           style: 'destructive',
           onPress: () => {
-            removeEvent.mutate(eventId);
+            removeEvent.mutate({ id: eventId, calendarId });
             onClose();
           },
         },

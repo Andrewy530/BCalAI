@@ -142,6 +142,10 @@ no value in mocking `expo-notifications` to assert that it was called.
 
 ## Not yet built
 
-- Server push for changes arriving while the app is closed — Sprint 4+.
+- Server push for changes arriving while the app is closed — still unbuilt.
+  Sprint 4 deliberately left it out: a Google change now reaches the database
+  promptly via the push channel, but the *device* only learns about it on the
+  next foreground query. Closing that gap needs APNs and a device-token table,
+  which is its own piece of work.
 - Badge counts. Deliberately off: a permanent red dot on a planning app trains
   people to ignore it.

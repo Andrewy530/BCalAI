@@ -1,10 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 
-import type { CreateEventInput, UpdateEventInput } from '@cal/schemas';
+import type { Calendar, CreateEventInput } from '@cal/schemas';
 
 import { queryKeys } from '../../../lib/query/query-client';
 import { useAuth, useRequiredUserId } from '../../auth';
+import {
+  writeProviderEvent,
+  type ProviderEventDraft,
+} from '../../integrations/api/integrations.api';
 import {
   createEvent,
   deleteEvent,
@@ -12,6 +16,7 @@ import {
   fetchEventsInWindow,
   updateEvent,
 } from '../api/events.api';
+import { useCalendars } from './useCalendars';
 
 /**
  * Events for a time window.
@@ -49,24 +54,87 @@ function useInvalidateEvents() {
   return () => queryClient.invalidateQueries({ queryKey: queryKeys.events.all() });
 }
 
+/**
+ * Which calendars this database owns, and which a provider owns.
+ *
+ * Every mutation below asks this first, because the answer changes where the
+ * write goes: an internal calendar is written straight to Postgres, and a
+ * synced one has to go out to the provider before anything is stored locally
+ * (`docs/architecture.md` § Decision A).
+ */
+function useCalendarSourceLookup() {
+  const { data: calendars } = useCalendars();
+
+  return (calendarId: string | undefined): Calendar | undefined =>
+    calendars?.find((calendar) => calendar.id === calendarId);
+}
+
+/** The editor's fields, in the shape the provider write path expects. */
+function toDraft(input: CreateEventInput): ProviderEventDraft {
+  return {
+    title: input.title,
+    description: input.description ?? null,
+    location: input.location ?? null,
+    startAt: input.startAt,
+    endAt: input.endAt,
+    allDay: input.allDay,
+    timezone: input.timezone,
+    recurrenceRule: input.recurrenceRule ?? null,
+    alerts: input.alerts,
+  };
+}
+
 export function useCreateEvent() {
   const userId = useRequiredUserId();
   const invalidate = useInvalidateEvents();
+  const calendarFor = useCalendarSourceLookup();
 
   return useMutation({
-    mutationFn: (input: CreateEventInput) => createEvent(input, userId),
+    mutationFn: async (input: CreateEventInput) => {
+      const calendar = calendarFor(input.calendarId);
+
+      if (calendar && calendar.sourceType !== 'internal') {
+        await writeProviderEvent({
+          operation: 'create',
+          calendarId: input.calendarId,
+          draft: toDraft(input),
+        });
+        return;
+      }
+
+      await createEvent(input, userId);
+    },
     onSuccess: () => void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success),
     onSettled: () => void invalidate(),
   });
 }
 
+/**
+ * The editor always holds every field, so an update carries the whole event
+ * rather than a patch. A provider write replaces the event's fields outright,
+ * and a partial patch could not express that faithfully.
+ */
+export type UpdateEventPayload = CreateEventInput & { id: string };
+
 export function useUpdateEvent() {
   const queryClient = useQueryClient();
   const invalidate = useInvalidateEvents();
+  const calendarFor = useCalendarSourceLookup();
 
   return useMutation({
-    mutationFn: (input: UpdateEventInput) => updateEvent(input),
-    onSuccess: (event) => {
+    mutationFn: async (input: UpdateEventPayload) => {
+      const calendar = calendarFor(input.calendarId);
+
+      if (calendar && calendar.sourceType !== 'internal') {
+        await writeProviderEvent({
+          operation: 'update',
+          eventId: input.id,
+          draft: toDraft(input),
+        });
+        return;
+      }
+
+      const event = await updateEvent(input);
       queryClient.setQueryData(queryKeys.events.detail(event.id), event);
     },
     onSettled: () => void invalidate(),
@@ -75,9 +143,19 @@ export function useUpdateEvent() {
 
 export function useDeleteEvent() {
   const invalidate = useInvalidateEvents();
+  const calendarFor = useCalendarSourceLookup();
 
   return useMutation({
-    mutationFn: (id: string) => deleteEvent(id),
+    mutationFn: async ({ id, calendarId }: { id: string; calendarId: string }) => {
+      const calendar = calendarFor(calendarId);
+
+      if (calendar && calendar.sourceType !== 'internal') {
+        await writeProviderEvent({ operation: 'delete', eventId: id });
+        return;
+      }
+
+      await deleteEvent(id);
+    },
     onSuccess: () => void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium),
     onSettled: () => void invalidate(),
   });

@@ -12,15 +12,19 @@ Architecture decisions live in [`docs/`](docs/). Coding rules are in
 
 ## Status
 
-**Sprint 3 — Today + polish implemented.** Sprints 0 through 3 are implemented.
-The app now has a working internal calendar with day, week, month, and agenda
-views, event CRUD, recurrence, calendar colors, local event alerts, a live Today
-dashboard, combined event/task search, and functional planning preferences.
+**Sprint 4 — Google Calendar implemented.** Sprints 0 through 4 are written.
+On top of the internal calendar, Today dashboard, and search, a Google account
+can now be connected from Settings, its calendars imported individually, and its
+events synced in both directions — initial sync, incremental sync via
+`nextSyncToken`, push-notification channels with hourly renewal, daily
+reconciliation, and provider-first writes.
 
-> **Device verification is still outstanding.** The workspace dependencies are
-> installed and the focused automated checks pass, but there is no generated
-> native iOS project yet. Treat the app as not device-verified until the Expo
-> development build runs on an iOS simulator or device.
+> **Sprint 4 is unverified.** No Node or Deno toolchain was available on the
+> machine it was written on, so nothing has been type-checked, linted, or run —
+> and the OAuth round trip has never been exercised against Google. Run
+> `pnpm verify`, `deno task check`, and `deno task test` in `supabase/functions`
+> before trusting any of it. Device verification from Sprint 3 also remains
+> outstanding: there is still no generated native iOS project.
 
 | Area                                                                          | State                     |
 | ----------------------------------------------------------------------------- | ------------------------- |
@@ -36,10 +40,11 @@ dashboard, combined event/task search, and functional planning preferences.
 | Today dashboard, merged timeline, overdue/unscheduled work, free-time summary | Done — Sprint 3           |
 | Search across event/task titles, notes, and locations                         | Done — Sprint 3           |
 | Settings planning preferences                                                 | Done — Sprint 3           |
-| Google / Microsoft sync                                                       | Not started — Sprints 4–5 |
+| Google OAuth, calendar import, two-way sync, webhooks, retry                  | Written — Sprint 4, unverified |
+| Microsoft / Outlook sync                                                      | Not started — Sprint 5    |
 | AI Find Time, RevenueCat                                                      | Not started — Sprint 6    |
 
-The live implementation handoff is [`docs/sprint-3-active.md`](docs/sprint-3-active.md).
+The live implementation handoff is [`docs/sprint-4-active.md`](docs/sprint-4-active.md).
 
 ---
 

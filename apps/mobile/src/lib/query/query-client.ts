@@ -63,6 +63,10 @@ export const queryKeys = {
 
   integrations: {
     all: () => ['integrations'] as const,
+    /** Calendars offered by one connected account — a provider read, not a table read. */
+    calendars: (providerAccountId: string) =>
+      ['integrations', 'calendars', providerAccountId] as const,
+    health: () => ['integrations', 'health'] as const,
   },
 
   subscription: () => ['subscription'] as const,

@@ -51,6 +51,10 @@ export default function RootLayout() {
                 <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
                   <Stack.Screen name="(auth)" />
                   <Stack.Screen name="(tabs)" />
+                  <Stack.Screen
+                    name="settings/integrations"
+                    options={{ headerShown: true, title: 'Connections', animation: 'default' }}
+                  />
                 </Stack>
                 <AppSheets />
                 <TaskEditorHost />

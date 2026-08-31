@@ -9,5 +9,9 @@
   },
   "lint": {
     "rules": { "tags": ["recommended"] }
+  },
+  "tasks": {
+    "test": "deno test --allow-env",
+    "check": "deno check **/index.ts"
   }
 }

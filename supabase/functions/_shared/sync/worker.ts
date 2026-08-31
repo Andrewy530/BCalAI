@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { z } from 'zod';
 
 import { EdgeError } from '../errors/index.ts';
 import { loadAccount, markAccount, resolveContext } from '../providers/accounts.ts';
@@ -12,7 +13,7 @@ import {
   syncCalendar,
 } from './engine.ts';
 import { JOB_KINDS, claim, complete, type SyncJob } from './jobs.ts';
-import { pushEvent } from './push.ts';
+import { eventDraftSchema, pushEvent, type PushRequest } from './push.ts';
 
 /**
  * The one consumer of `sync_jobs`.
@@ -142,16 +143,9 @@ async function runJob(
     }
 
     case JOB_KINDS.eventPush: {
-      await pushEvent(admin, account, ctx, {
-        eventId: String(job.payload.eventId ?? ''),
-        operation: String(job.payload.operation ?? 'update') as 'create' | 'update' | 'delete',
-        providerCalendarId: job.payload.providerCalendarId
-          ? String(job.payload.providerCalendarId)
-          : null,
-        providerEventId: job.payload.providerEventId
-          ? String(job.payload.providerEventId)
-          : null,
-      });
+      // The payload was validated when it was enqueued, but it has been through
+      // jsonb since — so it is external input again by the time it gets here.
+      await pushEvent(admin, account, ctx, parsePushPayload(job.payload));
       return;
     }
 
@@ -177,4 +171,22 @@ async function requireStateForCalendar(admin: SupabaseClient, job: SyncJob) {
     throw new EdgeError('NOT_FOUND', 'That calendar is no longer imported.', 404);
   }
   return state;
+}
+
+/** Only retryable operations are ever enqueued; a create never is. */
+const pushPayloadSchema = z.discriminatedUnion('operation', [
+  z.object({
+    operation: z.literal('update'),
+    eventId: z.string().uuid(),
+    draft: eventDraftSchema,
+  }),
+  z.object({ operation: z.literal('delete'), eventId: z.string().uuid() }),
+]);
+
+function parsePushPayload(payload: Record<string, unknown>): PushRequest {
+  const parsed = pushPayloadSchema.safeParse(payload);
+  if (!parsed.success) {
+    throw new EdgeError('VALIDATION_FAILED', 'Unusable push job.', 400);
+  }
+  return parsed.data;
 }
