@@ -1,8 +1,8 @@
+import type { Calendar, CreateEventInput } from '@cal/schemas';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 
-import type { Calendar, CreateEventInput } from '@cal/schemas';
-
+import { useCalendars } from './useCalendars';
 import { queryKeys } from '../../../lib/query/query-client';
 import { useAuth, useRequiredUserId } from '../../auth';
 import {
@@ -16,7 +16,6 @@ import {
   fetchEventsInWindow,
   updateEvent,
 } from '../api/events.api';
-import { useCalendars } from './useCalendars';
 
 /**
  * Events for a time window.

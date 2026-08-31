@@ -14,20 +14,20 @@ Postgres via Supabase. Every table below is created by a migration in
 
 ## Tables
 
-| Table | Purpose | Client access |
-| --- | --- | --- |
-| `profiles` | Planning preferences, working hours | Own row, full CRUD |
-| `calendars` | Internal and synced calendars | Own rows, full CRUD |
-| `events` | Events and time blocks | Own rows, full CRUD |
-| `task_lists` | Lists / projects | Own rows, full CRUD |
-| `tasks` | Tasks and reminders | Own rows, full CRUD |
-| `tags`, `task_tags` | Labelling | Own rows, via task ownership |
-| `provider_accounts` | Connected Google/Microsoft accounts | Read + delete only |
-| `calendar_sync_states` | Sync cursors, webhook bookkeeping | **None** |
-| `sync_jobs` | Durable retry queue | Read only |
-| `ai_schedule_requests` | Find Time requests | Read + update |
-| `ai_schedule_suggestions` | Ranked proposals | Read only |
-| `subscriptions` | RevenueCat entitlement mirror | Read only |
+| Table                     | Purpose                             | Client access                |
+| ------------------------- | ----------------------------------- | ---------------------------- |
+| `profiles`                | Planning preferences, working hours | Own row, full CRUD           |
+| `calendars`               | Internal and synced calendars       | Own rows, full CRUD          |
+| `events`                  | Events and time blocks              | Own rows, full CRUD          |
+| `task_lists`              | Lists / projects                    | Own rows, full CRUD          |
+| `tasks`                   | Tasks and reminders                 | Own rows, full CRUD          |
+| `tags`, `task_tags`       | Labelling                           | Own rows, via task ownership |
+| `provider_accounts`       | Connected Google/Microsoft accounts | Read + delete only           |
+| `calendar_sync_states`    | Sync cursors, webhook bookkeeping   | **None**                     |
+| `sync_jobs`               | Durable retry queue                 | Read only                    |
+| `ai_schedule_requests`    | Find Time requests                  | Read + update                |
+| `ai_schedule_suggestions` | Ranked proposals                    | Read only                    |
+| `subscriptions`           | RevenueCat entitlement mirror       | Read only                    |
 
 ## Invariants enforced in the database
 
@@ -47,12 +47,12 @@ thing that writes to this database:
 
 ## Indexes that matter
 
-| Index | Query it serves |
-| --- | --- |
-| `events (user_id, start_at, end_at)` | "everything in this window" — every calendar view |
-| `events (sync_status) where pending/failed/conflict` | the outbound push queue |
-| `tasks (user_id) where open and flexible and unscheduled` | the Find Time queue |
-| `calendar_sync_states (webhook_expires_at)` | Cron webhook renewal |
+| Index                                                     | Query it serves                                   |
+| --------------------------------------------------------- | ------------------------------------------------- |
+| `events (user_id, start_at, end_at)`                      | "everything in this window" — every calendar view |
+| `events (sync_status) where pending/failed/conflict`      | the outbound push queue                           |
+| `tasks (user_id) where open and flexible and unscheduled` | the Find Time queue                               |
+| `calendar_sync_states (webhook_expires_at)`               | Cron webhook renewal                              |
 
 ## Automatic provisioning
 

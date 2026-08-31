@@ -150,8 +150,12 @@ function connectionSummary(connections: ProviderAccount[]): string {
 
   const attention = connections.filter((account) => account.status !== 'active').length;
   if (attention > 0) {
-    return attention === 1 ? '1 account needs reconnecting' : `${attention} accounts need reconnecting`;
+    return attention === 1
+      ? '1 account needs reconnecting'
+      : `${attention} accounts need reconnecting`;
   }
 
-  return connections.length === 1 ? '1 account connected' : `${connections.length} accounts connected`;
+  return connections.length === 1
+    ? '1 account connected'
+    : `${connections.length} accounts connected`;
 }

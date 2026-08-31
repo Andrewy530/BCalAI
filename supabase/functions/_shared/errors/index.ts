@@ -48,10 +48,7 @@ export function withErrorHandling(
       }
 
       console.error(JSON.stringify({ code: 'UNKNOWN', detail: String(error) }));
-      return jsonResponse(
-        { error: { code: 'UNKNOWN', message: 'Something went wrong.' } },
-        500,
-      );
+      return jsonResponse({ error: { code: 'UNKNOWN', message: 'Something went wrong.' } }, 500);
     }
   };
 }

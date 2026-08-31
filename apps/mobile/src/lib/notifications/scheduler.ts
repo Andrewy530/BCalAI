@@ -1,7 +1,6 @@
+import type { PlannedReminder } from '@cal/domain';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
-
-import type { PlannedReminder } from '@cal/domain';
 
 import { logError } from '../logger';
 
@@ -148,6 +147,10 @@ export async function cancelAllReminders(): Promise<void> {
 export async function registerReminderActions(): Promise<void> {
   await Notifications.setNotificationCategoryAsync(TASK_REMINDER_CATEGORY, [
     { identifier: 'complete', buttonTitle: 'Mark done', options: { opensAppToForeground: false } },
-    { identifier: 'snooze', buttonTitle: 'Snooze 1 hour', options: { opensAppToForeground: false } },
+    {
+      identifier: 'snooze',
+      buttonTitle: 'Snooze 1 hour',
+      options: { opensAppToForeground: false },
+    },
   ]);
 }

@@ -1,6 +1,3 @@
-import { useEffect, useState } from 'react';
-import { Alert, ScrollView, Switch, View } from 'react-native';
-
 import { formatDueDate, formatTimeOfDay, getZonedParts, zonedWallClockToUtc } from '@cal/domain';
 import {
   BottomSheet,
@@ -12,12 +9,13 @@ import {
   TimePickerField,
   useTheme,
 } from '@cal/ui';
+import { useEffect, useState } from 'react';
+import { Alert, ScrollView, Switch, View } from 'react-native';
 
+import { RecurrenceField } from './RecurrenceField';
 import { useProfile, useUserTimeZone } from '../../settings/hooks/useProfile';
 import { useCalendars, useDefaultCalendarId } from '../hooks/useCalendars';
 import { useCreateEvent, useDeleteEvent, useEvent, useUpdateEvent } from '../hooks/useEvents';
-
-import { RecurrenceField } from './RecurrenceField';
 
 /** Alert offsets offered in the editor, in minutes before the start. */
 const ALERT_PRESETS = [
@@ -57,12 +55,7 @@ function defaultStart(seed: Date | null): Date {
   return rounded;
 }
 
-export function EventEditorSheet({
-  visible,
-  onClose,
-  eventId,
-  seedStart,
-}: EventEditorSheetProps) {
+export function EventEditorSheet({ visible, onClose, eventId, seedStart }: EventEditorSheetProps) {
   const theme = useTheme();
   const timeZone = useUserTimeZone();
   const { data: profile } = useProfile();
@@ -151,7 +144,8 @@ export function EventEditorSheet({
     const title = form.title.trim();
     if (!title) return setError('Give the event a title');
     if (!form.calendarId) return setError('Pick a calendar first');
-    if (form.end.getTime() < form.start.getTime()) return setError('The event ends before it starts');
+    if (form.end.getTime() < form.start.getTime())
+      return setError('The event ends before it starts');
 
     const payload = {
       calendarId: form.calendarId,

@@ -1,18 +1,12 @@
+import { PRIORITY_LABELS, describeTaskDue, formatDuration, isNotablePriority } from '@cal/domain';
+import type { HourCycle, Task, TaskPriority } from '@cal/schemas';
+import { Checkbox, Text, strikeThroughStyle, useTheme } from '@cal/ui';
 import { Ionicons } from '@expo/vector-icons';
 import { useRef } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import ReanimatedSwipeable, {
   type SwipeableMethods,
 } from 'react-native-gesture-handler/ReanimatedSwipeable';
-
-import {
-  PRIORITY_LABELS,
-  describeTaskDue,
-  formatDuration,
-  isNotablePriority,
-} from '@cal/domain';
-import type { HourCycle, Task, TaskPriority } from '@cal/schemas';
-import { Checkbox, Text, strikeThroughStyle, useTheme } from '@cal/ui';
 
 export interface TaskRowProps {
   task: Task;

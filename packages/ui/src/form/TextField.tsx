@@ -1,11 +1,5 @@
 import { forwardRef, useState, type ReactNode } from 'react';
-import {
-  StyleSheet,
-  TextInput,
-  type TextInputProps,
-  View,
-  type ViewStyle,
-} from 'react-native';
+import { StyleSheet, TextInput, type TextInputProps, View, type ViewStyle } from 'react-native';
 
 import { Text } from '../text/Text';
 import { useTheme } from '../theme/ThemeProvider';

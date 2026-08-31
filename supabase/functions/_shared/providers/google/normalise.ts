@@ -157,9 +157,7 @@ function ensureRRulePrefix(rule: string): string {
  * Popup reminders become our `alerts`. Email and SMS reminders are Google's to
  * deliver, not ours to duplicate, so they are ignored.
  */
-function normaliseReminders(
-  reminders: GoogleEvent['reminders'],
-): number[] {
+function normaliseReminders(reminders: GoogleEvent['reminders']): number[] {
   const overrides = reminders?.overrides ?? [];
   const minutes = overrides
     .filter((entry) => entry.method === 'popup' && typeof entry.minutes === 'number')

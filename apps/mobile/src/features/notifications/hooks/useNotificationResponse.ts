@@ -19,8 +19,7 @@ export function useNotificationResponse(): void {
     const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
       try {
         const payload = response.notification.request.content.data as
-          | Partial<ReminderPayload>
-          | undefined;
+          Partial<ReminderPayload> | undefined;
 
         if (payload?.kind !== 'task' || typeof payload.taskId !== 'string') return;
         const taskId = payload.taskId;

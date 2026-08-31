@@ -68,14 +68,14 @@ describe('planEventAlerts', () => {
   });
 
   it('stops at the horizon', () => {
-    const near = planEventAlerts(
-      [event({ id: 'a', alerts: [10], recurrenceRule: 'FREQ=DAILY' })],
-      { now: NOW, horizonDays: 5 },
-    );
-    const far = planEventAlerts(
-      [event({ id: 'a', alerts: [10], recurrenceRule: 'FREQ=DAILY' })],
-      { now: NOW, horizonDays: 30 },
-    );
+    const near = planEventAlerts([event({ id: 'a', alerts: [10], recurrenceRule: 'FREQ=DAILY' })], {
+      now: NOW,
+      horizonDays: 5,
+    });
+    const far = planEventAlerts([event({ id: 'a', alerts: [10], recurrenceRule: 'FREQ=DAILY' })], {
+      now: NOW,
+      horizonDays: 30,
+    });
 
     expect(near.length).toBeLessThan(far.length);
     expect(near).toHaveLength(5);
@@ -84,7 +84,12 @@ describe('planEventAlerts', () => {
   it('returns reminders soonest first', () => {
     const planned = planEventAlerts(
       [
-        event({ id: 'later', alerts: [10], startAt: '2026-09-05T18:00:00Z', endAt: '2026-09-05T19:00:00Z' }),
+        event({
+          id: 'later',
+          alerts: [10],
+          startAt: '2026-09-05T18:00:00Z',
+          endAt: '2026-09-05T19:00:00Z',
+        }),
         event({ id: 'sooner', alerts: [10] }),
       ],
       { now: NOW },

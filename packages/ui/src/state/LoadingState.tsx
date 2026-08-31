@@ -39,12 +39,25 @@ export function LoadingState({ label, fullScreen = false, style }: LoadingStateP
 }
 
 /** Neutral placeholder block, sized by the caller, for skeleton layouts. */
-export function Skeleton({ height = 16, width = '100%', style }: { height?: number; width?: number | `${number}%`; style?: ViewStyle }) {
+export function Skeleton({
+  height = 16,
+  width = '100%',
+  style,
+}: {
+  height?: number;
+  width?: number | `${number}%`;
+  style?: ViewStyle;
+}) {
   const theme = useTheme();
   return (
     <View
       style={[
-        { height, width, borderRadius: theme.radius.sm, backgroundColor: theme.colors.surfaceElevated },
+        {
+          height,
+          width,
+          borderRadius: theme.radius.sm,
+          backgroundColor: theme.colors.surfaceElevated,
+        },
         style,
       ]}
     />

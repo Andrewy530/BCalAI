@@ -1,8 +1,7 @@
-import { Icon, Label, NativeTabs } from 'expo-router/unstable-native-tabs';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { StyleSheet, View } from 'react-native';
-
 import { useTheme } from '@cal/ui';
+import { Icon, Label, NativeTabs } from 'expo-router/unstable-native-tabs';
+import { StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { QuickAddButton } from '../../src/components/app-shell/QuickAddButton';
 

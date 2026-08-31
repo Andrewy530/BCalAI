@@ -118,11 +118,7 @@ async function runJob(
       if (error) throw new EdgeError('UNKNOWN', 'Could not list calendars.', 500);
 
       for (const row of calendars ?? []) {
-        const state = await loadSyncState(
-          admin,
-          account.id,
-          row.provider_calendar_id as string,
-        );
+        const state = await loadSyncState(admin, account.id, row.provider_calendar_id as string);
         if (!state?.calendar_id) continue;
 
         try {

@@ -111,7 +111,9 @@ export function BottomSheet({
             </View>
 
             {title ? (
-              <View style={{ paddingHorizontal: theme.screenPadding, paddingBottom: theme.spacing.md }}>
+              <View
+                style={{ paddingHorizontal: theme.screenPadding, paddingBottom: theme.spacing.md }}
+              >
                 <Text variant="title2">{title}</Text>
               </View>
             ) : null}

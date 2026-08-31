@@ -1,7 +1,6 @@
+import { DEFAULT_REMINDER_PREFERENCES, type ReminderPreferences } from '@cal/domain';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useState } from 'react';
-
-import { DEFAULT_REMINDER_PREFERENCES, type ReminderPreferences } from '@cal/domain';
 
 import { logError } from '../logger';
 
@@ -14,9 +13,7 @@ export const REMINDER_PREFERENCES_KEY = 'reminder-preferences.v1';
  * its own account-level setting.
  */
 export function useReminderPreferences() {
-  const [preferences, setPreferences] = useState<ReminderPreferences>(
-    DEFAULT_REMINDER_PREFERENCES,
-  );
+  const [preferences, setPreferences] = useState<ReminderPreferences>(DEFAULT_REMINDER_PREFERENCES);
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {

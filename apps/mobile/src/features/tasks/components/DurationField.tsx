@@ -1,7 +1,6 @@
-import { View } from 'react-native';
-
 import { DURATION_PRESETS, formatDuration } from '@cal/domain';
 import { Chip, Text, useTheme } from '@cal/ui';
+import { View } from 'react-native';
 
 export interface DurationFieldProps {
   value: number | null;

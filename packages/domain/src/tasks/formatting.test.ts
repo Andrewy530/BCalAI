@@ -1,11 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  calendarDaysBetween,
-  formatDueDate,
-  formatDuration,
-  formatTimeOfDay,
-} from './formatting';
+import { calendarDaysBetween, formatDueDate, formatDuration, formatTimeOfDay } from './formatting';
 
 const NY = 'America/New_York';
 const BERLIN = 'Europe/Berlin';
@@ -101,9 +96,9 @@ describe('formatDueDate', () => {
   });
 
   it('includes the year only when it differs from the current one', () => {
-    expect(
-      formatDueDate(new Date('2027-01-14T12:00:00Z'), { ...base, hasTime: false }).text,
-    ).toBe('14 Jan 2027');
+    expect(formatDueDate(new Date('2027-01-14T12:00:00Z'), { ...base, hasTime: false }).text).toBe(
+      '14 Jan 2027',
+    );
   });
 
   it('counts overdue days', () => {

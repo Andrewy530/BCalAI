@@ -1,9 +1,8 @@
-import { useEffect, useRef } from 'react';
-import { ScrollView, View } from 'react-native';
-
 import { layoutOverlappingEvents, MIN_VISUAL_MINUTES, minuteOfDay } from '@cal/domain';
 import type { HourCycle } from '@cal/schemas';
 import { Text, useTheme } from '@cal/ui';
+import { useEffect, useRef } from 'react';
+import { ScrollView, View } from 'react-native';
 
 import type { EventOccurrence } from '../../hooks/useCalendarWindow';
 import { EventChip } from '../EventChip';
@@ -55,8 +54,7 @@ export function DayTimeline({
     end: Math.max(occurrence.end, occurrence.start + MIN_VISUAL_MINUTES * 60_000),
   }));
 
-  const isToday =
-    now.getTime() >= dayStartMs && now.getTime() < dayEndMs;
+  const isToday = now.getTime() >= dayStartMs && now.getTime() < dayEndMs;
   const nowOffset = isToday ? (minuteOfDay(now, timeZone) / 60) * HOUR_HEIGHT : null;
 
   // Open on the working day rather than at midnight.
@@ -112,7 +110,13 @@ export function DayTimeline({
                 flexDirection: 'row',
               }}
             >
-              <View style={{ width: GUTTER_WIDTH, alignItems: 'flex-end', paddingRight: theme.spacing.sm }}>
+              <View
+                style={{
+                  width: GUTTER_WIDTH,
+                  alignItems: 'flex-end',
+                  paddingRight: theme.spacing.sm,
+                }}
+              >
                 <Text variant="caption" color="tertiary" style={{ marginTop: -7 }}>
                   {formatHour(hour)}
                 </Text>
@@ -124,9 +128,7 @@ export function DayTimeline({
                   borderTopColor: theme.colors.gridLine,
                 }}
                 onStartShouldSetResponder={() => !!onPressSlot}
-                onResponderRelease={() =>
-                  onPressSlot?.(new Date(dayStartMs + hour * 3_600_000))
-                }
+                onResponderRelease={() => onPressSlot?.(new Date(dayStartMs + hour * 3_600_000))}
               />
             </View>
           ))}

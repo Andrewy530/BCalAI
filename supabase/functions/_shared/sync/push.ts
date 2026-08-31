@@ -30,7 +30,16 @@ export const eventDraftSchema = z.object({
   allDay: z.boolean().default(false),
   timezone: z.string().min(1).max(64),
   recurrenceRule: z.string().nullish(),
-  alerts: z.array(z.number().int().min(0).max(60 * 24 * 28)).max(5).default([]),
+  alerts: z
+    .array(
+      z
+        .number()
+        .int()
+        .min(0)
+        .max(60 * 24 * 28),
+    )
+    .max(5)
+    .default([]),
 });
 
 export type EventDraft = z.infer<typeof eventDraftSchema>;

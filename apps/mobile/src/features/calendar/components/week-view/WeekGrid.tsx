@@ -1,8 +1,7 @@
-import { ScrollView, View } from 'react-native';
-
 import { layoutOverlappingEvents, MIN_VISUAL_MINUTES, toZonedDateKey } from '@cal/domain';
 import type { HourCycle } from '@cal/schemas';
 import { Text, useTheme } from '@cal/ui';
+import { ScrollView, View } from 'react-native';
 
 import type { EventOccurrence } from '../../hooks/useCalendarWindow';
 import { dateKeyToInstant } from '../../utils/window';
@@ -113,7 +112,11 @@ export function WeekGrid({
             {Array.from({ length: 24 }, (_, hour) => (
               <View
                 key={hour}
-                style={{ height: HOUR_HEIGHT, alignItems: 'flex-end', paddingRight: theme.spacing.xs }}
+                style={{
+                  height: HOUR_HEIGHT,
+                  alignItems: 'flex-end',
+                  paddingRight: theme.spacing.xs,
+                }}
               >
                 <Text variant="caption" color="tertiary" style={{ marginTop: -6 }}>
                   {formatHour(hour)}

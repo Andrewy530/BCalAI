@@ -51,7 +51,9 @@ async function sendWithRetry(request: GoogleRequest): Promise<Response> {
     } catch (cause) {
       // A transport failure is worth one more try; it is usually a cold socket.
       lastError = new EdgeError('NETWORK_UNAVAILABLE', 'Could not reach Google.', 503);
-      console.error(JSON.stringify({ code: 'NETWORK_UNAVAILABLE', attempt, detail: String(cause) }));
+      console.error(
+        JSON.stringify({ code: 'NETWORK_UNAVAILABLE', attempt, detail: String(cause) }),
+      );
       if (attempt === MAX_ATTEMPTS) throw lastError;
       await backoff(attempt, null);
       continue;

@@ -87,7 +87,10 @@ describe('planReminderForTask', () => {
     ).toBeNull();
     // Due later today, but the 09:00 morning slot has already passed.
     expect(
-      planReminderForTask(task({ id: 'e', dueAt: '2026-08-31T23:00:00Z', hasDueTime: false }), base),
+      planReminderForTask(
+        task({ id: 'e', dueAt: '2026-08-31T23:00:00Z', hasDueTime: false }),
+        base,
+      ),
     ).toBeNull();
   });
 
@@ -105,7 +108,10 @@ describe('planReminderForTask', () => {
       ),
     ).toBeNull();
     expect(
-      planReminderForTask(task({ id: 'h', dueAt: '2026-09-03T12:00:00Z', status: 'archived' }), base),
+      planReminderForTask(
+        task({ id: 'h', dueAt: '2026-09-03T12:00:00Z', status: 'archived' }),
+        base,
+      ),
     ).toBeNull();
   });
 

@@ -1,7 +1,6 @@
+import { type SignInInput, type SignUpInput, signInSchema, signUpSchema } from '@cal/schemas';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Crypto from 'expo-crypto';
-
-import { type SignInInput, type SignUpInput, signInSchema, signUpSchema } from '@cal/schemas';
 
 import { toAppError } from '../../../lib/errors/app-error';
 import { supabase } from '../../../lib/supabase/client';
@@ -33,10 +32,7 @@ export async function signInWithApple(): Promise<void> {
   // A nonce binds Apple's token to this request. Apple hashes it with SHA-256,
   // so we send the raw value to Supabase and the digest to Apple.
   const rawNonce = Crypto.randomUUID();
-  const hashedNonce = await Crypto.digestStringAsync(
-    Crypto.CryptoDigestAlgorithm.SHA256,
-    rawNonce,
-  );
+  const hashedNonce = await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, rawNonce);
 
   const credential = await AppleAuthentication.signInAsync({
     requestedScopes: [

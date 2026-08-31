@@ -1,4 +1,15 @@
-import { Badge, Button, Card, Divider, EmptyState, ErrorState, ListRow, LoadingState, Text, useTheme } from '@cal/ui';
+import {
+  Badge,
+  Button,
+  Card,
+  Divider,
+  EmptyState,
+  ErrorState,
+  ListRow,
+  LoadingState,
+  Text,
+  useTheme,
+} from '@cal/ui';
 import * as Haptics from 'expo-haptics';
 import { useState } from 'react';
 import { Alert, View } from 'react-native';
@@ -54,8 +65,7 @@ export function IntegrationsScreen() {
     setBusyAccountId(accountId);
     disconnect.mutate(accountId, {
       onSettled: () => setBusyAccountId(null),
-      onError: () =>
-        Alert.alert('Could not disconnect', 'Check your connection and try again.'),
+      onError: () => Alert.alert('Could not disconnect', 'Check your connection and try again.'),
     });
   };
 
@@ -85,8 +95,8 @@ export function IntegrationsScreen() {
       <View style={{ gap: theme.spacing.sm }}>
         <Text variant="display">Connections</Text>
         <Text variant="footnote" color="secondary">
-          Connected calendars sync both ways. Events you create on them are written to the
-          provider first.
+          Connected calendars sync both ways. Events you create on them are written to the provider
+          first.
         </Text>
       </View>
 

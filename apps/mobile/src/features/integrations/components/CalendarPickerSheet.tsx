@@ -1,4 +1,13 @@
-import { Badge, BottomSheet, Divider, ErrorState, ListRow, LoadingState, Text, useTheme } from '@cal/ui';
+import {
+  Badge,
+  BottomSheet,
+  Divider,
+  ErrorState,
+  ListRow,
+  LoadingState,
+  Text,
+  useTheme,
+} from '@cal/ui';
 import * as Haptics from 'expo-haptics';
 import { useState } from 'react';
 import { ActivityIndicator, ScrollView, Switch, View } from 'react-native';
@@ -65,13 +74,17 @@ export function CalendarPickerSheet({
               {index > 0 ? <Divider inset /> : null}
               <ListRow
                 title={calendar.name}
-                subtitle={calendar.isPrimary ? 'Primary calendar' : (calendar.timezone ?? undefined)}
+                subtitle={
+                  calendar.isPrimary ? 'Primary calendar' : (calendar.timezone ?? undefined)
+                }
                 accentColor={calendar.color ?? undefined}
                 trailing={
                   pending === calendar.providerCalendarId ? (
                     <ActivityIndicator />
                   ) : (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
+                    <View
+                      style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}
+                    >
                       {calendar.isReadOnly ? <Badge label="Read-only" /> : null}
                       <Switch
                         value={calendar.isImported}

@@ -1,6 +1,5 @@
-import { View } from 'react-native';
-
 import { BottomSheet, Button, Chip, Text, useTheme } from '@cal/ui';
+import { View } from 'react-native';
 
 import { QuickAddTaskForm } from '../../features/tasks/components/QuickAddTaskForm';
 import { useEventEditorStore } from '../../store/event-editor.store';

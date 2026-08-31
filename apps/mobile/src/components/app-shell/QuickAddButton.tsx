@@ -1,8 +1,7 @@
+import { useTheme } from '@cal/ui';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Pressable, StyleSheet } from 'react-native';
-
-import { useTheme } from '@cal/ui';
 
 import { useQuickAddStore } from '../../store/quick-add.store';
 

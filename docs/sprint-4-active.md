@@ -47,7 +47,7 @@ above the adapter.
 
 - `packages/types/src/database.types.ts` was regenerated during the Mac
   continuation; keep it in sync with future schema changes.
-- Recurring-event *exceptions* are imported as individual provider events, but
+- Recurring-event _exceptions_ are imported as individual provider events, but
   Google's `EXDATE`/`RDATE` lines are dropped when the master's RRULE is stored.
   A deleted single occurrence therefore relies on its own tombstone arriving.
   Worth a targeted test once the stack runs.
@@ -128,17 +128,17 @@ above the adapter.
 
 ### Edge Functions
 
-| Function | JWT | Purpose |
-| --- | --- | --- |
-| `oauth-google-start` | yes | Mint PKCE + state, return the consent URL |
-| `oauth-google-callback` | **no** | Exchange the code, store the token, 302 into the app |
-| `integrations-calendars` | yes | List an account's calendars and what is imported |
-| `integrations-import` | yes | Import/drop one calendar; first sync runs after the response |
-| `integrations-disconnect` | yes | Stop channels, revoke, delete |
-| `provider-event-write` | yes | Provider-first create/update/delete |
-| `sync-run` | yes | "Sync now" — enqueue and drain in one request |
-| `webhook-google` | **no** | Verify channel token, enqueue, acknowledge fast |
-| `sync-cron` | **no** | `?task=renew-watches\|retry-failed\|reconcile\|prune` |
+| Function                  | JWT    | Purpose                                                      |
+| ------------------------- | ------ | ------------------------------------------------------------ |
+| `oauth-google-start`      | yes    | Mint PKCE + state, return the consent URL                    |
+| `oauth-google-callback`   | **no** | Exchange the code, store the token, 302 into the app         |
+| `integrations-calendars`  | yes    | List an account's calendars and what is imported             |
+| `integrations-import`     | yes    | Import/drop one calendar; first sync runs after the response |
+| `integrations-disconnect` | yes    | Stop channels, revoke, delete                                |
+| `provider-event-write`    | yes    | Provider-first create/update/delete                          |
+| `sync-run`                | yes    | "Sync now" — enqueue and drain in one request                |
+| `webhook-google`          | **no** | Verify channel token, enqueue, acknowledge fast              |
+| `sync-cron`               | **no** | `?task=renew-watches\|retry-failed\|reconcile\|prune`        |
 
 ### Mobile
 

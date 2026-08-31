@@ -40,12 +40,12 @@ runs before any context exists.
 
 Google and Microsoft differ in vocabulary but not in shape:
 
-| | Google | Microsoft |
-| --- | --- | --- |
-| Cursor | `nextSyncToken` | delta link / state token |
-| Invalidation | HTTP 410 → full resync | expired token → full resync |
-| Change signal | push notification channel | change notification subscription |
-| Renewal | recreate the channel before expiry | renew subscription, handle lifecycle events |
+|               | Google                             | Microsoft                                   |
+| ------------- | ---------------------------------- | ------------------------------------------- |
+| Cursor        | `nextSyncToken`                    | delta link / state token                    |
+| Invalidation  | HTTP 410 → full resync             | expired token → full resync                 |
+| Change signal | push notification channel          | change notification subscription            |
+| Renewal       | recreate the channel before expiry | renew subscription, handle lifecycle events |
 
 Both cursors are stored in `calendar_sync_states.sync_cursor`.
 
@@ -89,7 +89,7 @@ local row rather than triggering a second write outward. The unique index on
 replayed delivery is harmless.
 
 This is structural rather than heuristic: `_shared/sync/upsert.ts` has no path
-that writes outward at all, so an inbound event *cannot* start a write loop
+that writes outward at all, so an inbound event _cannot_ start a write loop
 regardless of what it contains.
 
 The one case that needs care is the opposite direction — an inbound snapshot
@@ -114,11 +114,11 @@ notification handling. So the system also needs:
 
 Two endpoints run without a user JWT, and each authenticates itself:
 
-| Endpoint | Caller | Proof |
-| --- | --- | --- |
-| `oauth-google-callback` | the user's browser | single-use `state` row in `oauth_states`, deleted before the code is exchanged |
-| `webhook-google` | Google | `X-Goog-Channel-Token`, generated when the channel was created and compared against `calendar_sync_states.webhook_token` |
-| `sync-cron` | `pg_cron` | `X-Sync-Cron-Secret`, and the function refuses to run at all if the secret is unset |
+| Endpoint                | Caller             | Proof                                                                                                                    |
+| ----------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------ |
+| `oauth-google-callback` | the user's browser | single-use `state` row in `oauth_states`, deleted before the code is exchanged                                           |
+| `webhook-google`        | Google             | `X-Goog-Channel-Token`, generated when the channel was created and compared against `calendar_sync_states.webhook_token` |
+| `sync-cron`             | `pg_cron`          | `X-Sync-Cron-Secret`, and the function refuses to run at all if the secret is unset                                      |
 
 The webhook never returns a non-2xx. A failure there is logged and acknowledged,
 because teaching Google to back off the channel costs more than the one
@@ -126,9 +126,9 @@ notification the daily reconciliation would have caught anyway.
 
 ## Cron jobs
 
-| Job | Cadence | Purpose |
-| --- | --- | --- |
-| Renew webhooks | hourly | Recreate Google channels / renew Graph subscriptions before expiry |
-| Retry failed syncs | every 15 min | Drain `sync_jobs` where status = failed |
-| Reconcile | daily | Full compare per connected calendar, in case a notification was missed |
-| Refresh stale accounts | hourly | Re-auth prompts for `status = 'expired'` |
+| Job                    | Cadence      | Purpose                                                                |
+| ---------------------- | ------------ | ---------------------------------------------------------------------- |
+| Renew webhooks         | hourly       | Recreate Google channels / renew Graph subscriptions before expiry     |
+| Retry failed syncs     | every 15 min | Drain `sync_jobs` where status = failed                                |
+| Reconcile              | daily        | Full compare per connected calendar, in case a notification was missed |
+| Refresh stale accounts | hourly       | Re-auth prompts for `status = 'expired'`                               |

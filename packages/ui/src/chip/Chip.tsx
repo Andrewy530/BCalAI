@@ -16,7 +16,15 @@ export interface ChipProps {
   style?: ViewStyle;
 }
 
-export function Chip({ label, selected = false, color, icon, onPress, onRemove, style }: ChipProps) {
+export function Chip({
+  label,
+  selected = false,
+  color,
+  icon,
+  onPress,
+  onRemove,
+  style,
+}: ChipProps) {
   const theme = useTheme();
   const tint = color ?? theme.colors.accent;
 
@@ -34,12 +42,19 @@ export function Chip({ label, selected = false, color, icon, onPress, onRemove, 
 
   const content = (
     <>
-      {icon ? <Ionicons name={icon} size={14} color={selected ? tint : theme.colors.textSecondary} /> : null}
+      {icon ? (
+        <Ionicons name={icon} size={14} color={selected ? tint : theme.colors.textSecondary} />
+      ) : null}
       <Text variant="subhead" style={{ color: selected ? tint : theme.colors.textSecondary }}>
         {label}
       </Text>
       {onRemove ? (
-        <Pressable accessibilityRole="button" accessibilityLabel={`Remove ${label}`} onPress={onRemove} hitSlop={8}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`Remove ${label}`}
+          onPress={onRemove}
+          hitSlop={8}
+        >
           <Ionicons name="close" size={14} color={theme.colors.textTertiary} />
         </Pressable>
       ) : null}

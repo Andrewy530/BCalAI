@@ -1,7 +1,6 @@
+import type { CreateTaskInput, UpdateTaskInput } from '@cal/schemas';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
-
-import type { CreateTaskInput, UpdateTaskInput } from '@cal/schemas';
 
 import { queryKeys } from '../../../lib/query/query-client';
 import { useAuth, useRequiredUserId } from '../../auth';

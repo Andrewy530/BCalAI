@@ -1,7 +1,6 @@
-import { View } from 'react-native';
-
 import type { TaskList } from '@cal/schemas';
 import { Chip, Text, useTheme } from '@cal/ui';
+import { View } from 'react-native';
 
 export interface ListPickerProps {
   lists: readonly TaskList[];

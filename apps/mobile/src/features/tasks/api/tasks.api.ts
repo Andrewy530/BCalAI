@@ -10,6 +10,7 @@ import {
   taskSchema,
   updateTaskSchema,
 } from '@cal/schemas';
+import type { TablesUpdate } from '@cal/types';
 import { z } from 'zod';
 
 import { toAppError } from '../../../lib/errors/app-error';
@@ -227,23 +228,18 @@ export async function updateTask(input: UpdateTaskInput): Promise<TaskWithTags> 
   const parsed = updateTaskSchema.parse(input);
   const { id, tagIds, ...patch } = parsed;
 
-  const columns: Record<string, string> = {
-    listId: 'list_id',
-    title: 'title',
-    description: 'description',
-    priority: 'priority',
-    dueAt: 'due_at',
-    hasDueTime: 'has_due_time',
-    estimatedMinutes: 'estimated_minutes',
-    isFlexible: 'is_flexible',
-    recurrenceRule: 'recurrence_rule',
-  };
-
-  const payload: Record<string, unknown> = {};
-  for (const [key, column] of Object.entries(columns)) {
-    const value = patch[key as keyof typeof patch];
-    if (value !== undefined) payload[column] = value;
+  const payload: TablesUpdate<'tasks'> = {};
+  if (patch.listId !== undefined) payload.list_id = patch.listId;
+  if (patch.title !== undefined) payload.title = patch.title;
+  if (patch.description !== undefined) payload.description = patch.description;
+  if (patch.priority !== undefined) payload.priority = patch.priority;
+  if (patch.dueAt !== undefined) payload.due_at = patch.dueAt;
+  if (patch.hasDueTime !== undefined) payload.has_due_time = patch.hasDueTime;
+  if (patch.estimatedMinutes !== undefined) {
+    payload.estimated_minutes = patch.estimatedMinutes;
   }
+  if (patch.isFlexible !== undefined) payload.is_flexible = patch.isFlexible;
+  if (patch.recurrenceRule !== undefined) payload.recurrence_rule = patch.recurrenceRule;
 
   // Clearing the due date must clear the time flag too, or the row violates
   // tasks_due_time_requires_due_at.

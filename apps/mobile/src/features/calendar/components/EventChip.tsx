@@ -1,8 +1,7 @@
-import { Pressable, View } from 'react-native';
-
 import { formatTimeOfDay } from '@cal/domain';
 import type { HourCycle } from '@cal/schemas';
 import { Text, useTheme } from '@cal/ui';
+import { Pressable, View } from 'react-native';
 
 import type { EventOccurrence } from '../hooks/useCalendarWindow';
 

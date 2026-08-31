@@ -40,7 +40,11 @@ export const syncStatusSchema = z.enum(['synced', 'pending', 'failed', 'conflict
  * empty array for "no alert". Matches how both Google and Graph express popup
  * reminders, which keeps provider normalisation lossless.
  */
-export const eventAlertSchema = z.number().int().min(0).max(60 * 24 * 28);
+export const eventAlertSchema = z
+  .number()
+  .int()
+  .min(0)
+  .max(60 * 24 * 28);
 
 export const eventSchema = z.object({
   id: uuidSchema,

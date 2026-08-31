@@ -31,16 +31,46 @@ const monoFont = Platform.select({
 });
 
 export const typography: Record<TextVariant, TextStyle> = {
-  display: { fontFamily: systemFont, fontSize: 34, lineHeight: 40, fontWeight: '700', letterSpacing: -0.6 },
-  title1: { fontFamily: systemFont, fontSize: 28, lineHeight: 34, fontWeight: '700', letterSpacing: -0.4 },
-  title2: { fontFamily: systemFont, fontSize: 22, lineHeight: 28, fontWeight: '700', letterSpacing: -0.3 },
-  title3: { fontFamily: systemFont, fontSize: 18, lineHeight: 24, fontWeight: '600', letterSpacing: -0.2 },
+  display: {
+    fontFamily: systemFont,
+    fontSize: 34,
+    lineHeight: 40,
+    fontWeight: '700',
+    letterSpacing: -0.6,
+  },
+  title1: {
+    fontFamily: systemFont,
+    fontSize: 28,
+    lineHeight: 34,
+    fontWeight: '700',
+    letterSpacing: -0.4,
+  },
+  title2: {
+    fontFamily: systemFont,
+    fontSize: 22,
+    lineHeight: 28,
+    fontWeight: '700',
+    letterSpacing: -0.3,
+  },
+  title3: {
+    fontFamily: systemFont,
+    fontSize: 18,
+    lineHeight: 24,
+    fontWeight: '600',
+    letterSpacing: -0.2,
+  },
   headline: { fontFamily: systemFont, fontSize: 16, lineHeight: 22, fontWeight: '600' },
   body: { fontFamily: systemFont, fontSize: 16, lineHeight: 22, fontWeight: '400' },
   bodyStrong: { fontFamily: systemFont, fontSize: 16, lineHeight: 22, fontWeight: '600' },
   callout: { fontFamily: systemFont, fontSize: 15, lineHeight: 20, fontWeight: '400' },
   subhead: { fontFamily: systemFont, fontSize: 14, lineHeight: 19, fontWeight: '500' },
   footnote: { fontFamily: systemFont, fontSize: 13, lineHeight: 18, fontWeight: '400' },
-  caption: { fontFamily: systemFont, fontSize: 11, lineHeight: 14, fontWeight: '600', letterSpacing: 0.4 },
+  caption: {
+    fontFamily: systemFont,
+    fontSize: 11,
+    lineHeight: 14,
+    fontWeight: '600',
+    letterSpacing: 0.4,
+  },
   mono: { fontFamily: monoFont, fontSize: 13, lineHeight: 18, fontWeight: '400' },
 };

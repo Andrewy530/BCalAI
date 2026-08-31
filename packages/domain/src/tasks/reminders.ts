@@ -78,9 +78,7 @@ export function planReminderForTask(
       fireAt,
       title: task.title,
       body:
-        preferences.minutesBefore === 0
-          ? 'Due now'
-          : `Due in ${preferences.minutesBefore} minutes`,
+        preferences.minutesBefore === 0 ? 'Due now' : `Due in ${preferences.minutesBefore} minutes`,
     };
   }
 

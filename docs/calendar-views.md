@@ -46,12 +46,12 @@ column runs its own layout pass, so a busy Tuesday cannot squeeze Wednesday.
 
 ## What each view is for
 
-| View | Question it answers | Detail shown |
-| --- | --- | --- |
-| Day | What does today look like hour by hour? | Full timeline, now indicator |
-| Week | Where is my free time this week? | Seven columns, compact chips |
-| Month | How busy am I? | Coloured dots per calendar, not titles |
-| Agenda | What is coming up? | Chronological list, empty days skipped |
+| View   | Question it answers                     | Detail shown                           |
+| ------ | --------------------------------------- | -------------------------------------- |
+| Day    | What does today look like hour by hour? | Full timeline, now indicator           |
+| Week   | Where is my free time this week?        | Seven columns, compact chips           |
+| Month  | How busy am I?                          | Coloured dots per calendar, not titles |
+| Agenda | What is coming up?                      | Chronological list, empty days skipped |
 
 Month deliberately shows dots rather than titles. At that density a title is
 unreadable, and pretending otherwise costs the whole grid its legibility.

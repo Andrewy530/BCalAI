@@ -1,6 +1,3 @@
-import { useEffect, useState } from 'react';
-import { Alert, ScrollView, View } from 'react-native';
-
 import type { CreateTaskInput, TaskPriority } from '@cal/schemas';
 import {
   BottomSheet,
@@ -10,13 +7,20 @@ import {
   useTheme,
   type SegmentedOption,
 } from '@cal/ui';
-
-import { useProfile, useUserTimeZone } from '../../settings/hooks/useProfile';
-import { useCreateTask, useDeleteTask, useTask, useTaskLists, useUpdateTask } from '../hooks/useTasks';
+import { useEffect, useState } from 'react';
+import { Alert, ScrollView, View } from 'react-native';
 
 import { DueDateField, type DueDateValue } from './DueDateField';
 import { DurationField } from './DurationField';
 import { ListPicker } from './ListPicker';
+import { useProfile, useUserTimeZone } from '../../settings/hooks/useProfile';
+import {
+  useCreateTask,
+  useDeleteTask,
+  useTask,
+  useTaskLists,
+  useUpdateTask,
+} from '../hooks/useTasks';
 
 const PRIORITY_OPTIONS: readonly SegmentedOption<TaskPriority>[] = [
   { value: 'low', label: 'Low' },

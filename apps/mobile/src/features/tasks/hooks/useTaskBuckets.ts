@@ -1,11 +1,9 @@
-import { useMemo } from 'react';
-
 import { bucketTasks, type TaskBuckets } from '@cal/domain';
 import type { Task } from '@cal/schemas';
-
-import { useProfile, useUserTimeZone } from '../../settings/hooks/useProfile';
+import { useMemo } from 'react';
 
 import { useTaskLists, useTasks } from './useTasks';
+import { useProfile, useUserTimeZone } from '../../settings/hooks/useProfile';
 
 /**
  * `bucketTasks` splits work by urgency; the inbox additionally wants future

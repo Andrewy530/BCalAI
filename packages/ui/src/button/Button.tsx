@@ -7,11 +7,7 @@ import {
   View,
   type ViewStyle,
 } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-} from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
 import { Text } from '../text/Text';
 import { useTheme } from '../theme/ThemeProvider';

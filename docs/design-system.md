@@ -19,18 +19,18 @@ flexible organisation. We take the principles, not the pixels.
 
 ## Tokens
 
-All tokens live in `packages/ui/src/theme/`. Components reference *roles*
+All tokens live in `packages/ui/src/theme/`. Components reference _roles_
 (`surface`, `textSecondary`, `accent`), never raw hex. That is what makes a real
 dark mode possible.
 
-| Group | File | Notes |
-| --- | --- | --- |
-| Colour | `colors.ts` | `ColorTokens` implemented by `darkColors` / `lightColors` |
-| Spacing | `tokens.ts` | 4pt scale, `xs` (4) … `huge` (48) |
-| Radius | `tokens.ts` | `sm` (8) … `xxl` (28), `pill` |
-| Elevation | `tokens.ts` | Soft shadows; depth comes mostly from surface colour |
-| Motion | `tokens.ts` | 80–320ms, standard easing, one spring |
-| Type | `typography.ts` | 12 variants, `display` … `mono` |
+| Group     | File            | Notes                                                     |
+| --------- | --------------- | --------------------------------------------------------- |
+| Colour    | `colors.ts`     | `ColorTokens` implemented by `darkColors` / `lightColors` |
+| Spacing   | `tokens.ts`     | 4pt scale, `xs` (4) … `huge` (48)                         |
+| Radius    | `tokens.ts`     | `sm` (8) … `xxl` (28), `pill`                             |
+| Elevation | `tokens.ts`     | Soft shadows; depth comes mostly from surface colour      |
+| Motion    | `tokens.ts`     | 80–320ms, standard easing, one spring                     |
+| Type      | `typography.ts` | 12 variants, `display` … `mono`                           |
 
 Adding a variant or a colour role is a design decision. Reach for an existing
 token first.

@@ -1,8 +1,7 @@
-import { Fragment } from 'react';
-import { View } from 'react-native';
-
 import type { HourCycle, Task, TaskList } from '@cal/schemas';
 import { Card, Divider, SectionHeader, useTheme } from '@cal/ui';
+import { Fragment } from 'react';
+import { View } from 'react-native';
 
 import { TaskRow } from './TaskRow';
 

@@ -1,7 +1,6 @@
-import { View } from 'react-native';
-
 import { describeRRule, parseRRule, RECURRENCE_PRESETS } from '@cal/domain';
 import { Chip, Text, useTheme } from '@cal/ui';
+import { View } from 'react-native';
 
 export interface RecurrenceFieldProps {
   value: string | null;

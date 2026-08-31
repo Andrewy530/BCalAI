@@ -1,13 +1,6 @@
 import type { ScheduleConstraints, WorkingHours } from '@cal/schemas';
 
-import {
-  MINUTE_MS,
-  type Interval,
-  intersect,
-  normalize,
-  pad,
-  subtract,
-} from '../time/interval';
+import { MINUTE_MS, type Interval, intersect, normalize, pad, subtract } from '../time/interval';
 import {
   addZonedDays,
   getZonedParts,
@@ -162,7 +155,8 @@ export function findFreeIntervals(input: AvailabilityInput): Interval[] {
     constraints.latestMinute,
   );
 
-  const blocked = constraints.bufferMinutes > 0 ? pad(busy, constraints.bufferMinutes) : normalize(busy);
+  const blocked =
+    constraints.bufferMinutes > 0 ? pad(busy, constraints.bufferMinutes) : normalize(busy);
 
   return subtract(banded, blocked);
 }

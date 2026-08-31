@@ -1,7 +1,6 @@
-import { Pressable, View } from 'react-native';
-
 import { toZonedDateKey } from '@cal/domain';
 import { Text, useTheme } from '@cal/ui';
+import { Pressable, View } from 'react-native';
 
 import type { EventOccurrence } from '../../hooks/useCalendarWindow';
 

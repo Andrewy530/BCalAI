@@ -1,7 +1,6 @@
-import { AuthError, PostgrestError } from '@supabase/supabase-js';
-import { ZodError } from 'zod';
-
 import type { AppError, ErrorCode } from '@cal/types';
+import { AuthError, type PostgrestError } from '@supabase/supabase-js';
+import { ZodError } from 'zod';
 
 /**
  * Convert anything thrown anywhere into a stable `AppError`.

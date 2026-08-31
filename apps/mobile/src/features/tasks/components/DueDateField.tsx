@@ -1,6 +1,3 @@
-import { useMemo } from 'react';
-import { View } from 'react-native';
-
 import {
   addZonedDays,
   formatDueDate,
@@ -11,6 +8,8 @@ import {
 } from '@cal/domain';
 import type { HourCycle } from '@cal/schemas';
 import { Chip, DatePickerField, Text, TimePickerField, useTheme } from '@cal/ui';
+import { useMemo } from 'react';
+import { View } from 'react-native';
 
 export interface DueDateValue {
   dueAt: Date | null;
@@ -112,8 +111,7 @@ export function DueDateField({
             selected={!!value.dueAt && isSameDay(value.dueAt, preset.date)}
             onPress={() =>
               onChange({
-                dueAt:
-                  value.dueAt && isSameDay(value.dueAt, preset.date) ? null : preset.date,
+                dueAt: value.dueAt && isSameDay(value.dueAt, preset.date) ? null : preset.date,
                 hasTime: false,
               })
             }
@@ -126,9 +124,7 @@ export function DueDateField({
         onChange={handleDateChange}
         placeholder="No due date"
         clearable
-        format={(date) =>
-          formatDueDate(date, { now, timeZone, hourCycle, hasTime: false }).text
-        }
+        format={(date) => formatDueDate(date, { now, timeZone, hourCycle, hasTime: false }).text}
       />
 
       {value.dueAt ? (

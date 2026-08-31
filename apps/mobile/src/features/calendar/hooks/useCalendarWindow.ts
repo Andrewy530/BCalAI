@@ -1,7 +1,6 @@
-import { useMemo } from 'react';
-
 import { addZonedDays, expandOccurrences, startOfZonedDay, toZonedDateKey } from '@cal/domain';
 import type { Calendar, CalendarEvent } from '@cal/schemas';
+import { useMemo } from 'react';
 
 import { useCalendarViewStore } from '../../../store/calendar-view.store';
 import { useCalendars } from '../../events/hooks/useCalendars';

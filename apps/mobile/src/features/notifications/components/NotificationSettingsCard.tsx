@@ -1,8 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Linking, Switch, View } from 'react-native';
-
 import { formatDuration } from '@cal/domain';
 import { Button, Card, Chip, Divider, Text, useTheme } from '@cal/ui';
+import { useCallback, useEffect, useState } from 'react';
+import { Linking, Switch, View } from 'react-native';
 
 import { logError } from '../../../lib/logger';
 import {

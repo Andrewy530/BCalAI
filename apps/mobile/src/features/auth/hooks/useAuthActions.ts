@@ -1,8 +1,7 @@
+import type { SignInInput, SignUpInput } from '@cal/schemas';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
-
-import type { SignInInput, SignUpInput } from '@cal/schemas';
 
 import { logEvent } from '../../../lib/logger';
 import {

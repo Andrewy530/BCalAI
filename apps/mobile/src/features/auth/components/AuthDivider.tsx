@@ -1,6 +1,5 @@
-import { StyleSheet, View } from 'react-native';
-
 import { Text, useTheme } from '@cal/ui';
+import { StyleSheet, View } from 'react-native';
 
 export function AuthDivider({ label = 'or' }: { label?: string }) {
   const theme = useTheme();

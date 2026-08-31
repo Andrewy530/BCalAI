@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
+import { layoutOverlappingEvents, verticalPlacement } from './layout';
 import { type Interval } from '../time/interval';
 
-import { layoutOverlappingEvents, verticalPlacement } from './layout';
-
 const at = (hour: number, minute = 0): number => Date.UTC(2026, 7, 31, hour, minute);
-const ev = (id: string, from: number, to: number) => ({ id, interval: { start: at(from), end: at(to) } });
+const ev = (id: string, from: number, to: number) => ({
+  id,
+  interval: { start: at(from), end: at(to) },
+});
 const intervalOf = (e: { interval: Interval }): Interval => e.interval;
 
 describe('layoutOverlappingEvents', () => {

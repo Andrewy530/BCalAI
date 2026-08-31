@@ -51,10 +51,7 @@ export function Screen({
   };
 
   return (
-    <View
-      testID={testID}
-      style={[styles.root, { backgroundColor: theme.colors.background }]}
-    >
+    <View testID={testID} style={[styles.root, { backgroundColor: theme.colors.background }]}>
       <StatusBar barStyle={theme.scheme === 'dark' ? 'light-content' : 'dark-content'} />
 
       {scrollable ? (

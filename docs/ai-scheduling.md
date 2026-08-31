@@ -24,8 +24,8 @@ Create time block
 
 The engine guarantees: no overlap, correct time maths across DST, buffers
 honoured, working hours respected, deadline met. The model handles what code
-cannot: *"I focus better in the morning"*, *"not right after my class"*,
-*"gym before dinner"*.
+cannot: _"I focus better in the morning"_, _"not right after my class"_,
+_"gym before dinner"_.
 
 ## The engine
 
@@ -63,7 +63,9 @@ reschedule_time_block(event_id, slot_id)
 Output must satisfy `aiScheduleProposalSchema`:
 
 ```ts
-{ suggestions: [{ slotId, rank, score, reason }] }
+{
+  suggestions: [{ slotId, rank, score, reason }];
+}
 ```
 
 `slotId` must be one the engine generated in this request. A response referring

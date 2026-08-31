@@ -1,6 +1,5 @@
-import { Component, type ErrorInfo, type ReactNode } from 'react';
-
 import { Button, ErrorState, Screen } from '@cal/ui';
+import { Component, type ErrorInfo, type ReactNode } from 'react';
 
 import { logError } from '../logger';
 

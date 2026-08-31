@@ -10,6 +10,7 @@ import {
   eventSchema,
   updateEventSchema,
 } from '@cal/schemas';
+import type { TablesUpdate } from '@cal/types';
 import { z } from 'zod';
 
 import { toAppError } from '../../../lib/errors/app-error';
@@ -234,25 +235,18 @@ export async function updateEvent(input: UpdateEventInput): Promise<CalendarEven
   const parsed = updateEventSchema.parse(input);
   const { id, ...patch } = parsed;
 
-  const columns: Record<string, string> = {
-    calendarId: 'calendar_id',
-    title: 'title',
-    description: 'description',
-    location: 'location',
-    startAt: 'start_at',
-    endAt: 'end_at',
-    allDay: 'all_day',
-    timezone: 'timezone',
-    status: 'status',
-    recurrenceRule: 'recurrence_rule',
-    alerts: 'alerts',
-  };
-
-  const payload: Record<string, unknown> = {};
-  for (const [key, column] of Object.entries(columns)) {
-    const value = patch[key as keyof typeof patch];
-    if (value !== undefined) payload[column] = value;
-  }
+  const payload: TablesUpdate<'events'> = {};
+  if (patch.calendarId !== undefined) payload.calendar_id = patch.calendarId;
+  if (patch.title !== undefined) payload.title = patch.title;
+  if (patch.description !== undefined) payload.description = patch.description;
+  if (patch.location !== undefined) payload.location = patch.location;
+  if (patch.startAt !== undefined) payload.start_at = patch.startAt;
+  if (patch.endAt !== undefined) payload.end_at = patch.endAt;
+  if (patch.allDay !== undefined) payload.all_day = patch.allDay;
+  if (patch.timezone !== undefined) payload.timezone = patch.timezone;
+  if (patch.status !== undefined) payload.status = patch.status;
+  if (patch.recurrenceRule !== undefined) payload.recurrence_rule = patch.recurrenceRule;
+  if (patch.alerts !== undefined) payload.alerts = patch.alerts;
 
   const { data, error } = await supabase
     .from('events')

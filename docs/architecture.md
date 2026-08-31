@@ -32,12 +32,12 @@ module never imports a component.
 
 ## Where state lives
 
-| Kind | Home | Example |
-| --- | --- | --- |
-| Server state | TanStack Query | events, tasks, profile, entitlement |
-| UI-only state | Zustand | current view mode, selected date, open sheet |
-| Form state | React Hook Form | the event editor being filled in |
-| Session | Supabase Auth + `AuthProvider` | who is signed in |
+| Kind          | Home                           | Example                                      |
+| ------------- | ------------------------------ | -------------------------------------------- |
+| Server state  | TanStack Query                 | events, tasks, profile, entitlement          |
+| UI-only state | Zustand                        | current view mode, selected date, open sheet |
+| Form state    | React Hook Form                | the event editor being filled in             |
+| Session       | Supabase Auth + `AuthProvider` | who is signed in                             |
 
 Database rows are never mirrored into Zustand. If two components need the same
 row, they use the same query key.
@@ -45,7 +45,7 @@ row, they use the same query key.
 ## Package boundaries
 
 - `@cal/schemas` — Zod schemas. The single source of truth for every shape.
-  Domain types are *inferred* from these, so runtime validation and compile-time
+  Domain types are _inferred_ from these, so runtime validation and compile-time
   types cannot drift apart.
 - `@cal/domain` — pure functions: time-zone conversion, interval math, the
   availability engine, calendar layout, task bucketing. No React, no network,
@@ -56,11 +56,11 @@ row, they use the same query key.
 
 ## Decision A — source of truth
 
-| Data | Authority |
-| --- | --- |
-| Internal tasks | This database |
-| Internal events | This database |
-| Google events | Google; we hold a normalised copy |
+| Data             | Authority                            |
+| ---------------- | ------------------------------------ |
+| Internal tasks   | This database                        |
+| Internal events  | This database                        |
+| Google events    | Google; we hold a normalised copy    |
 | Microsoft events | Microsoft; we hold a normalised copy |
 
 `events.source_type` records which case a row is in. A row whose source is a

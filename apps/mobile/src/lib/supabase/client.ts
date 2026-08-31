@@ -1,9 +1,8 @@
+import type { Database } from '@cal/types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { AppState, Platform } from 'react-native';
 import 'react-native-url-polyfill/auto';
-
-import type { Database } from '@cal/types';
 
 import { env } from '../env';
 

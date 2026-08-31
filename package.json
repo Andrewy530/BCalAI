@@ -3,7 +3,9 @@
   "private": true,
   "version": "0.0.1",
   "packageManager": "pnpm@9.12.0",
-  "engines": { "node": ">=20.18.0" },
+  "engines": {
+    "node": ">=20.18.0"
+  },
   "scripts": {
     "mobile": "pnpm --filter @cal/mobile start",
     "ios": "pnpm --filter @cal/mobile ios",

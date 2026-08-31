@@ -4,7 +4,11 @@ import { adminClient, requireUser } from '../_shared/auth/index.ts';
 import { EdgeError, withErrorHandling } from '../_shared/errors/index.ts';
 import { runAfterResponse } from '../_shared/http/background.ts';
 import { jsonResponse, preflight } from '../_shared/http/cors.ts';
-import { loadAccount, resolveContext, type ProviderAccountRow } from '../_shared/providers/accounts.ts';
+import {
+  loadAccount,
+  resolveContext,
+  type ProviderAccountRow,
+} from '../_shared/providers/accounts.ts';
 import { providerFor } from '../_shared/providers/registry.ts';
 import {
   ensureWatch,
@@ -180,7 +184,11 @@ async function dropCalendar(
     .eq('provider_calendar_id', providerCalendarId);
 
   console.log(
-    JSON.stringify({ event: 'calendar_dropped', provider: account.provider, accountId: account.id }),
+    JSON.stringify({
+      event: 'calendar_dropped',
+      provider: account.provider,
+      accountId: account.id,
+    }),
   );
 
   return jsonResponse({ calendarId: null, syncing: false });

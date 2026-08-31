@@ -1,7 +1,7 @@
 import type { CalendarEvent } from '@cal/schemas';
 
-import type { PlannedReminder } from '../tasks/reminders';
 import { expandOccurrences } from '../recurrence/expand';
+import type { PlannedReminder } from '../tasks/reminders';
 
 /**
  * Turning event alerts into scheduled reminders.

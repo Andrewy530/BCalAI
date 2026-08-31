@@ -1,9 +1,6 @@
 import type { ScheduleConstraints } from '@cal/schemas';
 import { describe, expect, it } from 'vitest';
 
-import { type Interval, toInterval } from '../time/interval';
-import { getZonedParts } from '../time/timezone';
-
 import {
   expandWorkingHours,
   findFreeIntervals,
@@ -11,6 +8,8 @@ import {
   hasConflict,
   rankSlotsHeuristically,
 } from './availability';
+import { type Interval, toInterval } from '../time/interval';
+import { getZonedParts } from '../time/timezone';
 
 const NY = 'America/New_York';
 

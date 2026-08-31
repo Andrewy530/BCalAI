@@ -1,10 +1,9 @@
+import { type SignUpInput, signUpSchema } from '@cal/schemas';
+import { Button, Screen, Text, TextField, useTheme } from '@cal/ui';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link } from 'expo-router';
 import { Controller, useForm } from 'react-hook-form';
 import { KeyboardAvoidingView, Platform, View } from 'react-native';
-
-import { type SignUpInput, signUpSchema } from '@cal/schemas';
-import { Button, Screen, Text, TextField, useTheme } from '@cal/ui';
 
 import { toAppError } from '../../../lib/errors/app-error';
 import { AppleSignInButton } from '../components/AppleSignInButton';

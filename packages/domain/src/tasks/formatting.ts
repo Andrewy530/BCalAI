@@ -10,7 +10,15 @@ import { toZonedDateKey, getZonedParts, addZonedDays } from '../time/timezone';
  * copy. One definition means those can never drift apart.
  */
 
-const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const WEEKDAY_NAMES = [
+  'Sunday',
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+];
 const MONTH_NAMES = [
   'Jan',
   'Feb',
@@ -97,7 +105,8 @@ export function formatDueDate(
 
   const month = MONTH_NAMES[parts.month - 1] ?? '';
   const date = `${parts.day} ${month}`;
-  const withYear = parts.year === getZonedParts(now, timeZone).year ? date : `${date} ${parts.year}`;
+  const withYear =
+    parts.year === getZonedParts(now, timeZone).year ? date : `${date} ${parts.year}`;
   return { text: time ? `${withYear}, ${time}` : withYear, tone: 'later' };
 }
 

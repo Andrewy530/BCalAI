@@ -1,6 +1,5 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-
 import type { Profile, UpdateProfileInput } from '@cal/schemas';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { queryKeys } from '../../../lib/query/query-client';
 import { useAuth } from '../../auth';

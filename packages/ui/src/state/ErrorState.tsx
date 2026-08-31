@@ -44,7 +44,9 @@ export function ErrorState({
       <Text variant="callout" color="secondary" align="center">
         {message}
       </Text>
-      {onRetry ? <Button label="Try again" variant="secondary" size="sm" onPress={onRetry} /> : null}
+      {onRetry ? (
+        <Button label="Try again" variant="secondary" size="sm" onPress={onRetry} />
+      ) : null}
       {code ? (
         <Text variant="mono" color="tertiary">
           {code}

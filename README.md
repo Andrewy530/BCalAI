@@ -26,23 +26,23 @@ reconciliation, and provider-first writes.
 > before trusting any of it. Device verification from Sprint 3 also remains
 > outstanding: there is still no generated native iOS project.
 
-| Area                                                                          | State                     |
-| ----------------------------------------------------------------------------- | ------------------------- |
-| Monorepo, TypeScript strict, ESLint, Prettier, CI                             | Done                      |
-| Design tokens + UI primitives (`@cal/ui`)                                     | Done                      |
-| Database schema, RLS, pgTAP tests                                             | Done                      |
-| Auth (email, Apple), session, account deletion                                | Done                      |
-| Deterministic availability engine (`@cal/domain`)                             | Done, unit-tested         |
-| Task inbox, editor, completion, snooze, delete                                | Done — Sprint 1           |
-| Quick Add (task lane)                                                         | Done — Sprint 1           |
-| Local task reminders + notification actions                                   | Done — Sprint 1           |
-| Calendar views, event CRUD, recurrence, alerts, calendar colors               | Done — Sprint 2           |
-| Today dashboard, merged timeline, overdue/unscheduled work, free-time summary | Done — Sprint 3           |
-| Search across event/task titles, notes, and locations                         | Done — Sprint 3           |
-| Settings planning preferences                                                 | Done — Sprint 3           |
+| Area                                                                          | State                          |
+| ----------------------------------------------------------------------------- | ------------------------------ |
+| Monorepo, TypeScript strict, ESLint, Prettier, CI                             | Done                           |
+| Design tokens + UI primitives (`@cal/ui`)                                     | Done                           |
+| Database schema, RLS, pgTAP tests                                             | Done                           |
+| Auth (email, Apple), session, account deletion                                | Done                           |
+| Deterministic availability engine (`@cal/domain`)                             | Done, unit-tested              |
+| Task inbox, editor, completion, snooze, delete                                | Done — Sprint 1                |
+| Quick Add (task lane)                                                         | Done — Sprint 1                |
+| Local task reminders + notification actions                                   | Done — Sprint 1                |
+| Calendar views, event CRUD, recurrence, alerts, calendar colors               | Done — Sprint 2                |
+| Today dashboard, merged timeline, overdue/unscheduled work, free-time summary | Done — Sprint 3                |
+| Search across event/task titles, notes, and locations                         | Done — Sprint 3                |
+| Settings planning preferences                                                 | Done — Sprint 3                |
 | Google OAuth, calendar import, two-way sync, webhooks, retry                  | Written — Sprint 4, unverified |
-| Microsoft / Outlook sync                                                      | Not started — Sprint 5    |
-| AI Find Time, RevenueCat                                                      | Not started — Sprint 6    |
+| Microsoft / Outlook sync                                                      | Not started — Sprint 5         |
+| AI Find Time, RevenueCat                                                      | Not started — Sprint 6         |
 
 The live implementation handoff is [`docs/sprint-4-active.md`](docs/sprint-4-active.md).
 

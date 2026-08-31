@@ -1,4 +1,4 @@
-export type { Database, Json } from './database.types';
+export type { Database, Json, TablesUpdate } from './database.types';
 export * from './result';
 
 // Domain entity types are inferred from the Zod schemas so that runtime

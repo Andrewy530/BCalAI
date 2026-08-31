@@ -4,7 +4,9 @@
   "private": true,
   "main": "src/index.ts",
   "types": "src/index.ts",
-  "scripts": { "typecheck": "tsc --noEmit -p tsconfig.json" },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
   "peerDependencies": {
     "@expo/vector-icons": "*",
     "@react-native-community/datetimepicker": "*",

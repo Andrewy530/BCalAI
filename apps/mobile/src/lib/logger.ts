@@ -16,7 +16,6 @@ export function logError(cause: unknown, context?: LogContext): void {
   const error = toAppError(cause);
 
   if (isDevelopment) {
-    // eslint-disable-next-line no-console
     console.error(`[${error.code}] ${error.message}`, context ?? '', error.cause ?? '');
     return;
   }
@@ -26,7 +25,6 @@ export function logError(cause: unknown, context?: LogContext): void {
 
 export function logEvent(name: string, context?: LogContext): void {
   if (isDevelopment) {
-    // eslint-disable-next-line no-console
     console.warn(`[event] ${name}`, context ?? '');
   }
 }

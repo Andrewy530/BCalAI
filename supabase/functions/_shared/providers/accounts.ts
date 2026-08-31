@@ -110,10 +110,7 @@ export async function markAccount(
     .eq('id', providerAccountId);
 }
 
-export async function touchSynced(
-  admin: SupabaseClient,
-  providerAccountId: string,
-): Promise<void> {
+export async function touchSynced(admin: SupabaseClient, providerAccountId: string): Promise<void> {
   await admin
     .from('provider_accounts')
     .update({ last_sync_at: new Date().toISOString(), last_error: null, status: 'active' })

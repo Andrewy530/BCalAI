@@ -38,7 +38,12 @@ export const taskSchema = z.object({
   dueAt: isoDateTimeSchema.nullable(),
   /** false when the user set a date but no specific time. */
   hasDueTime: z.boolean(),
-  estimatedMinutes: z.number().int().min(5).max(24 * 60).nullable(),
+  estimatedMinutes: z
+    .number()
+    .int()
+    .min(5)
+    .max(24 * 60)
+    .nullable(),
   scheduledEventId: uuidSchema.nullable(),
   /** Flexible tasks are the ones the scheduling engine is allowed to move. */
   isFlexible: z.boolean(),
@@ -55,7 +60,12 @@ export const createTaskSchema = z.object({
   priority: taskPrioritySchema.default('normal'),
   dueAt: isoDateTimeSchema.nullish(),
   hasDueTime: z.boolean().default(false),
-  estimatedMinutes: z.number().int().min(5).max(24 * 60).nullish(),
+  estimatedMinutes: z
+    .number()
+    .int()
+    .min(5)
+    .max(24 * 60)
+    .nullish(),
   isFlexible: z.boolean().default(true),
   recurrenceRule: z.string().nullish(),
   tagIds: z.array(uuidSchema).max(20).default([]),

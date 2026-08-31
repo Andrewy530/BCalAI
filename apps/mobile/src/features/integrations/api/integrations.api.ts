@@ -198,7 +198,9 @@ const errorEnvelopeSchema = z.object({
   error: z.object({ code: z.string(), message: z.string() }),
 });
 
-async function readErrorEnvelope(error: unknown): Promise<{ code: string; message: string } | null> {
+async function readErrorEnvelope(
+  error: unknown,
+): Promise<{ code: string; message: string } | null> {
   const response = (error as { context?: Response }).context;
   if (!(response instanceof Response)) return null;
 

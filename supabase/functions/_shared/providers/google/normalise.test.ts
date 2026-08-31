@@ -139,9 +139,10 @@ Deno.test('an unusable time zone falls back to UTC instead of throwing', () => {
 
 // ---------------------------------------------------------------------------
 
-const calendarEntry = (
-  overrides: Partial<GoogleCalendarListEntry>,
-): GoogleCalendarListEntry => ({ id: 'cal-1', ...overrides });
+const calendarEntry = (overrides: Partial<GoogleCalendarListEntry>): GoogleCalendarListEntry => ({
+  id: 'cal-1',
+  ...overrides,
+});
 
 Deno.test('reader access is imported but marked read-only', () => {
   assertEquals(normaliseCalendar(calendarEntry({ accessRole: 'reader' })).isReadOnly, true);

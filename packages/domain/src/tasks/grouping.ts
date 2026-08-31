@@ -37,11 +37,7 @@ export function compareTasks(a: Task, b: Task): number {
   return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
 }
 
-export function bucketTasks(
-  tasks: readonly Task[],
-  now: Date,
-  timeZone: string,
-): TaskBuckets {
+export function bucketTasks(tasks: readonly Task[], now: Date, timeZone: string): TaskBuckets {
   const todayKey = toZonedDateKey(now, timeZone);
   const buckets: TaskBuckets = {
     overdue: [],

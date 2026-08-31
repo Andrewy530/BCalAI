@@ -34,8 +34,16 @@ export const profileSchema = z.object({
   timezone: timeZoneSchema,
   weekStartsOn: weekdaySchema,
   hourCycle: hourCycleSchema,
-  defaultTaskMinutes: z.number().int().min(5).max(8 * 60),
-  defaultEventMinutes: z.number().int().min(5).max(8 * 60),
+  defaultTaskMinutes: z
+    .number()
+    .int()
+    .min(5)
+    .max(8 * 60),
+  defaultEventMinutes: z
+    .number()
+    .int()
+    .min(5)
+    .max(8 * 60),
   workingHours: workingHoursSchema,
   createdAt: isoDateTimeSchema,
   updatedAt: isoDateTimeSchema,

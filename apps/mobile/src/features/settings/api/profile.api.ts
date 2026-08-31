@@ -1,11 +1,11 @@
-import { z } from 'zod';
-
 import {
   type Profile,
   type UpdateProfileInput,
   profileSchema,
   updateProfileSchema,
 } from '@cal/schemas';
+import type { TablesUpdate } from '@cal/types';
+import { z } from 'zod';
 
 import { toAppError } from '../../../lib/errors/app-error';
 import { supabase } from '../../../lib/supabase/client';
@@ -48,23 +48,21 @@ const profileRowSchema = z
   .pipe(profileSchema);
 
 /** Only send the keys the caller actually set. */
-function toUpdatePayload(patch: UpdateProfileInput): Record<string, unknown> {
-  const columns: Record<keyof UpdateProfileInput, string> = {
-    fullName: 'full_name',
-    avatarUrl: 'avatar_url',
-    timezone: 'timezone',
-    weekStartsOn: 'week_starts_on',
-    hourCycle: 'hour_cycle',
-    defaultTaskMinutes: 'default_task_minutes',
-    defaultEventMinutes: 'default_event_minutes',
-    workingHours: 'working_hours',
-  };
-
-  const payload: Record<string, unknown> = {};
-  for (const [key, column] of Object.entries(columns)) {
-    const value = patch[key as keyof UpdateProfileInput];
-    if (value !== undefined) payload[column] = value;
+function toUpdatePayload(patch: UpdateProfileInput): TablesUpdate<'profiles'> {
+  const payload: TablesUpdate<'profiles'> = {};
+  if (patch.fullName !== undefined) payload.full_name = patch.fullName;
+  if (patch.avatarUrl !== undefined) payload.avatar_url = patch.avatarUrl;
+  if (patch.timezone !== undefined) payload.timezone = patch.timezone;
+  if (patch.weekStartsOn !== undefined) payload.week_starts_on = patch.weekStartsOn;
+  if (patch.hourCycle !== undefined) payload.hour_cycle = patch.hourCycle;
+  if (patch.defaultTaskMinutes !== undefined) {
+    payload.default_task_minutes = patch.defaultTaskMinutes;
   }
+  if (patch.defaultEventMinutes !== undefined) {
+    payload.default_event_minutes = patch.defaultEventMinutes;
+  }
+  if (patch.workingHours !== undefined) payload.working_hours = patch.workingHours;
+
   return payload;
 }
 

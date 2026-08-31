@@ -160,11 +160,7 @@ export interface CalendarProvider {
 export interface ProviderAuth {
   readonly kind: ProviderKind;
   /** The consent URL to open, given a PKCE challenge and CSRF state. */
-  authorizationUrl(params: {
-    state: string;
-    codeChallenge: string;
-    redirectUri: string;
-  }): string;
+  authorizationUrl(params: { state: string; codeChallenge: string; redirectUri: string }): string;
   exchangeCode(params: {
     code: string;
     codeVerifier: string;

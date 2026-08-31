@@ -1,7 +1,6 @@
+import { Card, Chip, EmptyState, ErrorState, LoadingState, Text, useTheme } from '@cal/ui';
 import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
-
-import { Card, Chip, EmptyState, ErrorState, LoadingState, Text, useTheme } from '@cal/ui';
 
 import { useTaskEditorStore } from '../../../store/task-editor.store';
 import { TaskGroup } from '../components/TaskGroup';
@@ -71,7 +70,11 @@ export function TasksScreen() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ gap: theme.spacing.sm, paddingRight: theme.spacing.lg }}
         >
-          <Chip label="All" selected={listFilter === undefined} onPress={() => setListFilter(undefined)} />
+          <Chip
+            label="All"
+            selected={listFilter === undefined}
+            onPress={() => setListFilter(undefined)}
+          />
           <Chip
             label="Inbox"
             icon="file-tray-outline"

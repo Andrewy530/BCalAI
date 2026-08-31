@@ -37,21 +37,18 @@ describe('getZonedParts', () => {
 
 describe('zonedWallClockToUtc', () => {
   it('round-trips an unambiguous local time', () => {
-    const instant = zonedWallClockToUtc(
-      { year: 2026, month: 8, day: 30, hour: 9, minute: 0 },
-      NY,
-    );
+    const instant = zonedWallClockToUtc({ year: 2026, month: 8, day: 30, hour: 9, minute: 0 }, NY);
     expect(instant.toISOString()).toBe('2026-08-30T13:00:00.000Z');
   });
 
   it('keeps 09:00 local across the spring DST boundary', () => {
     // US DST begins 2026-03-08. 09:00 local is 14:00Z before and 13:00Z after.
-    expect(
-      zonedWallClockToUtc({ year: 2026, month: 3, day: 7, hour: 9 }, NY).toISOString(),
-    ).toBe('2026-03-07T14:00:00.000Z');
-    expect(
-      zonedWallClockToUtc({ year: 2026, month: 3, day: 8, hour: 9 }, NY).toISOString(),
-    ).toBe('2026-03-08T13:00:00.000Z');
+    expect(zonedWallClockToUtc({ year: 2026, month: 3, day: 7, hour: 9 }, NY).toISOString()).toBe(
+      '2026-03-07T14:00:00.000Z',
+    );
+    expect(zonedWallClockToUtc({ year: 2026, month: 3, day: 8, hour: 9 }, NY).toISOString()).toBe(
+      '2026-03-08T13:00:00.000Z',
+    );
   });
 
   it('resolves a non-existent spring-forward time to the shifted instant', () => {

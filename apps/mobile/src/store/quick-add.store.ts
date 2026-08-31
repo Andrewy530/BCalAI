@@ -18,7 +18,8 @@ export const useQuickAddStore = create<QuickAddState>((set) => ({
   mode: 'task',
   seedDateKey: null,
 
-  open: (mode = 'task', seedDateKey) => set({ isOpen: true, mode, seedDateKey: seedDateKey ?? null }),
+  open: (mode = 'task', seedDateKey) =>
+    set({ isOpen: true, mode, seedDateKey: seedDateKey ?? null }),
   close: () => set({ isOpen: false, seedDateKey: null }),
   setMode: (mode) => set({ mode }),
 }));

@@ -1,8 +1,8 @@
+import { capReminders, diffReminders, planEventAlerts, planReminders } from '@cal/domain';
 import { useEffect, useRef } from 'react';
 import { AppState } from 'react-native';
 
-import { capReminders, diffReminders, planEventAlerts, planReminders } from '@cal/domain';
-
+import { logError } from '../../../lib/logger';
 import {
   cancelReminder,
   getPermissionState,
@@ -10,7 +10,6 @@ import {
   scheduleReminder,
   useReminderPreferences,
 } from '../../../lib/notifications';
-import { logError } from '../../../lib/logger';
 import { useAuth } from '../../auth';
 import { useEventsInWindow } from '../../events/hooks/useEvents';
 import { useUserTimeZone } from '../../settings/hooks/useProfile';

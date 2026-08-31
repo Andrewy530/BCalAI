@@ -1,17 +1,26 @@
-import { Fragment } from 'react';
-import { View } from 'react-native';
-
 import { formatTimeOfDay, toZonedDateKey } from '@cal/domain';
 import type { HourCycle } from '@cal/schemas';
 import { Card, Divider, EmptyState, ListRow, Text, useTheme } from '@cal/ui';
+import { Fragment } from 'react';
+import { View } from 'react-native';
 
 import type { EventOccurrence } from '../../hooks/useCalendarWindow';
 import { dateKeyToInstant } from '../../utils/window';
 
 const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const MONTHS = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
 ];
 
 export interface AgendaListProps {

@@ -3,7 +3,10 @@ import { describe, expect, it } from 'vitest';
 import { type Interval, normalize, overlaps, pad, subtract } from './interval';
 
 const at = (hour: number, minute = 0): number => Date.UTC(2026, 7, 30, hour, minute);
-const span = (fromHour: number, toHour: number): Interval => ({ start: at(fromHour), end: at(toHour) });
+const span = (fromHour: number, toHour: number): Interval => ({
+  start: at(fromHour),
+  end: at(toHour),
+});
 
 describe('overlaps', () => {
   it('treats back-to-back intervals as non-overlapping', () => {
@@ -47,8 +50,6 @@ describe('subtract', () => {
 
 describe('pad', () => {
   it('grows intervals on both sides and merges the results', () => {
-    expect(pad([span(10, 11), span(11, 12)], 15)).toEqual([
-      { start: at(9, 45), end: at(12, 15) },
-    ]);
+    expect(pad([span(10, 11), span(11, 12)], 15)).toEqual([{ start: at(9, 45), end: at(12, 15) }]);
   });
 });

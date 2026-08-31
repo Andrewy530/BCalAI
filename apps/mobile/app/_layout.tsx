@@ -1,11 +1,10 @@
+import { ThemeProvider } from '@cal/ui';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { Stack, router, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-
-import { ThemeProvider } from '@cal/ui';
 
 import { AppSheets } from '../src/components/app-shell/AppSheets';
 import { TaskEditorHost } from '../src/components/app-shell/TaskEditorHost';

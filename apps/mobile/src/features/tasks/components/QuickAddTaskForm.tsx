@@ -1,6 +1,3 @@
-import { useState } from 'react';
-import { View } from 'react-native';
-
 import {
   DURATION_PRESETS,
   addZonedDays,
@@ -11,6 +8,8 @@ import {
 } from '@cal/domain';
 import type { TaskPriority } from '@cal/schemas';
 import { Button, Chip, Text, TextField, useTheme } from '@cal/ui';
+import { useState } from 'react';
+import { View } from 'react-native';
 
 import { useTaskEditorStore } from '../../../store/task-editor.store';
 import { useUserTimeZone } from '../../settings/hooks/useProfile';

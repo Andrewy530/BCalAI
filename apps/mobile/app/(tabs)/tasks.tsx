@@ -1,6 +1,5 @@
-import { useLocalSearchParams } from 'expo-router';
-
 import { Screen } from '@cal/ui';
+import { useLocalSearchParams } from 'expo-router';
 
 import { useOpenTaskFromParam } from '../../src/features/tasks/hooks/useOpenTaskFromParam';
 import { TasksScreen } from '../../src/features/tasks/screens/TasksScreen';

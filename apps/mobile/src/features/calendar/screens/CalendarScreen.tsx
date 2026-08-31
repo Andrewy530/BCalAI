@@ -1,19 +1,8 @@
+import { addZonedDays, toZonedDateKey } from '@cal/domain';
+import { ErrorState, IconButton, LoadingState, SegmentedControl, Text, useTheme } from '@cal/ui';
 import { ScrollView, View } from 'react-native';
 
-import { addZonedDays, toZonedDateKey } from '@cal/domain';
-import {
-  ErrorState,
-  IconButton,
-  LoadingState,
-  SegmentedControl,
-  Text,
-  useTheme,
-} from '@cal/ui';
-
-import {
-  type CalendarViewMode,
-  useCalendarViewStore,
-} from '../../../store/calendar-view.store';
+import { type CalendarViewMode, useCalendarViewStore } from '../../../store/calendar-view.store';
 import { useEventEditorStore } from '../../../store/event-editor.store';
 import { AgendaList } from '../components/agenda-view/AgendaList';
 import { DayTimeline } from '../components/day-view/DayTimeline';
@@ -30,8 +19,18 @@ const MODES: { value: CalendarViewMode; label: string }[] = [
 ];
 
 const MONTHS = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
 ];
 
 /**
@@ -51,16 +50,8 @@ export function CalendarScreen() {
   const openEvent = useEventEditorStore((state) => state.openEvent);
   const openNewEvent = useEventEditorStore((state) => state.openNew);
 
-  const {
-    window,
-    byDateKey,
-    timeZone,
-    hourCycle,
-    weekStartsOn,
-    isLoading,
-    isError,
-    refetch,
-  } = useCalendarWindow();
+  const { window, byDateKey, timeZone, hourCycle, weekStartsOn, isLoading, isError, refetch } =
+    useCalendarWindow();
 
   const now = new Date();
   const anchor = dateKeyToInstant(selectedDateKey, timeZone);
@@ -71,7 +62,9 @@ export function CalendarScreen() {
     const days = mode === 'day' ? 1 : mode === 'week' ? 7 : mode === 'agenda' ? 28 : 0;
 
     if (days > 0) {
-      setSelectedDateKey(toZonedDateKey(addZonedDays(anchor, days * direction, timeZone), timeZone));
+      setSelectedDateKey(
+        toZonedDateKey(addZonedDays(anchor, days * direction, timeZone), timeZone),
+      );
       return;
     }
 
