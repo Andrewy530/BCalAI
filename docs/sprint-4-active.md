@@ -1,6 +1,6 @@
 # Sprint 4 — Active implementation tracker
 
-Status: **Implementation complete; partially verified locally**
+Status: **Implementation complete; code checks verified, integration verification pending**
 Last updated: **2026-08-31**
 
 This is the live handoff for the Sprint 4 implementation. Update the
@@ -89,9 +89,10 @@ above the adapter.
 - [x] Settings connection rows become live; sync health is visible.
 - [x] Event editor routes provider-owned events through the write path.
 - [x] Account deletion revokes for real, replacing the Sprint 4/5 TODO.
-- [ ] **Complete the full formatting, lint, typecheck, and unit-test pass.**
-      Core domain, Deno, and database tests now run locally; the remaining
-      failures are recorded in the verification log.
+- [x] **Complete the monorepo formatting, lint, typecheck, and unit-test pass.**
+      `pnpm verify` passes locally.
+- [x] Fix the Deno typecheck error in `integrations-import/index.ts`; Deno
+      check and tests now pass.
 - [ ] Register the Google Cloud OAuth client and set the new secrets.
 - [ ] Device/simulator verification of the OAuth round trip.
 
@@ -185,14 +186,19 @@ secret server-side and is why Google issues a refresh token at all.
 
 ### Mac continuation — 2026-08-31
 
-- Domain tests: 129 tests passed.
-- Edge Function tests: 15 tests passed; `deno task check` still reports the
-  known cast error in `supabase/functions/integrations-import/index.ts`.
-- Database tests: 20 tests passed after the seed/auth fix.
+- `pnpm verify`: passed — formatting, ESLint, all six workspace typechecks, and
+  129 unit tests.
+- Edge Function checks: `deno task check` passed after the typed cast fix in
+  `supabase/functions/integrations-import/index.ts:120`.
+- Edge Function tests: 15 tests passed.
+- Database tests: 20 tests passed during the Mac continuation after the
+  seed/auth fix; a fresh run is pending because Docker Desktop is not running.
 - Mobile simulator smoke test: native Liquid Glass tab navigation and Quick Add
   were exercised on iOS 27.
-- Full `pnpm verify` and mobile typecheck remain incomplete because of existing
-  formatting/lint output and three generated-database typing errors.
+- Fresh local database verification is currently blocked because the Supabase
+  CLI cannot connect to Docker at `/Users/pattysin/.docker/run/docker.sock`.
+- The Google OAuth round trip, a real webhook delivery, and an outward provider
+  write remain unexercised.
 
 ### Original Sprint 4 handoff state
 
@@ -214,14 +220,10 @@ compiling it.
 
 ### What to do first, on a machine with the toolchain
 
-1. `pnpm install`, then `pnpm verify`. Expect type errors to surface first in
-   `apps/mobile/src/features/events/hooks/useEvents.ts`, where the mutation
-   signatures changed, and in the new `integrations` feature.
-2. In `supabase/functions`: `deno task check` and `deno task test`.
-3. `pnpm db:reset` to prove 0006 applies, then `pnpm db:types` after any future
-   schema changes; the generated types were refreshed during the Mac
-   continuation.
-4. Only then attempt the OAuth round trip.
+1. Start Docker Desktop, then run `pnpm db:reset` and `supabase test db`.
+2. Register the Google Cloud OAuth client and set the server-side secrets.
+3. Build the Expo development client and exercise the complete OAuth/sync
+   acceptance flow on the iOS simulator or a device.
 
 ## Handoff prompt
 

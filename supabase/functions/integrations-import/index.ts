@@ -117,7 +117,7 @@ async function importCalendar(
     throw new EdgeError('UNKNOWN', 'Could not prepare that calendar for syncing.', 500);
   }
 
-  const syncState = state as SyncStateRow;
+  const syncState = state as unknown as SyncStateRow;
 
   runAfterResponse(async () => {
     try {
