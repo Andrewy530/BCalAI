@@ -19,30 +19,27 @@ events synced in both directions — initial sync, incremental sync via
 `nextSyncToken`, push-notification channels with hourly renewal, daily
 reconciliation, and provider-first writes.
 
-> **Sprint 4 is unverified.** No Node or Deno toolchain was available on the
-> machine it was written on, so nothing has been type-checked, linted, or run —
-> and the OAuth round trip has never been exercised against Google. Run
-> `pnpm verify`, `deno task check`, and `deno task test` in `supabase/functions`
-> before trusting any of it. Device verification from Sprint 3 also remains
-> outstanding: there is still no generated native iOS project.
+The monorepo checks, Edge Function checks/tests, local migrations, and database
+tests now pass. The real Google OAuth round trip, webhook delivery, and
+provider-first write flow still need device-level verification.
 
-| Area                                                                          | State                          |
-| ----------------------------------------------------------------------------- | ------------------------------ |
-| Monorepo, TypeScript strict, ESLint, Prettier, CI                             | Done                           |
-| Design tokens + UI primitives (`@cal/ui`)                                     | Done                           |
-| Database schema, RLS, pgTAP tests                                             | Done                           |
-| Auth (email, Apple), session, account deletion                                | Done                           |
-| Deterministic availability engine (`@cal/domain`)                             | Done, unit-tested              |
-| Task inbox, editor, completion, snooze, delete                                | Done — Sprint 1                |
-| Quick Add (task lane)                                                         | Done — Sprint 1                |
-| Local task reminders + notification actions                                   | Done — Sprint 1                |
-| Calendar views, event CRUD, recurrence, alerts, calendar colors               | Done — Sprint 2                |
-| Today dashboard, merged timeline, overdue/unscheduled work, free-time summary | Done — Sprint 3                |
-| Search across event/task titles, notes, and locations                         | Done — Sprint 3                |
-| Settings planning preferences                                                 | Done — Sprint 3                |
-| Google OAuth, calendar import, two-way sync, webhooks, retry                  | Written — Sprint 4, unverified |
-| Microsoft / Outlook sync                                                      | Not started — Sprint 5         |
-| AI Find Time, RevenueCat                                                      | Not started — Sprint 6         |
+| Area                                                                          | State                                               |
+| ----------------------------------------------------------------------------- | --------------------------------------------------- |
+| Monorepo, TypeScript strict, ESLint, Prettier, CI                             | Done                                                |
+| Design tokens + UI primitives (`@cal/ui`)                                     | Done                                                |
+| Database schema, RLS, pgTAP tests                                             | Done                                                |
+| Auth (email, Apple), session, account deletion                                | Done                                                |
+| Deterministic availability engine (`@cal/domain`)                             | Done, unit-tested                                   |
+| Task inbox, editor, completion, snooze, delete                                | Done — Sprint 1                                     |
+| Quick Add (task lane)                                                         | Done — Sprint 1                                     |
+| Local task reminders + notification actions                                   | Done — Sprint 1                                     |
+| Calendar views, event CRUD, recurrence, alerts, calendar colors               | Done — Sprint 2                                     |
+| Today dashboard, merged timeline, overdue/unscheduled work, free-time summary | Done — Sprint 3                                     |
+| Search across event/task titles, notes, and locations                         | Done — Sprint 3                                     |
+| Settings planning preferences                                                 | Done — Sprint 3                                     |
+| Google OAuth, calendar import, two-way sync, webhooks, retry                  | Implemented — local checks pass; Google E2E pending |
+| Microsoft / Outlook sync                                                      | Not started — Sprint 5                              |
+| AI Find Time, RevenueCat                                                      | Not started — Sprint 6                              |
 
 The live implementation handoff is [`docs/sprint-4-active.md`](docs/sprint-4-active.md).
 
@@ -69,12 +66,15 @@ corepack enable && pnpm install
 supabase start
 ```
 
-`supabase start` prints an API URL and an anon key. Copy the example env file
-and paste them in:
+`supabase start` prints an API URL and an anon key. Copy the public mobile env
+template and paste them in:
 
 ```bash
-cp .env.example .env
+cp apps/mobile/.env.example apps/mobile/.env
 ```
+
+Keep server-only secrets (Google OAuth, service role, webhook, and cron
+secrets) in `supabase/.env`; never put them in the mobile env file.
 
 Apply the schema and the development seed data:
 
@@ -141,7 +141,7 @@ docs/               Architecture, database, sync engine, AI scheduling, ADRs.
 `pnpm --filter @cal/mobile exec expo start --clear`.
 
 **Env var errors on launch** — `src/lib/env.ts` validates configuration at
-startup and names what is missing. Check `.env` at the repo root.
+startup and names what is missing. Check `apps/mobile/.env`.
 
 **Dependency version warnings** — let Expo pick the versions that match the
 SDK: `pnpm --filter @cal/mobile exec expo install --fix`.

@@ -14,8 +14,9 @@ config.resolver.nodeModulesPaths = [
   path.resolve(projectRoot, 'node_modules'),
   path.resolve(workspaceRoot, 'node_modules'),
 ];
-// pnpm's symlinked store means Metro must not assume a hoisted layout.
-config.resolver.disableHierarchicalLookup = true;
+// Keep hierarchical lookup enabled so nested dependencies in pnpm's isolated
+// store remain resolvable from symlinked packages.
+config.resolver.disableHierarchicalLookup = false;
 config.resolver.unstable_enableSymlinks = true;
 
 module.exports = config;

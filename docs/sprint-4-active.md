@@ -1,6 +1,6 @@
 # Sprint 4 — Active implementation tracker
 
-Status: **Implementation complete; code checks verified, integration verification pending**
+Status: **Implementation complete; local verification complete, OAuth verification pending**
 Last updated: **2026-08-31**
 
 This is the live handoff for the Sprint 4 implementation. Update the
@@ -93,6 +93,12 @@ above the adapter.
       `pnpm verify` passes locally.
 - [x] Fix the Deno typecheck error in `integrations-import/index.ts`; Deno
       check and tests now pass.
+- [x] Reset the local Supabase database and pass the database/RLS test suite
+      (20 tests).
+- [x] Create the ignored `apps/mobile/.env` from
+      `apps/mobile/.env.example` with the local Supabase URL and anon key.
+- [x] Build and launch the native iOS development client against the local
+      Metro server, sign in with the seeded account, and load the Today data.
 - [ ] Register the Google Cloud OAuth client and set the new secrets.
 - [ ] Device/simulator verification of the OAuth round trip.
 
@@ -191,12 +197,16 @@ secret server-side and is why Google issues a refresh token at all.
 - Edge Function checks: `deno task check` passed after the typed cast fix in
   `supabase/functions/integrations-import/index.ts:120`.
 - Edge Function tests: 15 tests passed.
-- Database tests: 20 tests passed during the Mac continuation after the
-  seed/auth fix; a fresh run is pending because Docker Desktop is not running.
-- Mobile simulator smoke test: native Liquid Glass tab navigation and Quick Add
-  were exercised on iOS 27.
-- Fresh local database verification is currently blocked because the Supabase
-  CLI cannot connect to Docker at `/Users/pattysin/.docker/run/docker.sock`.
+- Local database reset: all seven migrations applied and seed data loaded.
+- Database/RLS tests: 20 tests passed with `supabase test db`.
+- Native iOS simulator build: `xcodebuild` succeeded for the iOS 27 simulator;
+  Metro bundled successfully after adding the direct Expo runtime dependency
+  and restoring hierarchical lookup for pnpm's isolated store.
+- Mobile local-auth smoke test: the seeded `dev@example.com` account signed in
+  and the Today dashboard loaded seeded events and free-time data.
+- The simulator build was unsigned/ad hoc, so `expo-notifications` reported the
+  expected missing Keychain entitlement. Notification registration still needs
+  a properly provisioned development build.
 - The Google OAuth round trip, a real webhook delivery, and an outward provider
   write remain unexercised.
 
@@ -220,7 +230,8 @@ compiling it.
 
 ### What to do first, on a machine with the toolchain
 
-1. Start Docker Desktop, then run `pnpm db:reset` and `supabase test db`.
+1. Create `apps/mobile/.env` from `apps/mobile/.env.example` using the values
+   from `supabase status`; keep server-only values in `supabase/.env`.
 2. Register the Google Cloud OAuth client and set the server-side secrets.
 3. Build the Expo development client and exercise the complete OAuth/sync
    acceptance flow on the iOS simulator or a device.

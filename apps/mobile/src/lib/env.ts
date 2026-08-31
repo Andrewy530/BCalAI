@@ -23,7 +23,7 @@ if (!parsed.success) {
   const issues = parsed.error.issues.map((i) => `  • ${i.message}`).join('\n');
   throw new Error(
     `Missing or invalid environment configuration:\n${issues}\n\n` +
-      'Copy .env.example to .env at the repo root and fill it in (see README.md).',
+      'Copy apps/mobile/.env.example to apps/mobile/.env and fill it in (see README.md).',
   );
 }
 
