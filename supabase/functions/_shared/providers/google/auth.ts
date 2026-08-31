@@ -10,7 +10,11 @@ import {
   googleClientId,
   googleClientSecret,
 } from './config.ts';
-import { googleTokenResponseSchema, googleUserInfoSchema } from './schemas.ts';
+import {
+  googleTokenErrorSchema,
+  googleTokenResponseSchema,
+  googleUserInfoSchema,
+} from './schemas.ts';
 
 /**
  * Google OAuth, authorisation-code flow with PKCE.
@@ -145,8 +149,8 @@ async function postToken(fields: Record<string, string>): Promise<TokenSet> {
 /** The OAuth error *code* only. Never the description, which can echo input. */
 async function safeReason(response: Response): Promise<string | null> {
   try {
-    const body = (await response.json()) as { error?: string };
-    return body.error ?? null;
+    const parsed = googleTokenErrorSchema.safeParse(await response.json());
+    return parsed.success ? (parsed.data.error ?? null) : null;
   } catch {
     return null;
   }

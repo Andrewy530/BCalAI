@@ -1,4 +1,5 @@
 import { EdgeError } from '../../errors/index.ts';
+import { googleApiErrorSchema } from './schemas.ts';
 
 /**
  * The single place a request leaves for Google.
@@ -127,10 +128,9 @@ function translate(status: number, reason: string | null): EdgeError {
 /** Read only the machine-readable reason, never the message or payload. */
 async function safeReadError(response: Response): Promise<string | null> {
   try {
-    const body = (await response.json()) as {
-      error?: { errors?: Array<{ reason?: string }>; status?: string };
-    };
-    return body.error?.errors?.[0]?.reason ?? body.error?.status ?? null;
+    const parsed = googleApiErrorSchema.safeParse(await response.json());
+    if (!parsed.success) return null;
+    return parsed.data.error?.errors?.[0]?.reason ?? parsed.data.error?.status ?? null;
   } catch {
     return null;
   }

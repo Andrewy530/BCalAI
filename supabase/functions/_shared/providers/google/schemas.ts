@@ -19,6 +19,17 @@ export const googleTokenResponseSchema = z.object({
   id_token: z.string().optional(),
 });
 
+export const googleTokenErrorSchema = z.object({ error: z.string().optional() });
+
+export const googleApiErrorSchema = z.object({
+  error: z
+    .object({
+      errors: z.array(z.object({ reason: z.string().optional() })).optional(),
+      status: z.string().optional(),
+    })
+    .optional(),
+});
+
 export const googleUserInfoSchema = z.object({
   sub: z.string().min(1),
   email: z.string().email().nullish(),
