@@ -39,6 +39,20 @@ function AuthGate() {
   return null;
 }
 
+function AuthenticatedOverlays() {
+  const { isAuthenticated } = useAuth();
+
+  if (!isAuthenticated) return null;
+
+  return (
+    <>
+      <AppSheets />
+      <TaskEditorHost />
+      <ReminderSync />
+    </>
+  );
+}
+
 export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -56,9 +70,7 @@ export default function RootLayout() {
                     options={{ headerShown: true, title: 'Connections', animation: 'default' }}
                   />
                 </Stack>
-                <AppSheets />
-                <TaskEditorHost />
-                <ReminderSync />
+                <AuthenticatedOverlays />
               </ErrorBoundary>
             </AuthProvider>
           </QueryClientProvider>

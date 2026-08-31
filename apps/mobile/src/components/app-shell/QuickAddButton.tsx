@@ -32,15 +32,15 @@ export function QuickAddButton() {
         },
       ]}
     >
-      <Ionicons name="add" size={26} color={theme.colors.onAccent} />
+      <Ionicons name="add" size={30} color={theme.colors.onAccent} />
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   button: {
-    width: 48,
-    height: 48,
+    width: 56,
+    height: 56,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: -14,

@@ -1,6 +1,6 @@
-import { Ionicons } from '@expo/vector-icons';
-import { Tabs } from 'expo-router';
-import { StyleSheet } from 'react-native';
+import { Icon, Label, NativeTabs } from 'expo-router/unstable-native-tabs';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StyleSheet, View } from 'react-native';
 
 import { useTheme } from '@cal/ui';
 
@@ -8,65 +8,59 @@ import { QuickAddButton } from '../../src/components/app-shell/QuickAddButton';
 
 export default function TabsLayout() {
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
 
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: theme.colors.accent,
-        tabBarInactiveTintColor: theme.colors.textTertiary,
-        tabBarStyle: {
-          backgroundColor: theme.colors.backgroundElevated,
-          borderTopColor: theme.colors.border,
-          borderTopWidth: StyleSheet.hairlineWidth,
-        },
-        tabBarLabelStyle: theme.typography.caption,
-      }}
-    >
-      <Tabs.Screen
-        name="today"
-        options={{
-          title: 'Today',
-          tabBarIcon: ({ color, size }) => <Ionicons name="sunny-outline" size={size} color={color} />,
+    <View style={styles.container}>
+      <NativeTabs
+        iconColor={{ default: theme.colors.textTertiary, selected: theme.colors.accent }}
+        labelStyle={{
+          default: { color: theme.colors.textTertiary },
+          selected: { color: theme.colors.accent },
         }}
-      />
-      <Tabs.Screen
-        name="calendar"
-        options={{
-          title: 'Calendar',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="calendar-outline" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="quick-add"
-        options={{
-          title: '',
-          tabBarButton: () => <QuickAddButton />,
-        }}
-        // The centre tab is an action, not a destination.
-        listeners={{ tabPress: (event) => event.preventDefault() }}
-      />
-      <Tabs.Screen
-        name="tasks"
-        options={{
-          title: 'Tasks',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="checkbox-outline" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="settings"
-        options={{
-          title: 'Settings',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person-circle-outline" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen name="search" options={{ href: null }} />
-    </Tabs>
+        minimizeBehavior="automatic"
+      >
+        <NativeTabs.Trigger name="today">
+          <Icon sf={{ default: 'sun.max', selected: 'sun.max.fill' }} />
+          <Label>Today</Label>
+        </NativeTabs.Trigger>
+        <NativeTabs.Trigger name="calendar">
+          <Icon sf={{ default: 'calendar', selected: 'calendar' }} />
+          <Label>Calendar</Label>
+        </NativeTabs.Trigger>
+        <NativeTabs.Trigger name="quick-add" options={{ title: '' }} />
+        <NativeTabs.Trigger name="tasks">
+          <Icon sf={{ default: 'checkmark.square', selected: 'checkmark.square.fill' }} />
+          <Label>Tasks</Label>
+        </NativeTabs.Trigger>
+        <NativeTabs.Trigger name="settings">
+          <Icon sf={{ default: 'person.crop.circle', selected: 'person.crop.circle.fill' }} />
+          <Label>Settings</Label>
+        </NativeTabs.Trigger>
+        <NativeTabs.Trigger name="search" hidden />
+      </NativeTabs>
+
+      {/* Quick Add is an action, so it sits above the native navigation bar. */}
+      <View
+        pointerEvents="box-none"
+        style={[styles.quickAddOverlay, { bottom: insets.bottom + 12 }]}
+      >
+        <QuickAddButton />
+      </View>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  quickAddOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    height: 48,
+    alignItems: 'center',
+    zIndex: 10,
+  },
+});

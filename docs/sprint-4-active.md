@@ -1,13 +1,21 @@
 # Sprint 4 — Active implementation tracker
 
-Status: **Implementation complete; nothing verified — no toolchain available**
-Last updated: **2026-08-30**
+Status: **Implementation complete; partially verified locally**
+Last updated: **2026-08-31**
 
 This is the live handoff for the Sprint 4 implementation. Update the
 checkboxes, file map, and verification notes as work lands. A different model
 should be able to continue from this file plus `AGENTS.md`,
 `docs/architecture.md`, and `docs/sync-engine.md` without reconstructing the
 sprint from chat history.
+
+## Mac continuation note
+
+The repository was continued on macOS on 2026-08-31. Local database and
+simulator smoke checks were run, generated database types and local seed auth
+defaults were refreshed, and the iOS tab layout was moved to Expo Router's
+native Liquid Glass tabs. Quick Add remains a separate action overlay. The
+remaining verification gaps are recorded below.
 
 ## Goal
 
@@ -37,7 +45,8 @@ above the adapter.
 
 ## Known gaps
 
-- `packages/types/src/database.types.ts` is stale and must be regenerated.
+- `packages/types/src/database.types.ts` was regenerated during the Mac
+  continuation; keep it in sync with future schema changes.
 - Recurring-event *exceptions* are imported as individual provider events, but
   Google's `EXDATE`/`RDATE` lines are dropped when the master's RRULE is stored.
   A deleted single occurrence therefore relies on its own tombstone arriving.
@@ -80,9 +89,9 @@ above the adapter.
 - [x] Settings connection rows become live; sync health is visible.
 - [x] Event editor routes provider-owned events through the write path.
 - [x] Account deletion revokes for real, replacing the Sprint 4/5 TODO.
-- [ ] **Run formatting, lint, typecheck, and unit tests.** Blocked: no Node,
-      pnpm, or Deno on the machine, and no `node_modules`. Nothing below has
-      been compiled or executed.
+- [ ] **Complete the full formatting, lint, typecheck, and unit-test pass.**
+      Core domain, Deno, and database tests now run locally; the remaining
+      failures are recorded in the verification log.
 - [ ] Register the Google Cloud OAuth client and set the new secrets.
 - [ ] Device/simulator verification of the OAuth round trip.
 
@@ -174,8 +183,21 @@ secret server-side and is why Google issues a refresh token at all.
 
 ## Verification log
 
-**Nothing in this sprint has been executed.** The machine had no Node, pnpm, npx,
-or Deno binary and no installed `node_modules`, so none of the following ran:
+### Mac continuation — 2026-08-31
+
+- Domain tests: 129 tests passed.
+- Edge Function tests: 15 tests passed; `deno task check` still reports the
+  known cast error in `supabase/functions/integrations-import/index.ts`.
+- Database tests: 20 tests passed after the seed/auth fix.
+- Mobile simulator smoke test: native Liquid Glass tab navigation and Quick Add
+  were exercised on iOS 27.
+- Full `pnpm verify` and mobile typecheck remain incomplete because of existing
+  formatting/lint output and three generated-database typing errors.
+
+### Original Sprint 4 handoff state
+
+At the original handoff, the machine had no Node, pnpm, npx, or Deno binary and
+no installed `node_modules`, so none of the following had run:
 
 - `pnpm verify` (format, lint, typecheck, test) — not run.
 - `tsc --noEmit` for the mobile app or any package — not run.
@@ -196,9 +218,9 @@ compiling it.
    `apps/mobile/src/features/events/hooks/useEvents.ts`, where the mutation
    signatures changed, and in the new `integrations` feature.
 2. In `supabase/functions`: `deno task check` and `deno task test`.
-3. `pnpm db:reset` to prove 0006 applies, then `pnpm db:types` — the generated
-   `database.types.ts` is now stale, since it predates `oauth_states`, the new
-   `calendar_sync_states` columns, and `calendar_sync_health`.
+3. `pnpm db:reset` to prove 0006 applies, then `pnpm db:types` after any future
+   schema changes; the generated types were refreshed during the Mac
+   continuation.
 4. Only then attempt the OAuth round trip.
 
 ## Handoff prompt

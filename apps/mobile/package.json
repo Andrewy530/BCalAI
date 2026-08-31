@@ -16,14 +16,12 @@
     "@cal/schemas": "workspace:*",
     "@cal/types": "workspace:*",
     "@cal/ui": "workspace:*",
-
     "@expo/vector-icons": "^15.0.0",
     "@hookform/resolvers": "^3.9.0",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/datetimepicker": "8.4.5",
     "@supabase/supabase-js": "^2.45.4",
     "@tanstack/react-query": "^5.59.0",
-
     "expo": "~54.0.0",
     "expo-apple-authentication": "~8.0.0",
     "expo-auth-session": "~7.0.0",
@@ -37,7 +35,6 @@
     "expo-splash-screen": "~31.0.0",
     "expo-status-bar": "~3.0.0",
     "expo-web-browser": "~15.0.0",
-
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-hook-form": "^7.53.0",
@@ -48,7 +45,6 @@
     "react-native-screens": "~4.16.0",
     "react-native-url-polyfill": "^2.0.0",
     "react-native-worklets": "0.5.1",
-
     "zod": "^3.23.8",
     "zustand": "^5.0.0"
   },
