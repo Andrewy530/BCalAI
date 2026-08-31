@@ -5,6 +5,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { QuickAddButton } from '../../src/components/app-shell/QuickAddButton';
 
+const NATIVE_TAB_BAR_CLEARANCE = 72;
+
 export default function TabsLayout() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
@@ -27,7 +29,6 @@ export default function TabsLayout() {
           <Icon sf={{ default: 'calendar', selected: 'calendar' }} />
           <Label>Calendar</Label>
         </NativeTabs.Trigger>
-        <NativeTabs.Trigger name="quick-add" options={{ title: '' }} />
         <NativeTabs.Trigger name="tasks">
           <Icon sf={{ default: 'checkmark.square', selected: 'checkmark.square.fill' }} />
           <Label>Tasks</Label>
@@ -36,13 +37,20 @@ export default function TabsLayout() {
           <Icon sf={{ default: 'person.crop.circle', selected: 'person.crop.circle.fill' }} />
           <Label>Settings</Label>
         </NativeTabs.Trigger>
+        <NativeTabs.Trigger name="quick-add" hidden />
         <NativeTabs.Trigger name="search" hidden />
       </NativeTabs>
 
       {/* Quick Add is an action, so it sits above the native navigation bar. */}
       <View
         pointerEvents="box-none"
-        style={[styles.quickAddOverlay, { bottom: insets.bottom + 12 }]}
+        style={[
+          styles.quickAddOverlay,
+          {
+            bottom: insets.bottom + NATIVE_TAB_BAR_CLEARANCE,
+            right: theme.screenPadding,
+          },
+        ]}
       >
         <QuickAddButton />
       </View>
@@ -56,9 +64,8 @@ const styles = StyleSheet.create({
   },
   quickAddOverlay: {
     position: 'absolute',
-    left: 0,
-    right: 0,
-    height: 48,
+    width: 56,
+    height: 56,
     alignItems: 'center',
     zIndex: 10,
   },

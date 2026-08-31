@@ -99,6 +99,8 @@ above the adapter.
       `apps/mobile/.env.example` with the local Supabase URL and anon key.
 - [x] Build and launch the native iOS development client against the local
       Metro server, sign in with the seeded account, and load the Today data.
+- [x] Move Quick Add above the native tab bar and reduce the visible navigation
+      to Today, Calendar, Tasks, and Settings; simulator interaction verified.
 - [ ] Register the Google Cloud OAuth client and set the new secrets.
 - [ ] Device/simulator verification of the OAuth round trip.
 
@@ -204,6 +206,9 @@ secret server-side and is why Google issues a refresh token at all.
   and restoring hierarchical lookup for pnpm's isolated store.
 - Mobile local-auth smoke test: the seeded `dev@example.com` account signed in
   and the Today dashboard loaded seeded events and free-time data.
+- Navigation UI smoke test: the four-item native tab bar rendered with Quick
+  Add at the upper-right above the bar, and the button opened the Quick Add
+  sheet successfully.
 - The simulator build was unsigned/ad hoc, so `expo-notifications` reported the
   expected missing Keychain entitlement. Notification registration still needs
   a properly provisioned development build.

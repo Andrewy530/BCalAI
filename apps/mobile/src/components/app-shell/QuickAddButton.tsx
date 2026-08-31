@@ -6,7 +6,7 @@ import { Pressable, StyleSheet } from 'react-native';
 import { useQuickAddStore } from '../../store/quick-add.store';
 
 /**
- * The persistent capture affordance, rendered as the centre tab button so it is
+ * The persistent capture affordance, rendered above the navigation bar so it is
  * reachable with a thumb from anywhere in the app.
  */
 export function QuickAddButton() {
@@ -42,6 +42,5 @@ const styles = StyleSheet.create({
     height: 56,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: -14,
   },
 });
