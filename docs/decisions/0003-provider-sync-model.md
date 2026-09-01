@@ -22,7 +22,9 @@ echoes into an infinite loop.
 5. **Idempotent upserts** keyed on `(provider_account_id, provider_event_id)`.
 6. **Periodic reconciliation** via Cron, because push delivery is documented as
    unreliable on both platforms.
-7. **Read sync ships first**, and writes are enabled only after it is validated.
+7. **Read sync ships first**. Writes are enabled only after read sync is
+   validated; the current Google and Microsoft paths now use provider-first
+   writes as described above.
 
 ## Consequences
 

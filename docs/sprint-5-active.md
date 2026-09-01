@@ -1,18 +1,34 @@
-# Sprint 5 — Active implementation tracker
+# Sprint 5 — Current implementation handoff
 
 Status: **IMPLEMENTATION COMPLETE / EXTERNAL VERIFICATION REMAINING**
-Last updated: **2026-08-31**
+Implementation: **Microsoft/Outlook provider, OAuth, Graph delta sync,
+subscriptions/webhook, provider-first CRUD, recurrence, disconnect, and mobile
+coexistence are implemented.**
+Automated verification: **Targeted current-host checks passed; Deno,
+Supabase/Docker, and aggregate verification remain environment-limited.**
+External verification: **Microsoft OAuth/Graph/delta/CRUD, webhook delivery,
+renewal/teardown, and device/deep-link flows remain unexercised.**
+Current blocker: **Azure app registration/credentials, a public HTTPS webhook,
+and a toolchain-equipped environment/device are required for the remaining
+verification.**
+Next action: **Run the Microsoft live and missing runtime checks; after Sprint 5
+verification/hardening, Sprint 6 (AI Pro prototype) is next.**
+Last updated: **2026-09-01**
 
 Prior implementation checkpoint: **`1e2361910b1ae83dcc9441a45204722a1ddf79fa`**
+Current code baseline: **`38ac47f5e821a056a6cdeda9a27b5e24d84ccf86`**
+(`Complete Sprint 5 Microsoft calendar integration`), on `main` and aligned
+with `origin/main` at this reconciliation.
 
-This continuation is working from the checkpoint above. The current `HEAD` is
-that commit on `main`; the worktree was clean before this tracker update. The
-checkpoint is preserved as the baseline—working Sprint 5 code is being extended,
-not replaced.
+The checkpoint above is historical baseline evidence, not the current HEAD. The
+working Sprint 5 code was completed in the current code baseline; this update is
+documentation-only and does not change production code, tests, migrations, or
+application behavior. This file is the authoritative live Sprint 5 handoff.
 
-## Checkpoint reconciliation — 2026-08-31
+## Historical checkpoint reconciliation — 2026-08-31
 
-Source-level audit of the current tree confirms:
+The source-level audit below records what was true at prior checkpoint
+`1e23619`, before the continuation slices completed the remaining work:
 
 - **Completed in the checkpoint:** provider-neutral error and mobile connection
   plumbing; Microsoft tenant/config, PKCE auth, token handling, identity lookup,
@@ -39,10 +55,9 @@ Source-level audit of the current tree confirms:
   HTTPS endpoint and a device/deep-link build are required for end-to-end
   webhook/mobile verification. No success will be claimed without them.
 
-The live handoff for Sprint 5. Same contract as `docs/sprint-4-active.md`:
-update the checkboxes, file map, and verification notes as work lands, so a
-different model can continue from this file plus `AGENTS.md`,
-`docs/architecture.md`, and `docs/sync-engine.md`.
+The sections after this historical record describe the current state. Update
+this tracker when Sprint 5 verification evidence changes; do not treat the
+closed Sprint 3 or Sprint 4 trackers as active plans.
 
 ## Goal
 
@@ -150,11 +165,12 @@ have to route around them.
       `PROVIDER_AUTH_EXPIRED` and `PROVIDER_SYNC_CURSOR_INVALID`; ship the
       backend and client together without compatibility aliases. The mobile
       call-site documentation was updated as well.
-- [x] **The mobile connect flow is provider-shaped but not yet Microsoft-enabled.**
-      The API, hook, screen, connection card, and Settings contracts now use
-      provider metadata while keeping the current Google flow working.
-      Microsoft remains disabled until `oauth-microsoft-start`, its callback,
-      and the registry entry exist; enabling that UI is a separate slice.
+- [x] **The mobile connect flow is provider-shaped and now Microsoft-enabled.**
+      The API, hook, screen, connection card, and Settings contracts use
+      provider metadata while keeping the Google flow working. This bullet
+      records the pre-enablement finding; continuation slice 3 added the
+      Microsoft start/callback functions and registry path, then enabled the
+      second provider action.
 - [x] **Manual “Sync now” was not scoped to the account being refreshed.**
       A connection card passed its account id to the handler, but the hook/API
       omitted it, so `sync-run` queued every connected account while only one
@@ -240,8 +256,13 @@ security/integrity checks that apply equally to Google and Microsoft.
       added.
 - [x] Enable the Microsoft connect action and two-provider Integrations screen;
       the callback result now also has to identify the requested provider.
-- [ ] Full verification pass: `pnpm verify`, Deno check and tests, database
-      tests, and a real OAuth round trip against Microsoft.
+- [ ] Full verification pass: the root `pnpm verify` path on the repository's
+      pinned pnpm toolchain, Deno check/tests, and Supabase migration/RLS tests
+      remain to be rerun on a toolchain-equipped host.
+- [ ] External Microsoft verification: Azure OAuth round trip, calendar
+      listing/import, delta sync, provider-first CRUD, Outlook-side changes,
+      webhook delivery, renewal/replacement/teardown, reauth, and device/deep
+      link behavior.
 
 ## Where Graph differs from Google
 
@@ -313,8 +334,8 @@ Sprint 4's eight criteria, restated for Microsoft, plus:
   this inherited note predates that continuation slice.
 - The Graph watch-scope audit verified that Outlook `/me/events` subscriptions
   are mailbox/account scoped and duplicate subscriptions for the same resource
-  and change type are rejected; the account-level storage, capability, and
-  reconciliation webhook prerequisite remains in progress.
+  and change type are rejected. The account-level storage, capability, and
+  reconciliation webhook prerequisite was completed in the continuation.
 - The Microsoft config foundation is complete: provider-neutral PKCE/random
   helpers were extracted without changing Google behavior; tenant-safe v2
   authority, authorize, and token endpoints, Graph v1 base, exact delegated
@@ -338,6 +359,9 @@ Sprint 4's eight criteria, restated for Microsoft, plus:
 
 - iOS app-side OAuth/deep-link return from Settings, and the provider-owned
   event editor flow on the device.
+- Microsoft live OAuth, Graph calendar listing/import, delta sync, real
+  provider-first CRUD, Outlook-side change ingestion, webhook delivery,
+  subscription renewal/replacement/teardown, and reauth against Azure.
 - Real Google webhook delivery and replay/idempotency. Local Google push needs
   a public HTTPS tunnel or deployed project.
 - A deliberate expired-cursor/HTTP 410 recovery run and a revoked-credential
@@ -482,6 +506,29 @@ verify.
 - [ ] Microsoft live OAuth, Graph delta/CRUD, webhook delivery, renewal,
       teardown, and device/deep-link verification were not exercised; Azure
       configuration and a public HTTPS callback are not available on this host.
+
+## Documentation reconciliation — 2026-09-01
+
+- Current code HEAD is `38ac47f5e821a056a6cdeda9a27b5e24d84ccf86`; the prior
+  `1e23619` checkpoint is historical baseline evidence. The code worktree was
+  clean before this documentation-only update.
+- README, the technical plan, architecture/database/sync references, and this
+  tracker now agree that Sprint 5 implementation is complete but external
+  Microsoft verification remains. Sprint 6 is next planned work and is not
+  started.
+- Sprint 3 and Sprint 4 trackers are explicitly closed/historical; this file is
+  the active Sprint 5 source of truth.
+- Files reconciled: `README.md`,
+  `calendar_app_product_technical_plan.md`, `docs/architecture.md`,
+  `docs/database.md`, `docs/sync-engine.md`,
+  `docs/decisions/0003-provider-sync-model.md`, `docs/notifications.md`, and
+  the Sprint 3, Sprint 4, and Sprint 5 trackers.
+- Documentation verification: the explicit Prettier check passed for the
+  changed Markdown files, `git diff --check` passed, and the targeted stale-
+  status search was reviewed. No production verification was rerun because
+  this reconciliation changes documentation only.
+- This reconciliation changed Markdown documentation only. No production code,
+  tests, migrations, dependency files, or application behavior changed.
 
 ## Follow-up work (not Sprint 5 blockers)
 

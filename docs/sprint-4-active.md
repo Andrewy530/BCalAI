@@ -1,13 +1,12 @@
-# Sprint 4 — Active implementation tracker
+# Sprint 4 — Closed historical tracker
 
-Status: **Implementation complete; live Google OAuth, import, sync, and provider-first writes verified. Real webhook delivery remains unexercised.**
-Last updated: **2026-08-31**
+Status: **CLOSED / HISTORICAL — Google implementation complete; major live provider flows verified; webhook and device gaps remain**
+Last updated: **2026-09-01**
 
-This is the live handoff for the Sprint 4 implementation. Update the
-checkboxes, file map, and verification notes as work lands. A different model
-should be able to continue from this file plus `AGENTS.md`,
-`docs/architecture.md`, and `docs/sync-engine.md` without reconstructing the
-sprint from chat history.
+This document records the Sprint 4 implementation and verification history. It
+is not the current implementation plan. The current source of truth is
+[`docs/sprint-5-active.md`](sprint-5-active.md); use this file for Google
+provider history and inherited verification evidence.
 
 ## Mac continuation note
 
@@ -23,9 +22,9 @@ Make Google Calendar a real connected calendar: OAuth from the app, calendar
 selection, initial and incremental sync into `events`, push-notification
 webhooks with durable retry, and two-way writes that go to Google first.
 
-The provider-specific code must live behind the `CalendarProvider` interface in
-`docs/sync-engine.md` so Sprint 5 can add Microsoft without touching anything
-above the adapter.
+The provider-specific code was placed behind the `CalendarProvider` interface in
+`docs/sync-engine.md`, which allowed Sprint 5 to add Microsoft without adding a
+provider-specific branch to the shared sync path.
 
 ## Scope
 
@@ -108,14 +107,15 @@ above the adapter.
 - [ ] Exercise a real webhook delivery (needs an HTTPS tunnel or a deployed
       project; `127.0.0.1` cannot receive Google push notifications).
 
-## File map for the next model
+## File map from the Sprint 4 implementation
 
-### The provider boundary
+### The provider boundary used by Sprint 4
 
 - `supabase/functions/_shared/providers/types.ts` — the contract. `CalendarProvider`
   for sync and writes, `ProviderAuth` for the connect flow.
 - `supabase/functions/_shared/providers/registry.ts` — the only place a provider
-  kind becomes an implementation. **This is the entire Sprint 5 seam.**
+  kind becomes an implementation. This seam was subsequently used by Sprint 5
+  to register Microsoft.
 - `supabase/functions/_shared/providers/accounts.ts` — access-token resolution
   through Vault, and connection health.
 - `supabase/functions/_shared/providers/disconnect.ts` — releasing a grant.
@@ -216,8 +216,10 @@ secret server-side and is why Google issues a refresh token at all.
 - The simulator build was unsigned/ad hoc, so `expo-notifications` reported the
   expected missing Keychain entitlement. Notification registration still needs
   a properly provisioned development build.
-- The Google OAuth round trip, a real webhook delivery, and an outward provider
-  write remain unexercised.
+- At this stage of the Mac continuation, the Google OAuth round trip, a real
+  webhook delivery, and an outward provider write remained unexercised. The
+  later live Google section below records the OAuth, sync, and write verification
+  that followed.
 
 ### Google OAuth and sync verified against the live API — 2026-09-01
 
@@ -293,7 +295,7 @@ Everything below was re-run independently here and passed:
 - `pnpm db:types` against the local schema produced no schema change — only a
   trailing newline — which confirms the committed types match the migrations.
 
-Environment notes for the next model:
+Environment notes from the historical continuation:
 
 - Node is 26.8.1, not the 20.18+ the README pins. Nothing has failed on it, but
   Metro/Expo has not yet been exercised on this machine; if bundling misbehaves,
@@ -334,10 +336,11 @@ compiling it.
 3. Build the Expo development client and exercise the complete OAuth/sync
    acceptance flow on the iOS simulator or a device.
 
-## Handoff prompt
+## Historical next steps and handoff
 
-> Read `AGENTS.md`, `docs/architecture.md`, `docs/sync-engine.md`, and
-> `docs/sprint-4-active.md`. Inspect the current files before editing. Continue
-> only unchecked Sprint 4 items, preserve unrelated working-tree changes, update
-> this tracker after each completed slice, and run the smallest meaningful
-> verification available. Do not start Sprint 5–7 work.
+The original Sprint 4 next steps were to configure Google and exercise the
+provider flow; the later verification entries above record that the major live
+OAuth, import, sync, and provider-first write work was completed. Real Google
+webhook delivery and some device-level flows remain historical gaps. Sprint 4
+has no active implementation checklist. For current work, read
+`docs/sprint-5-active.md` and do not use this tracker as an active task list.

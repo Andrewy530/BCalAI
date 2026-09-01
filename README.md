@@ -10,39 +10,41 @@ Architecture decisions live in [`docs/`](docs/). Coding rules are in
 
 ---
 
-## Status
+## Current status
 
-**Sprint 4 — Google Calendar implemented.** Sprints 0 through 4 are written.
-On top of the internal calendar, Today dashboard, and search, a Google account
-can now be connected from Settings, its calendars imported individually, and its
-events synced in both directions — initial sync, incremental sync via
-`nextSyncToken`, push-notification channels with hourly renewal, daily
-reconciliation, and provider-first writes.
+**Sprint 5 — Microsoft Calendar implementation complete; external verification
+remaining.** Sprints 0 through 4 are complete/implemented, and Sprint 5 adds
+Microsoft/Outlook behind the existing provider boundary. The current code
+baseline is commit `38ac47f5e821a056a6cdeda9a27b5e24d84ccf86` on `main`.
 
-The monorepo checks, Edge Function checks/tests, local migrations, and database
-tests now pass. The real Google OAuth round trip, webhook delivery, and
-provider-first write flow still need device-level verification.
+Google live OAuth, calendar import, initial/incremental sync, and
+provider-first create/update/delete were verified in Sprint 4. Microsoft
+OAuth, Graph delta sync, subscriptions/webhooks, provider-first writes,
+recurrence translation, disconnect cleanup, and the shared mobile flow are
+implemented, but Microsoft live OAuth/Graph/webhook/device verification remains.
 
-| Area                                                                          | State                                              |
-| ----------------------------------------------------------------------------- | -------------------------------------------------- |
-| Monorepo, TypeScript strict, ESLint, Prettier, CI                             | Done                                               |
-| Design tokens + UI primitives (`@cal/ui`)                                     | Done                                               |
-| Database schema, RLS, pgTAP tests                                             | Done                                               |
-| Auth (email, Apple), session, account deletion                                | Done                                               |
-| Deterministic availability engine (`@cal/domain`)                             | Done, unit-tested                                  |
-| Task inbox, editor, completion, snooze, delete                                | Done — Sprint 1                                    |
-| Quick Add (task lane)                                                         | Done — Sprint 1                                    |
-| Local task reminders + notification actions                                   | Done — Sprint 1                                    |
-| Calendar views, event CRUD, recurrence, alerts, calendar colors               | Done — Sprint 2                                    |
-| Today dashboard, merged timeline, overdue/unscheduled work, free-time summary | Done — Sprint 3                                    |
-| Search across event/task titles, notes, and locations                         | Done — Sprint 3                                    |
-| Settings planning preferences                                                 | Done — Sprint 3                                    |
-| Google OAuth, calendar import, two-way sync, webhooks, retry                  | Done — Sprint 4; webhook delivery untested locally |
-| Microsoft / Outlook sync                                                      | Implementation complete; live verification pending |
-| AI Find Time, RevenueCat                                                      | Not started — Sprint 6                             |
+The current source-of-truth handoff is
+[`docs/sprint-5-active.md`](docs/sprint-5-active.md). The Sprint 3 and Sprint 4
+trackers are closed historical records. Sprint 6 (AI Pro prototype) is the next
+planned sprint after Sprint 5 verification and hardening; it has not started.
 
-The live implementation handoffs are [`docs/sprint-4-active.md`](docs/sprint-4-active.md)
-and [`docs/sprint-5-active.md`](docs/sprint-5-active.md).
+| Area                                                                          | State                                                                  |
+| ----------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| Monorepo, TypeScript strict, ESLint, Prettier, CI                             | Implemented; verification is environment-dependent                     |
+| Design tokens + UI primitives (`@cal/ui`)                                     | Done                                                                   |
+| Database schema, RLS, pgTAP tests                                             | Done                                                                   |
+| Auth (email, Apple), session, account deletion                                | Done                                                                   |
+| Deterministic availability engine (`@cal/domain`)                             | Done, unit-tested                                                      |
+| Task inbox, editor, completion, snooze, delete                                | Done — Sprint 1                                                        |
+| Quick Add (task lane)                                                         | Done — Sprint 1                                                        |
+| Local task reminders + notification actions                                   | Done — Sprint 1                                                        |
+| Calendar views, event CRUD, recurrence, alerts, calendar colors               | Done — Sprint 2                                                        |
+| Today dashboard, merged timeline, overdue/unscheduled work, free-time summary | Done — Sprint 3                                                        |
+| Search across event/task titles, notes, and locations                         | Done — Sprint 3                                                        |
+| Settings planning preferences                                                 | Done — Sprint 3                                                        |
+| Google OAuth, calendar import, two-way sync, webhooks, retry                  | Done — Sprint 4; live major flows verified; webhook/device gaps remain |
+| Microsoft / Outlook sync                                                      | Done in code — Sprint 5; live verification pending                     |
+| AI Find Time, RevenueCat                                                      | Not started — Sprint 6                                                 |
 
 ---
 
@@ -74,8 +76,14 @@ template and paste them in:
 cp apps/mobile/.env.example apps/mobile/.env
 ```
 
-Keep server-only secrets (Google OAuth, service role, webhook, and cron
-secrets) in `supabase/.env`; never put them in the mobile env file.
+Keep server-only secrets (service role, Google and Microsoft OAuth client
+credentials, OAuth redirect settings, webhook URLs, and cron secrets) in the
+Supabase/Edge Function secret store; never put them in the mobile env file.
+Microsoft uses `MICROSOFT_OAUTH_CLIENT_ID`,
+`MICROSOFT_OAUTH_CLIENT_SECRET`, optional `MICROSOFT_OAUTH_TENANT` and
+`MICROSOFT_OAUTH_REDIRECT_URI`, plus `MICROSOFT_WEBHOOK_URL` when the public
+callback URL is not derived from `SUPABASE_URL`. Azure must register the same
+web redirect URI and delegated `Calendars.ReadWrite` access.
 
 Apply the schema and the development seed data:
 
@@ -123,6 +131,9 @@ Database tests need the local stack running:
 ```bash
 supabase test db
 ```
+
+The exact Sprint 5 verification results and unavailable-toolchain blockers are
+recorded in [`docs/sprint-5-active.md`](docs/sprint-5-active.md).
 
 ## Layout
 

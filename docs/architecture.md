@@ -68,8 +68,17 @@ provider is never edited locally without first writing to the provider.
 
 ## Decision B — two-way sync
 
-Read sync ships first and is validated before writes are enabled. See
+Read sync was shipped and validated before provider-owned writes were enabled.
+The current implementation writes provider-owned events first, then updates the
+normalised local copy. Google and Microsoft both use this path; see
 [`sync-engine.md`](sync-engine.md).
+
+Watch ownership follows the provider boundary: Google calendar-scoped channels
+are stored with `calendar_sync_states`, while Microsoft Graph account-scoped
+subscriptions are stored on `provider_accounts`. The shared renewal and
+teardown paths use the provider contract, and webhook handlers enqueue sync
+work rather than synchronising inline. Microsoft lifecycle notifications are
+recovered through subscription renewal/replacement plus reconciliation.
 
 ## Decision C — AI autonomy
 

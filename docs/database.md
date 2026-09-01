@@ -6,7 +6,9 @@ Postgres via Supabase. Every table below is created by a migration in
 ## Conventions
 
 - Every user-owned table has `user_id uuid not null references auth.users`.
-- Every user-owned table has RLS enabled and four explicit policies.
+- Every user-owned table has RLS enabled and explicit policies for the client
+  operations it is allowed to perform. Server-managed operations have no client
+  policy.
 - A server-only table has RLS enabled and **no** policies.
 - `updated_at` is maintained by the `set_updated_at` trigger, never by a client.
 - Policies use `(select auth.uid())` so the planner evaluates it once per query
@@ -29,6 +31,14 @@ Postgres via Supabase. Every table below is created by a migration in
 | `ai_schedule_suggestions` | Ranked proposals                    | Read only                               |
 | `subscriptions`           | RevenueCat entitlement mirror       | Read only                               |
 
+Provider watch ownership is deliberate. Google keeps one channel per imported
+calendar in `calendar_sync_states`; Microsoft Graph keeps its mailbox/account-
+scoped subscription identifiers, clientState, and expiry on
+`provider_accounts`. Those watch fields are server-only even when the account's
+safe status projection is readable by the mobile client. Provider-account
+creation, updates, and disconnect deletion are server-managed; the client can
+read the safe projection and must use `integrations-disconnect` for teardown.
+
 ## Invariants enforced in the database
 
 These are constraints, not conventions, because application code is not the only
@@ -49,6 +59,9 @@ thing that writes to this database:
   the series master's stored RRULE.
 - A claimed sync job carries a server-only `claim_token`; completion must use
   the token issued for that claim so a late worker cannot close a replacement.
+- `claim_sync_jobs` locks provider-account rows while selecting work and claims
+  at most one due job per connected account. `SKIP LOCKED` still allows jobs for
+  unrelated accounts to progress.
 
 ## Indexes that matter
 
@@ -58,6 +71,7 @@ thing that writes to this database:
 | `events (sync_status) where pending/failed/conflict`      | the outbound push queue                           |
 | `tasks (user_id) where open and flexible and unscheduled` | the Find Time queue                               |
 | `calendar_sync_states (webhook_expires_at)`               | Cron webhook renewal                              |
+| `provider_accounts (webhook_expires_at)`                  | Account-scoped Graph subscription renewal         |
 | `events (provider_account_id, recurring_event_id)`        | Recurring-instance reconciliation                 |
 
 ## Automatic provisioning
@@ -80,5 +94,6 @@ pnpm db:types
 ## Testing
 
 `supabase/tests/` holds pgTAP tests run by `supabase test db` in CI. They cover
-cross-user isolation, the server-only tables, and the constraints above. An RLS
-mistake is silent in the app, which is exactly why it is gated in CI.
+cross-user isolation, the server-only tables, account-level queue serialization,
+claim fencing, and the constraints above. An RLS mistake is silent in the app,
+which is exactly why it is gated in CI.

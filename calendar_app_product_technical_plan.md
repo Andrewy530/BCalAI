@@ -7,6 +7,27 @@
 
 ---
 
+## Repository status after Sprint 5
+
+- Sprints 0–4 are complete/implemented. Sprint 4 delivered the Google
+  provider, and its major OAuth, import, sync, and provider-first write flows
+  were verified against the live Google API.
+- Sprint 5 Microsoft/Outlook implementation is complete in code: OAuth, Graph
+  calendar listing, fixed-window initial sync, delta sync, normalization,
+  recurrence translation, provider-first CRUD, account-scoped subscriptions,
+  webhook enqueueing, renewal/teardown, reconnect/disconnect, and shared mobile
+  integration are present behind the provider abstraction.
+- Automated verification is mixed by environment. Targeted TypeScript,
+  domain/mobile tests, ESLint, Prettier, and diff checks passed on the current
+  Windows host; Deno, Supabase CLI/Docker, and the aggregate `pnpm verify`
+  path were unavailable or did not reach project scripts there. The exact
+  evidence is maintained in [`docs/sprint-5-active.md`](docs/sprint-5-active.md).
+- Microsoft live OAuth/Graph/delta/CRUD, real webhook delivery, subscription
+  renewal/teardown, and device/deep-link testing remain external verification.
+  Azure app registration/credentials and a public HTTPS callback are the main
+  blockers. Sprint 6 — AI Pro prototype — is next, after this verification and
+  hardening; Sprint 6 implementation has not started.
+
 ## 1. Executive Summary
 
 We are building a **calendar + reminders productivity app** inspired by three products for different reasons:
@@ -195,23 +216,25 @@ Later, Quick Add can understand natural-language input.
 
 ## Phase 0 — Foundation
 
-Build this before feature expansion.
+Build this before feature expansion. The status markers below are reconciled
+against the current repository; unchecked items remain future or
+platform-specific work.
 
 ### Project foundation
 
-- [ ] Monorepo/project structure
-- [ ] TypeScript strict mode
-- [ ] ESLint + Prettier
-- [ ] Environment variable strategy
-- [ ] Supabase local development
-- [ ] Database migration workflow
-- [ ] Auth foundation
-- [ ] RLS policies
-- [ ] Design tokens
-- [ ] Reusable UI primitives
-- [ ] Error boundaries
-- [ ] Logging/error reporting
-- [ ] CI checks
+- [x] Monorepo/project structure
+- [x] TypeScript strict mode
+- [x] ESLint + Prettier
+- [x] Environment variable strategy
+- [x] Supabase local development
+- [x] Database migration workflow
+- [x] Auth foundation
+- [x] RLS policies
+- [x] Design tokens
+- [x] Reusable UI primitives
+- [x] Error boundaries
+- [x] Logging/error reporting seam; Sentry wiring remains future work
+- [x] CI checks
 - [ ] Development builds for both developers
 
 ### Design system primitives
@@ -242,81 +265,81 @@ Create these once rather than styling each screen independently:
 
 ### Authentication
 
-- [ ] Email sign-up/sign-in
-- [ ] Sign in with Apple
-- [ ] Google sign-in
-- [ ] Session persistence
-- [ ] Account deletion
-- [ ] Basic profile/preferences
+- [x] Email sign-up/sign-in
+- [x] Sign in with Apple
+- [ ] Google sign-in (distinct from Google Calendar connection)
+- [x] Session persistence
+- [x] Account deletion
+- [x] Basic profile/preferences
 
 ### Today screen
 
-- [ ] Today's events
-- [ ] Tasks due today
-- [ ] Overdue tasks
-- [ ] Unscheduled tasks
-- [ ] Current/next event
-- [ ] Simple free-time indicator
-- [ ] Quick Add
+- [x] Today's events
+- [x] Tasks due today
+- [x] Overdue tasks
+- [x] Unscheduled tasks
+- [x] Current/next event
+- [x] Simple free-time indicator
+- [x] Quick Add
 
 ### Calendar
 
 #### Required views
 
-- [ ] Month
-- [ ] Week
-- [ ] Day
-- [ ] Agenda/list
+- [x] Month
+- [x] Week
+- [x] Day
+- [x] Agenda/list
 
 #### Event capabilities
 
-- [ ] Create event
-- [ ] Edit event
-- [ ] Delete event
-- [ ] Title
-- [ ] Start/end datetime
-- [ ] All-day event
-- [ ] Notes
-- [ ] Location
-- [ ] Calendar selection
-- [ ] Event color/calendar color
-- [ ] Recurrence
-- [ ] Reminder/alert timing
-- [ ] Time zone
+- [x] Create event
+- [x] Edit event
+- [x] Delete event
+- [x] Title
+- [x] Start/end datetime
+- [x] All-day event
+- [x] Notes
+- [x] Location
+- [x] Calendar selection
+- [x] Event color/calendar color
+- [x] Recurrence
+- [x] Reminder/alert timing
+- [x] Time zone
 
 ### Calendar preferences
 
-- [ ] Start week on Sunday/Monday
-- [ ] 12-hour / 24-hour clock
+- [x] Start week on Sunday/Monday
+- [x] 12-hour / 24-hour clock
 - [ ] Default event duration
 - [ ] Visible calendars
-- [ ] Default calendar
-- [ ] Working hours
-- [ ] Theme
+- [ ] Default calendar selection
+- [x] Working hours
+- [ ] Theme preference
 
 ### Tasks / reminders
 
-- [ ] Inbox
-- [ ] Task title
-- [ ] Notes
-- [ ] Due date
-- [ ] Due time
-- [ ] Priority
-- [ ] Estimated duration
-- [ ] Completed state
-- [ ] Repeating task
-- [ ] List/project assignment
-- [ ] Tags
-- [ ] Snooze/postpone
-- [ ] Search/filter
+- [x] Inbox
+- [x] Task title
+- [x] Notes
+- [x] Due date
+- [x] Due time
+- [x] Priority
+- [x] Estimated duration
+- [x] Completed state
+- [ ] Repeating task UI
+- [x] List/project assignment
+- [ ] Tags UI
+- [x] Snooze/postpone
+- [x] Search; filtering remains future work
 
 ### Notifications
 
-- [ ] Local task reminders
-- [ ] Event reminders
-- [ ] Due-soon notifications
-- [ ] Notification preferences
-- [ ] Deep-link from notification to item
+- [x] Local task reminders
+- [x] Event reminders
+- [x] Due-soon notifications
+- [x] Notification preferences
+- [x] Deep-link from notification to item
 
 Expo supports both scheduled local notifications and remote push notifications. Begin with local notifications for user-created reminders; introduce remote notifications only when server-driven behavior is needed.
 
@@ -326,27 +349,35 @@ Expo supports both scheduled local notifications and remote push notifications. 
 
 ### Google Calendar
 
-- [ ] Connect Google account using OAuth
-- [ ] List calendars
-- [ ] Select which calendars to sync
-- [ ] Initial event sync
-- [ ] Incremental sync using `syncToken`
-- [ ] Google Calendar push notification webhook
-- [ ] Create/update/delete Google events from app
-- [ ] Refresh/re-auth flows
-- [ ] Disconnect integration
+- [x] Connect Google account using OAuth
+- [x] List calendars
+- [x] Select which calendars to sync
+- [x] Initial event sync
+- [x] Incremental sync using `syncToken`
+- [x] Google Calendar push notification webhook implementation
+- [x] Create/update/delete Google events from app
+- [x] Refresh/re-auth flows
+- [x] Disconnect integration
+
+Major OAuth, import, sync, and provider-first write flows were verified against
+the live Google API in Sprint 4. Real webhook delivery and some device-level
+flows remain unexercised; see `docs/sprint-4-active.md` for historical evidence.
 
 ### Microsoft Outlook / Microsoft 365 Calendar
 
-- [ ] Connect Microsoft account using OAuth
-- [ ] List calendars
-- [ ] Select calendars
-- [ ] Initial event sync
-- [ ] Incremental sync using Microsoft Graph delta query
-- [ ] Microsoft Graph webhook subscriptions
-- [ ] Subscription renewal/lifecycle handling
-- [ ] Create/update/delete events
-- [ ] Disconnect integration
+- [x] Connect Microsoft account using OAuth
+- [x] List calendars
+- [x] Select calendars
+- [x] Initial event sync
+- [x] Incremental sync using Microsoft Graph delta query
+- [x] Microsoft Graph webhook subscriptions
+- [x] Subscription renewal/lifecycle handling
+- [x] Create/update/delete events
+- [x] Disconnect integration
+
+Implementation is complete, but live Microsoft/Azure verification remains for
+OAuth, Graph listing/import, delta sync, CRUD, webhook delivery, renewal,
+teardown, and device/deep-link behavior.
 
 ### Apple/iOS device calendar
 
@@ -820,14 +851,20 @@ calendar-app/
 │       │   │   └── microsoft/
 │       │   └── ai/
 │       │
-│       ├── google-oauth-callback/
-│       ├── google-calendar-webhook/
-│       ├── google-calendar-sync/
-│       ├── microsoft-oauth-callback/
-│       ├── microsoft-graph-webhook/
-│       ├── microsoft-calendar-sync/
-│       ├── ai-find-time/
-│       ├── revenuecat-webhook/
+│       ├── oauth-google-start/
+│       ├── oauth-google-callback/
+│       ├── integrations-calendars/
+│       ├── integrations-import/
+│       ├── integrations-disconnect/
+│       ├── provider-event-write/
+│       ├── sync-run/
+│       ├── sync-cron/
+│       ├── webhook-google/
+│       ├── oauth-microsoft-start/
+│       ├── oauth-microsoft-callback/
+│       ├── webhook-microsoft/
+│       ├── ai-find-time/                # planned — Sprint 6
+│       ├── revenuecat-webhook/          # planned — Sprint 6
 │       └── delete-account/
 │
 ├── docs/
@@ -1021,6 +1058,11 @@ email
 status                  active | expired | revoked | error
 scopes                   text[]
 secret_reference_id      uuid/text    # reference to protected token storage
+webhook_channel_id       text nullable # account-scoped watch, when applicable
+webhook_resource_id      text nullable
+webhook_subscription_id  text nullable
+webhook_token            text nullable # server-only clientState/channel token
+webhook_expires_at       timestamptz nullable
 connected_at
 last_sync_at
 created_at
@@ -1048,7 +1090,13 @@ retry_count              integer
 updated_at
 ```
 
-Google `syncToken` and Microsoft delta-link/state data belong here.
+Google `syncToken` and Microsoft delta-link/state data belong here. Google
+calendar-scoped watch bookkeeping remains on this row; Microsoft Graph's
+account-scoped subscription bookkeeping is stored on `provider_accounts`.
+
+Provider event rows may also carry `recurring_event_id` and
+`recurrence_original_start_at` so moved or cancelled occurrences can be
+reconciled without changing the series master's RRULE.
 
 ## `ai_schedule_requests`
 
@@ -1358,31 +1406,34 @@ If offline usage becomes a major differentiator, introduce a dedicated local per
 
 # 20. Security Checklist
 
+The checklist below records implemented controls; live/device verification is
+tracked separately in `docs/sprint-5-active.md`.
+
 ## Database
 
-- [ ] RLS enabled on all exposed user tables
-- [ ] RLS tests included in CI
-- [ ] Service role never bundled with app
-- [ ] Sensitive provider token tables/views inaccessible to client roles
-- [ ] Database migrations reviewed in PRs
+- [x] RLS enabled on all exposed user tables
+- [x] RLS tests included in CI
+- [x] Service role never bundled with app
+- [x] Sensitive provider token tables/views inaccessible to client roles
+- [x] Database migrations reviewed in PRs
 
 ## OAuth
 
-- [ ] Least-privilege scopes
-- [ ] PKCE where applicable
-- [ ] Secure redirect/deep-link handling
-- [ ] Refresh token protection
-- [ ] Provider revoke/disconnect path
-- [ ] Reauthentication on expired consent
+- [x] Least-privilege scopes
+- [x] PKCE where applicable
+- [x] Secure redirect/deep-link handling (device verification remains pending)
+- [x] Refresh token protection
+- [x] Provider revoke/disconnect path
+- [x] Reauthentication on expired consent
 
 ## Webhooks
 
-- [ ] Validate webhook authenticity/token state
-- [ ] Public HTTPS only
-- [ ] Idempotency
-- [ ] Rate limits
-- [ ] Fast acknowledgement
-- [ ] Asynchronous follow-up processing where appropriate
+- [x] Validate webhook authenticity/token state
+- [x] Public HTTPS only
+- [x] Idempotency
+- [ ] Rate limits (follow-up hardening; not a Sprint 5 blocker)
+- [x] Fast acknowledgement
+- [x] Asynchronous follow-up processing where appropriate
 
 ## AI
 
@@ -1592,6 +1643,8 @@ SUBSCRIPTION_REQUIRED
 
 ## Sprint 0 — Engineering foundation
 
+Status: **COMPLETE / HISTORICAL**
+
 - Repository
 - Expo app
 - Development builds
@@ -1609,6 +1662,8 @@ A user can create an account, enter the authenticated app shell, and see polishe
 ---
 
 ## Sprint 1 — Tasks + quick capture
+
+Status: **COMPLETE / HISTORICAL**
 
 - Task schema
 - Inbox
@@ -1628,6 +1683,8 @@ The app is already useful as a basic reminder product.
 
 ## Sprint 2 — Internal calendar
 
+Status: **COMPLETE / HISTORICAL**
+
 - Calendar schema
 - Event CRUD
 - Day view
@@ -1645,6 +1702,8 @@ The app works as a standalone calendar without integrations.
 
 ## Sprint 3 — Today + polish
 
+Status: **COMPLETE / HISTORICAL**
+
 - Today dashboard
 - Merge events/tasks chronologically
 - Overdue state
@@ -1660,6 +1719,8 @@ The product begins to feel like a coherent premium consumer app.
 ---
 
 ## Sprint 4 — Google Calendar
+
+Status: **COMPLETE / HISTORICAL**
 
 - Provider architecture
 - OAuth
@@ -1678,6 +1739,8 @@ Google Calendar can be used as a real connected calendar.
 
 ## Sprint 5 — Microsoft Calendar
 
+Status: **IMPLEMENTATION COMPLETE / EXTERNAL VERIFICATION REMAINING**
+
 - Microsoft OAuth
 - Graph calendar adapter
 - Delta sync
@@ -1687,11 +1750,15 @@ Google Calendar can be used as a real connected calendar.
 
 ### Deliverable
 
-Both major external calendar ecosystems are supported.
+Both major external calendar ecosystems are implemented behind the provider
+abstraction. Microsoft live OAuth, Graph, webhook, subscription-lifecycle, and
+device verification remain before this sprint is fully verified.
 
 ---
 
 ## Sprint 6 — AI Pro prototype
+
+Status: **NEXT PLANNED SPRINT — NOT STARTED**
 
 - Availability engine
 - Task constraints
@@ -1818,9 +1885,12 @@ Recommended:
 
 ## Decision B — Two-way sync
 
-Recommended:
+Implemented decision:
 
-Support two-way calendar editing, but build **read sync first**, validate it, then enable writes.
+Support two-way calendar editing. Read sync was validated before provider-owned
+writes were enabled, and current writes remain provider-first: mutate Google or
+Microsoft, wait for provider confirmation, then update the normalized local
+copy.
 
 ## Decision C — AI autonomy
 
@@ -2024,7 +2094,8 @@ The following sources were reviewed while preparing this plan.
 
 # 33. Next Planning Documents to Create
 
-Once this document is accepted, the next useful repository documents are:
+The core repository documents below now exist and are maintained alongside the
+implementation. The current sprint handoff is `docs/sprint-5-active.md`.
 
 1. `docs/database.md` — exact tables, indexes, constraints, RLS policies.
 2. `docs/design-system.md` — exact visual tokens and reusable UI component rules.
@@ -2033,4 +2104,5 @@ Once this document is accepted, the next useful repository documents are:
 5. `AGENTS.md` — coding rules for both developers and AI coding agents.
 6. `README.md` — setup instructions so either developer can clone and run the app quickly.
 
-These should be created before implementation becomes large enough that architectural decisions live only in chat history.
+They are reference documents, not a replacement for the live sprint handoff or
+for the code when the two disagree.

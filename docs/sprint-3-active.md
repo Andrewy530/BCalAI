@@ -1,12 +1,12 @@
-# Sprint 3 — Active implementation tracker
+# Sprint 3 — Closed historical tracker
 
-Status: **Implementation complete; device smoke test pending**
-Last updated: **2026-08-30**
+Status: **CLOSED / HISTORICAL — implementation complete**
+Last updated: **2026-09-01**
 
-This is the live handoff for the current Sprint 3 implementation. Update the
-checkboxes, file map, and verification notes as work lands. A different model
-should be able to continue from this file plus `AGENTS.md` and
-`docs/architecture.md` without reconstructing the sprint from chat history.
+This document records the Sprint 3 implementation and its verification state at
+handoff. It is not the current implementation plan. The current source of truth
+is [`docs/sprint-5-active.md`](sprint-5-active.md); use this file only for Sprint
+3 history and evidence.
 
 ## Goal
 
@@ -38,10 +38,10 @@ polish that makes the internal calendar and task inbox feel like one product.
 - [x] Make planning preference rows functional.
 - [x] Apply Sprint 3 motion, haptic, accessibility, and failure-state polish.
 - [x] Run formatting, lint, typecheck, and unit tests; record exact results.
-- [ ] Perform iOS simulator/device smoke verification when the local Expo and
-      Supabase prerequisites are available.
+- [x] Perform the core iOS simulator smoke verification later during the Sprint
+      4 continuation; the original Sprint 3 handoff recorded this as pending.
 
-## File map for the next model
+## File map from the Sprint 3 implementation
 
 ### Today
 
@@ -100,12 +100,13 @@ polish that makes the internal calendar and task inbox feel like one product.
   attempted a non-interactive modules-directory reconciliation and stopped.
   The direct equivalent checks above passed. The repository-wide ESLint and
   Prettier checks also still report pre-existing issues in untouched files.
-- Expo native/iOS smoke test: pending; `apps/mobile/ios` is not generated.
+- Expo native/iOS smoke test: pending at the original Sprint 3 handoff;
+  the core Today/navigation path was later exercised during the Sprint 4
+  continuation.
 
-## Handoff prompt
+## Historical handoff note
 
-> Read `AGENTS.md`, `docs/architecture.md`, and `docs/sprint-3-active.md`.
-> Inspect the current files before editing. Continue only unchecked Sprint 3
-> items, preserve unrelated working-tree changes, update this tracker after
-> each completed slice, and run the smallest meaningful verification available.
-> Do not start Sprint 4–7 work.
+Sprint 3 has no remaining implementation work in this tracker. Do not treat its
+old unchecked-at-handoff notes as the active task list, and do not reopen Sprint
+3 for the current work. Continue from the current Sprint 5 handoff and inspect
+the repository before making any new change.

@@ -143,9 +143,9 @@ no value in mocking `expo-notifications` to assert that it was called.
 ## Not yet built
 
 - Server push for changes arriving while the app is closed — still unbuilt.
-  Sprint 4 deliberately left it out: a Google change now reaches the database
-  promptly via the push channel, but the _device_ only learns about it on the
+  Calendar provider changes now reach the database promptly through the Google
+  or Microsoft webhook path, but the _device_ only learns about them on the
   next foreground query. Closing that gap needs APNs and a device-token table,
-  which is its own piece of work.
+  which is its own piece of work after the calendar provider work.
 - Badge counts. Deliberately off: a permanent red dot on a planning app trains
   people to ignore it.

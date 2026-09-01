@@ -51,6 +51,14 @@ Google and Microsoft differ in vocabulary but not in shape:
 
 Both cursors are stored in `calendar_sync_states.sync_cursor`.
 
+Watch state is stored according to provider scope. Google registrations are
+calendar-scoped and live on `calendar_sync_states`; Microsoft Graph
+subscriptions target `/me/events`, so their subscription id, clientState, and
+expiry live on `provider_accounts`. The shared engine renews through the
+optional provider `renewWatch` method when available and otherwise uses its
+stop-and-recreate fallback. A missing or removed Graph subscription is replaced
+and followed by reconciliation.
+
 One Google constraint shapes the whole design: `syncToken` and
 `timeMin`/`timeMax` are mutually exclusive. The window is therefore fixed at the
 initial sync and inherited by every incremental run, so `initialSyncWindow()` in
@@ -109,6 +117,9 @@ notification handling. So the system also needs:
 
 - Periodic reconciliation via Supabase Cron.
 - Webhook renewal before `webhook_expires_at`.
+- Microsoft lifecycle notifications (`reauthorizationRequired` and
+  `subscriptionRemoved`) enqueue account renewal; the replacement subscription
+  is then followed by the normal account reconciliation job.
 - Retry with backoff through `sync_jobs`, and a `dead` status for exhausted
   jobs so failures are visible rather than silent.
 - A claimed queue row carries a fencing token. Lease recovery can make an
@@ -130,9 +141,12 @@ authenticates itself:
 | `webhook-microsoft`        | Microsoft Graph    | subscription id plus `clientState`, generated at subscription creation and compared against `provider_accounts.webhook_token` |
 | `sync-cron`                | `pg_cron`          | `X-Sync-Cron-Secret`, and the function refuses to run at all if the secret is unset                                           |
 
-The webhook never returns a non-2xx. A failure there is logged and acknowledged,
-because teaching Google to back off the channel costs more than the one
-notification the daily reconciliation would have caught anyway.
+Provider webhook POSTs are acknowledged with 2xx responses, including safely
+ignorable or internally failed notifications; the Microsoft validation
+handshake returns the required plain-text 200 response. Unsupported HTTP
+methods may still return 405. A notification failure is logged and
+acknowledged, because teaching a provider to back off the channel costs more
+than the one notification daily reconciliation would have caught anyway.
 
 ## Cron jobs
 
