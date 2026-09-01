@@ -23,25 +23,26 @@ The monorepo checks, Edge Function checks/tests, local migrations, and database
 tests now pass. The real Google OAuth round trip, webhook delivery, and
 provider-first write flow still need device-level verification.
 
-| Area                                                                          | State                                               |
-| ----------------------------------------------------------------------------- | --------------------------------------------------- |
-| Monorepo, TypeScript strict, ESLint, Prettier, CI                             | Done                                                |
-| Design tokens + UI primitives (`@cal/ui`)                                     | Done                                                |
-| Database schema, RLS, pgTAP tests                                             | Done                                                |
-| Auth (email, Apple), session, account deletion                                | Done                                                |
-| Deterministic availability engine (`@cal/domain`)                             | Done, unit-tested                                   |
-| Task inbox, editor, completion, snooze, delete                                | Done — Sprint 1                                     |
-| Quick Add (task lane)                                                         | Done — Sprint 1                                     |
-| Local task reminders + notification actions                                   | Done — Sprint 1                                     |
-| Calendar views, event CRUD, recurrence, alerts, calendar colors               | Done — Sprint 2                                     |
-| Today dashboard, merged timeline, overdue/unscheduled work, free-time summary | Done — Sprint 3                                     |
-| Search across event/task titles, notes, and locations                         | Done — Sprint 3                                     |
-| Settings planning preferences                                                 | Done — Sprint 3                                     |
-| Google OAuth, calendar import, two-way sync, webhooks, retry                  | Implemented — local checks pass; Google E2E pending |
-| Microsoft / Outlook sync                                                      | Not started — Sprint 5                              |
-| AI Find Time, RevenueCat                                                      | Not started — Sprint 6                              |
+| Area                                                                          | State                                              |
+| ----------------------------------------------------------------------------- | -------------------------------------------------- |
+| Monorepo, TypeScript strict, ESLint, Prettier, CI                             | Done                                               |
+| Design tokens + UI primitives (`@cal/ui`)                                     | Done                                               |
+| Database schema, RLS, pgTAP tests                                             | Done                                               |
+| Auth (email, Apple), session, account deletion                                | Done                                               |
+| Deterministic availability engine (`@cal/domain`)                             | Done, unit-tested                                  |
+| Task inbox, editor, completion, snooze, delete                                | Done — Sprint 1                                    |
+| Quick Add (task lane)                                                         | Done — Sprint 1                                    |
+| Local task reminders + notification actions                                   | Done — Sprint 1                                    |
+| Calendar views, event CRUD, recurrence, alerts, calendar colors               | Done — Sprint 2                                    |
+| Today dashboard, merged timeline, overdue/unscheduled work, free-time summary | Done — Sprint 3                                    |
+| Search across event/task titles, notes, and locations                         | Done — Sprint 3                                    |
+| Settings planning preferences                                                 | Done — Sprint 3                                    |
+| Google OAuth, calendar import, two-way sync, webhooks, retry                  | Done — Sprint 4; webhook delivery untested locally |
+| Microsoft / Outlook sync                                                      | Not started — Sprint 5                             |
+| AI Find Time, RevenueCat                                                      | Not started — Sprint 6                             |
 
 The live implementation handoff is [`docs/sprint-4-active.md`](docs/sprint-4-active.md).
+Sprint 5 is planned but gated on it — see [`docs/sprint-5-active.md`](docs/sprint-5-active.md).
 
 ---
 

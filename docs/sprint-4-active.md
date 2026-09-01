@@ -1,6 +1,6 @@
 # Sprint 4 — Active implementation tracker
 
-Status: **Implementation complete; local verification complete, OAuth verification pending**
+Status: **Implementation complete; OAuth, import, and sync verified against live Google. Outward write and webhook delivery still unexercised.**
 Last updated: **2026-08-31**
 
 This is the live handoff for the Sprint 4 implementation. Update the
@@ -101,8 +101,12 @@ above the adapter.
       Metro server, sign in with the seeded account, and load the Today data.
 - [x] Move Quick Add above the native tab bar and reduce the visible navigation
       to Today, Calendar, Tasks, and Settings; simulator interaction verified.
-- [ ] Register the Google Cloud OAuth client and set the new secrets.
-- [ ] Device/simulator verification of the OAuth round trip.
+- [x] Register the Google Cloud OAuth client and set the new secrets.
+- [x] Verify the OAuth round trip end to end (done against the live Google
+      API from the local stack; the iOS client build is still unexercised).
+- [x] Exercise an outward provider write against Google.
+- [ ] Exercise a real webhook delivery (needs an HTTPS tunnel or a deployed
+      project; `127.0.0.1` cannot receive Google push notifications).
 
 ## File map for the next model
 
@@ -214,6 +218,95 @@ secret server-side and is why Google issues a refresh token at all.
   a properly provisioned development build.
 - The Google OAuth round trip, a real webhook delivery, and an outward provider
   write remain unexercised.
+
+### Google OAuth and sync verified against the live API — 2026-09-01
+
+Run from the local stack with `supabase functions serve --env-file supabase/.env`
+against a real Google account (Cloud project `BCalAI Dev`,
+OAuth client type Web application, redirect
+`http://127.0.0.1:54321/functions/v1/oauth-google-callback`).
+
+- `oauth-google-start` minted PKCE + state and returned a correct consent URL.
+- `oauth-google-callback` exchanged the code and logged `provider_connected`.
+  `provider_accounts` holds the account as `active`, with all four scopes and a
+  non-null `secret_reference_id` — the refresh token reached Vault.
+- `integrations-calendars` listed seven real calendars, correctly marking the
+  primary as writable and the subscribed/holiday calendars as read-only.
+- `integrations-import` imported the primary calendar.
+- `sync-run` performed the initial sync: **231 events written**, 20 with an
+  RRULE, 31 all-day. A second run went down the `incremental` path from the
+  stored cursor and wrote 0 — the cursor round trip works.
+
+**Bug found and fixed: migration 0008.** Both provider-identity indexes were
+created as _partial_ unique indexes. Postgres only infers a partial index for
+`on conflict (cols)` when the statement repeats the predicate, and PostgREST's
+`onConflict` option cannot emit one, so every upsert through the client library
+failed with 42P10. This broke `integrations-import`, `sync/upsert.ts` (all
+inbound events), and `sync/push.ts` (reconciliation after an outward write) —
+the whole engine. Migration 0008 recreates both indexes without the predicate,
+which is behaviourally identical because Postgres treats NULLs as distinct.
+`sync_jobs_idempotency_idx` is deliberately still partial: it is only used from
+`enqueue_sync_job`, which is SQL and states the predicate itself.
+
+**Outward writes verified (acceptance criterion 5).** Through
+`provider-event-write` against the primary calendar:
+
+- `create` returned a `providerEventId` and an etag, and the event was
+  confirmed present in the Google Calendar web UI at the correct wall-clock
+  time (15:00 UTC rendering as 11am EST).
+- `update` changed title, location, and time; Google returned a new etag
+  (`…171146398` → `…337065086`), so the change was accepted by the provider
+  rather than only written locally.
+- `delete` removed the provider event and the local row, confirmed by the day
+  being empty in the Google Calendar web UI.
+
+All three came back `syncStatus: "synced"`, which is only reachable through a
+confirmed provider response.
+
+This is the class of defect that only a live run finds. It had passed
+formatting, lint, six typechecks, 129 unit tests, 15 Deno tests, and 20
+database tests.
+
+Two local-environment limits worth knowing:
+
+- `[edge_runtime] policy = "oneshot"` kills the isolate once a response is
+  sent, so `runAfterResponse` work (the post-import sync) never runs locally.
+  Invoke `sync-run` explicitly instead. This is a local artifact, not a bug.
+- Google only delivers push notifications to public HTTPS endpoints, so webhook
+  delivery cannot be tested against `127.0.0.1`. Needs a tunnel or a deployed
+  project.
+
+### Second machine verified — 2026-08-31
+
+The clone at `~/Desktop/Claude Vault/Cal Project App` was brought up from a bare
+machine: Xcode 26.6 with iOS 26.5 simulators, Homebrew, Node 26.8.1, pnpm
+9.12.0, Deno 2.9.6, Watchman, Docker 29.7.2, and Supabase CLI 2.116.0.
+Everything below was re-run independently here and passed:
+
+- `pnpm verify`: formatting, ESLint, all six workspace typechecks, 129 unit
+  tests.
+- `deno task check`: all twelve Edge Function entry points.
+- `deno task test`: 15 tests.
+- `supabase start` and `pnpm db:reset`: all seven migrations applied, seed
+  loaded.
+- `supabase test db`: 20 tests across `rls.test.sql` and `scheduling.test.sql`.
+- `pnpm db:types` against the local schema produced no schema change — only a
+  trailing newline — which confirms the committed types match the migrations.
+
+Environment notes for the next model:
+
+- Node is 26.8.1, not the 20.18+ the README pins. Nothing has failed on it, but
+  Metro/Expo has not yet been exercised on this machine; if bundling misbehaves,
+  suspect the Node major before anything in this repo.
+- `corepack` is no longer bundled with Node 26, so pnpm was installed via
+  Homebrew. It still resolves to the pinned 9.12.0 from `packageManager`.
+- Homebrew refuses to build while the standalone Command Line Tools lag the
+  macOS version, even with a current Xcode installed. `softwareupdate --install
+"Command Line Tools for Xcode <version>-<version>"` is the fix; the label
+  repeats the version.
+
+Still unexercised here: the iOS development build, and the Google OAuth round
+trip, webhook delivery, and outward provider write.
 
 ### Original Sprint 4 handoff state
 
