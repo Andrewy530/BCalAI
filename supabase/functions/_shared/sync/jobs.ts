@@ -33,6 +33,8 @@ export interface SyncJob {
   kind: string;
   payload: Record<string, unknown>;
   attempts: number;
+  /** Fences completion so a reclaimed worker cannot close a newer claim. */
+  claim_token: string;
 }
 
 export async function enqueue(
@@ -81,6 +83,7 @@ export async function complete(
   admin: SupabaseClient,
   jobId: string,
   succeeded: boolean,
+  claimToken: string,
   error?: unknown,
 ): Promise<void> {
   // Only our own stable code is stored: `last_error` is readable by the job's
@@ -90,6 +93,7 @@ export async function complete(
   const { error: rpcError } = await admin.rpc('complete_sync_job', {
     p_job_id: jobId,
     p_succeeded: succeeded,
+    p_claim_token: claimToken,
     p_error: code,
   });
 

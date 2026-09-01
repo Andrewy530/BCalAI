@@ -5,7 +5,7 @@
 begin;
 create extension if not exists pgtap;
 
-select plan(17);
+select plan(20);
 
 insert into auth.users (instance_id, id, aud, role, email, created_at, updated_at)
 values
@@ -42,12 +42,13 @@ values
 
 insert into public.sync_jobs (
   user_id, provider_account_id, kind, payload, status, attempts, updated_at,
-  run_after, idempotency_key
+  run_after, idempotency_key, claim_token
 )
 values (
   'dddddddd-dddd-dddd-dddd-dddddddddddd',
   '33333333-3333-3333-3333-333333333333', 'calendar.sync', '{"calendarId":"c1"}',
-  'running', 1, now() - interval '16 minutes', now() - interval '16 minutes', 'queue-c-stale'
+  'running', 1, now() - interval '16 minutes', now() - interval '16 minutes',
+  'queue-c-stale', '33333333-3333-3333-3333-333333333333'
 );
 
 select is(
@@ -89,6 +90,11 @@ select is(
   'claim increments attempts'
 );
 
+select ok(
+  (select claim_token is not null from public.sync_jobs where idempotency_key = 'queue-a-1'),
+  'claim issues a fencing token'
+);
+
 select is(
   (select count(*)::int
    from public.sync_jobs
@@ -113,7 +119,8 @@ select is(
 -- eligible. This is the hand-off drainQueue relies on.
 select public.complete_sync_job(
   (select id from public.sync_jobs where idempotency_key = 'queue-a-1'),
-  true
+  true,
+  (select claim_token from public.sync_jobs where idempotency_key = 'queue-a-1')
 );
 
 select is(
@@ -142,6 +149,32 @@ select is(
    where j.provider_account_id = '33333333-3333-3333-3333-333333333333'),
   1,
   'recovered work can be claimed after its retry delay'
+);
+
+-- The stale worker's original token must not be able to close the replacement
+-- claim. Only the token returned by the current claim may release the account.
+select public.complete_sync_job(
+  (select id from public.sync_jobs where idempotency_key = 'queue-c-stale'),
+  true,
+  '33333333-3333-3333-3333-333333333333'
+);
+
+select is(
+  (select status::text from public.sync_jobs where idempotency_key = 'queue-c-stale'),
+  'running',
+  'a late completion with an old claim token is fenced'
+);
+
+select public.complete_sync_job(
+  (select id from public.sync_jobs where idempotency_key = 'queue-c-stale'),
+  true,
+  (select claim_token from public.sync_jobs where idempotency_key = 'queue-c-stale')
+);
+
+select is(
+  (select status::text from public.sync_jobs where idempotency_key = 'queue-c-stale'),
+  'succeeded',
+  'the current claim token completes the recovered job'
 );
 
 select is(

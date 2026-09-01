@@ -27,7 +27,8 @@ import { supabase } from '../../../lib/supabase/client';
 const EVENT_COLUMNS =
   'id, user_id, calendar_id, title, description, location, start_at, end_at, all_day, ' +
   'timezone, status, recurrence_rule, alerts, source_type, provider_event_id, provider_etag, ' +
-  'provider_updated_at, sync_status, created_at, updated_at';
+  'recurring_event_id, recurrence_original_start_at, provider_updated_at, sync_status, ' +
+  'created_at, updated_at';
 
 const eventRowSchema = z
   .object({
@@ -46,6 +47,8 @@ const eventRowSchema = z
     alerts: z.array(z.number()).nullable(),
     source_type: z.string(),
     provider_event_id: z.string().nullable(),
+    recurring_event_id: z.string().nullable(),
+    recurrence_original_start_at: z.string().nullable(),
     provider_etag: z.string().nullable(),
     provider_updated_at: z.string().nullable(),
     sync_status: z.string(),
@@ -68,6 +71,8 @@ const eventRowSchema = z
     alerts: row.alerts ?? [],
     sourceType: row.source_type,
     providerEventId: row.provider_event_id,
+    recurringEventId: row.recurring_event_id,
+    recurrenceOriginalStartAt: row.recurrence_original_start_at,
     providerEtag: row.provider_etag,
     providerUpdatedAt: row.provider_updated_at,
     syncStatus: row.sync_status,
@@ -161,19 +166,20 @@ export async function deleteCalendar(id: string): Promise<void> {
 /**
  * Every event that could appear between `start` and `end`.
  *
- * Recurring events are stored once, as a master row, so the window filter
- * cannot exclude them by start time — a weekly series that began last year
- * still has occurrences this week. They are fetched whole and expanded on the
- * client by `expandOccurrences`.
+ * Recurring masters are fetched whole because a weekly series that began last
+ * year still has occurrences this week. Provider exception rows and materialized
+ * Microsoft occurrences are fetched by their original occurrence start and are
+ * expanded together on the client by `expandCalendarEvents`.
  */
 export async function fetchEventsInWindow(start: Date, end: Date): Promise<CalendarEvent[]> {
   const { data, error } = await supabase
     .from('events')
     .select(EVENT_COLUMNS)
-    .neq('status', 'cancelled')
     .or(
-      `and(start_at.lt.${end.toISOString()},end_at.gt.${start.toISOString()}),` +
-        `recurrence_rule.not.is.null`,
+      `and(status.neq.cancelled,start_at.lt.${end.toISOString()},end_at.gt.${start.toISOString()}),` +
+        `recurrence_rule.not.is.null,` +
+        `and(recurring_event_id.not.is.null,recurrence_original_start_at.gte.${start.toISOString()},` +
+        `recurrence_original_start_at.lt.${end.toISOString()})`,
     )
     .order('start_at');
 

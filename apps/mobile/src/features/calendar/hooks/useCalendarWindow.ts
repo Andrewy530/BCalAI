@@ -1,10 +1,11 @@
-import { addZonedDays, expandOccurrences, startOfZonedDay, toZonedDateKey } from '@cal/domain';
+import { addZonedDays, startOfZonedDay, toZonedDateKey } from '@cal/domain';
 import type { Calendar, CalendarEvent } from '@cal/schemas';
 import { useMemo } from 'react';
 
 import { useCalendarViewStore } from '../../../store/calendar-view.store';
 import { useCalendars } from '../../events/hooks/useCalendars';
 import { useEventsInWindow } from '../../events/hooks/useEvents';
+import { expandCalendarEvents } from '../../events/utils/expand-calendar-events';
 import { useProfile, useUserTimeZone } from '../../settings/hooks/useProfile';
 import { windowForView, type CalendarWindow } from '../utils/window';
 
@@ -69,31 +70,19 @@ export function useCalendarWindow(): CalendarWindowResult {
 
     const expanded: EventOccurrence[] = [];
 
-    for (const event of eventsQuery.data ?? []) {
-      const calendar = calendarById.get(event.calendarId);
+    for (const item of expandCalendarEvents(eventsQuery.data ?? [], window)) {
+      const calendar = calendarById.get(item.event.calendarId);
       // Respect both the per-device toggle and the calendar's own visibility.
-      if (hidden.has(event.calendarId) || calendar?.isVisible === false) continue;
+      if (hidden.has(item.event.calendarId) || calendar?.isVisible === false) continue;
 
-      const slices = expandOccurrences(
-        {
-          start: new Date(event.startAt),
-          end: new Date(event.endAt),
-          timeZone: event.timezone,
-          recurrenceRule: event.recurrenceRule,
-        },
-        { start: window.start, end: window.end },
-      );
-
-      for (const slice of slices) {
-        expanded.push({
-          key: `${event.id}:${slice.index}`,
-          event,
-          calendar,
-          start: slice.start,
-          end: slice.end,
-          occurrenceIndex: slice.index,
-        });
-      }
+      expanded.push({
+        key: `${item.event.id}:${item.occurrenceIndex}`,
+        event: item.event,
+        calendar,
+        start: item.start,
+        end: item.end,
+        occurrenceIndex: item.occurrenceIndex,
+      });
     }
 
     expanded.sort((a, b) => a.start - b.start || a.end - b.end);

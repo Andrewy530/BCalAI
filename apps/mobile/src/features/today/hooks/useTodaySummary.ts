@@ -3,7 +3,6 @@ import {
   bucketTasks,
   calculateFreeTime,
   deviceTimeZone,
-  expandOccurrences,
   startOfZonedDay,
   toZonedDateKey,
   type FreeTimeSummary,
@@ -15,6 +14,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useCalendarViewStore } from '../../../store/calendar-view.store';
 import { useCalendars } from '../../events/hooks/useCalendars';
 import { useEventsInWindow } from '../../events/hooks/useEvents';
+import { expandCalendarEvents } from '../../events/utils/expand-calendar-events';
 import { useProfile } from '../../settings/hooks/useProfile';
 import { useTaskLists, useTasks } from '../../tasks/hooks/useTasks';
 
@@ -104,30 +104,21 @@ export function useTodaySummary(): TodaySummary {
     const hidden = new Set(hiddenCalendarIds);
     const expanded: TodayEventOccurrence[] = [];
 
-    for (const event of eventsQuery.data ?? []) {
-      const calendar = calendarById.get(event.calendarId);
-      if (hidden.has(event.calendarId) || calendar?.isVisible === false) continue;
+    for (const item of expandCalendarEvents(eventsQuery.data ?? [], {
+      start: dayStart,
+      end: dayEnd,
+    })) {
+      const calendar = calendarById.get(item.event.calendarId);
+      if (hidden.has(item.event.calendarId) || calendar?.isVisible === false) continue;
 
-      const occurrences = expandOccurrences(
-        {
-          start: new Date(event.startAt),
-          end: new Date(event.endAt),
-          timeZone: event.timezone,
-          recurrenceRule: event.recurrenceRule,
-        },
-        { start: dayStart, end: dayEnd },
-      );
-
-      for (const occurrence of occurrences) {
-        expanded.push({
-          key: `${event.id}:${occurrence.index}`,
-          event,
-          calendar,
-          start: occurrence.start,
-          end: occurrence.end,
-          occurrenceIndex: occurrence.index,
-        });
-      }
+      expanded.push({
+        key: `${item.event.id}:${item.occurrenceIndex}`,
+        event: item.event,
+        calendar,
+        start: item.start,
+        end: item.end,
+        occurrenceIndex: item.occurrenceIndex,
+      });
     }
 
     return expanded.sort((a, b) => a.start - b.start || a.end - b.end);

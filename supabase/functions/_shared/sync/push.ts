@@ -86,7 +86,12 @@ async function createOutward(
   calendarId: string,
   draft: EventDraft,
 ): Promise<PushResult> {
-  const providerCalendarId = await resolveWritableCalendar(admin, calendarId, account.user_id);
+  const providerCalendarId = await resolveWritableCalendar(
+    admin,
+    calendarId,
+    account.user_id,
+    account.id,
+  );
 
   // Provider first. Nothing is written locally until this returns.
   const created = await providerFor(account.provider).createEvent(
@@ -121,7 +126,7 @@ async function updateOutward(
   eventId: string,
   draft: EventDraft,
 ): Promise<PushResult> {
-  const event = await loadEvent(admin, eventId, account.user_id);
+  const event = await loadEvent(admin, eventId, account.user_id, account.id);
   if (!event.provider_event_id) {
     throw new EdgeError('VALIDATION_FAILED', 'That event has no provider copy yet.', 400);
   }
@@ -130,6 +135,7 @@ async function updateOutward(
     admin,
     event.calendar_id,
     account.user_id,
+    account.id,
   );
 
   try {
@@ -137,7 +143,7 @@ async function updateOutward(
       ctx,
       providerCalendarId,
       event.provider_event_id,
-      toProviderInput(draft),
+      toProviderInput(draft, event.provider_etag),
     );
 
     const { error } = await admin
@@ -169,13 +175,14 @@ async function deleteOutward(
   ctx: ProviderContext,
   eventId: string,
 ): Promise<PushResult> {
-  const event = await loadEvent(admin, eventId, account.user_id);
+  const event = await loadEvent(admin, eventId, account.user_id, account.id);
 
   if (event.provider_event_id) {
     const providerCalendarId = await resolveWritableCalendar(
       admin,
       event.calendar_id,
       account.user_id,
+      account.id,
     );
 
     try {
@@ -203,12 +210,14 @@ async function loadEvent(
   admin: SupabaseClient,
   eventId: string,
   userId: string,
+  providerAccountId: string,
 ): Promise<EventRow> {
   const { data, error } = await admin
     .from('events')
     .select(EVENT_COLUMNS)
     .eq('id', eventId)
     .eq('user_id', userId)
+    .eq('provider_account_id', providerAccountId)
     .maybeSingle();
 
   if (error) throw new EdgeError('UNKNOWN', 'Could not read that event.', 500);
@@ -221,12 +230,14 @@ async function resolveWritableCalendar(
   admin: SupabaseClient,
   calendarId: string,
   userId: string,
+  providerAccountId: string,
 ): Promise<string> {
   const { data, error } = await admin
     .from('calendars')
     .select('provider_calendar_id, is_read_only')
     .eq('id', calendarId)
     .eq('user_id', userId)
+    .eq('provider_account_id', providerAccountId)
     .maybeSingle();
 
   if (error) throw new EdgeError('UNKNOWN', 'Could not read that calendar.', 500);
@@ -260,6 +271,8 @@ function toRow(
     timezone: event.timezone,
     status: event.status,
     recurrence_rule: event.recurrenceRule,
+    recurring_event_id: event.recurringEventId,
+    recurrence_original_start_at: event.recurrenceOriginalStartAt,
     alerts: event.alerts,
     source_type: account.provider,
     provider_account_id: account.id,
@@ -272,7 +285,10 @@ function toRow(
   };
 }
 
-function toProviderInput(draft: EventDraft): ProviderEventInput {
+function toProviderInput(
+  draft: EventDraft,
+  providerEtag: string | null = null,
+): ProviderEventInput {
   return {
     title: draft.title,
     description: draft.description ?? null,
@@ -283,5 +299,6 @@ function toProviderInput(draft: EventDraft): ProviderEventInput {
     timezone: draft.timezone,
     recurrenceRule: draft.recurrenceRule ?? null,
     alerts: draft.alerts,
+    providerEtag,
   };
 }

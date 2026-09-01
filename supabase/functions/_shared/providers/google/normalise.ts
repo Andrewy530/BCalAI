@@ -49,15 +49,28 @@ export function normaliseEvent(event: GoogleEvent, calendarTimeZone: string): No
   const fallbackZone = safeTimeZone(calendarTimeZone);
   const start = event.start ?? null;
   const end = event.end ?? null;
-  const allDay = isAllDay(start) || isAllDay(end);
-  const timezone = safeTimeZone(start?.timeZone ?? end?.timeZone ?? fallbackZone);
+  const originalStart = event.originalStartTime ?? null;
+  const allDay = isAllDay(start) || isAllDay(end) || isAllDay(originalStart);
+  const timezone = safeTimeZone(
+    start?.timeZone ?? end?.timeZone ?? originalStart?.timeZone ?? fallbackZone,
+  );
+  const recurrenceOriginalStartAt = resolveInstant(originalStart, timezone);
+  const hasRecurrenceInstanceIdentity =
+    event.recurringEventId !== null &&
+    event.recurringEventId !== undefined &&
+    recurrenceOriginalStartAt !== null;
 
   // A tombstone from an incremental sync carries an id, a status, and little
-  // else — so every field below has to tolerate being absent.
-  const deleted = event.status === 'cancelled' && !event.summary && !start;
+  // else — so every field below has to tolerate being absent. A cancelled
+  // recurring instance is different: its original start is the identity the
+  // client needs to suppress the RRULE-generated occurrence.
+  const deleted =
+    event.status === 'cancelled' && !event.summary && !start && !hasRecurrenceInstanceIdentity;
 
-  const startAt = resolveInstant(start, timezone);
-  const endAt = resolveInstant(end, timezone);
+  const effectiveStart = start ?? (hasRecurrenceInstanceIdentity ? originalStart : null);
+  const effectiveEnd = end ?? (hasRecurrenceInstanceIdentity ? originalStart : null);
+  const startAt = resolveInstant(effectiveStart, timezone);
+  const endAt = resolveInstant(effectiveEnd, timezone);
 
   return {
     providerEventId: event.id,
@@ -76,6 +89,7 @@ export function normaliseEvent(event: GoogleEvent, calendarTimeZone: string): No
     recurrenceRule: extractRRule(event.recurrence),
     alerts: normaliseReminders(event.reminders),
     recurringEventId: event.recurringEventId ?? null,
+    recurrenceOriginalStartAt,
     deleted,
   };
 }

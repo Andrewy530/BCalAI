@@ -62,6 +62,8 @@ export const eventSchema = z.object({
   alerts: z.array(eventAlertSchema).max(5),
   sourceType: sourceTypeSchema,
   providerEventId: z.string().nullable(),
+  recurringEventId: z.string().nullable(),
+  recurrenceOriginalStartAt: isoDateTimeSchema.nullable(),
   providerEtag: z.string().nullable(),
   providerUpdatedAt: isoDateTimeSchema.nullable(),
   syncStatus: syncStatusSchema,

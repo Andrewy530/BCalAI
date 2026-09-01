@@ -56,6 +56,8 @@ export interface NormalisedEvent {
   alerts: number[];
   /** Set when this row is a modified occurrence of a series. */
   recurringEventId: string | null;
+  /** The scheduled start of the occurrence before an exception was moved. */
+  recurrenceOriginalStartAt: string | null;
   deleted: boolean;
 }
 
@@ -71,6 +73,8 @@ export interface ProviderEventInput {
   recurrenceRule: string | null;
   alerts: number[];
   status?: EventStatus;
+  /** The last provider version, when an update can be made conditionally. */
+  providerEtag?: string | null;
 }
 
 export interface SyncResult {
@@ -152,6 +156,14 @@ export interface CalendarProvider {
 
   /** Register (or re-register) the change channel. Called on connect and by cron. */
   watch(ctx: ProviderContext, target: WatchTarget, callbackUrl: string): Promise<WatchRegistration>;
+
+  /**
+   * Extend an existing registration when the provider supports in-place
+   * renewal. Providers without this method use the shared stop-and-recreate
+   * fallback. This keeps renewal provider-neutral while allowing Graph's PATCH
+   * semantics to avoid a duplicate subscription during the hand-off.
+   */
+  renewWatch?(ctx: ProviderContext, registration: WatchRegistration): Promise<WatchRegistration>;
 
   /** Best-effort teardown. A failure here must not block a disconnect. */
   unwatch(ctx: ProviderContext, registration: WatchRegistration): Promise<void>;

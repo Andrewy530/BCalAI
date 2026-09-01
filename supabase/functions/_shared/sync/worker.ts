@@ -56,14 +56,14 @@ export async function drainQueue(
     for (const job of jobs) {
       try {
         await runJob(admin, job, contexts);
-        await complete(admin, job.id, true);
+        await complete(admin, job.id, true, job.claim_token);
         summary.succeeded += 1;
       } catch (error) {
         const code = error instanceof EdgeError ? error.code : 'UNKNOWN';
         console.error(
           JSON.stringify({ code: 'SYNC_JOB_FAILED', kind: job.kind, reason: code, jobId: job.id }),
         );
-        await complete(admin, job.id, false, error);
+        await complete(admin, job.id, false, job.claim_token, error);
         summary.failed += 1;
       }
     }
@@ -98,7 +98,11 @@ async function runJob(
   switch (job.kind) {
     case JOB_KINDS.calendarInitialSync:
     case JOB_KINDS.calendarSync: {
-      const state = await requireStateForCalendar(admin, calendarIdFromPayload(job.payload));
+      const state = await requireStateForCalendar(
+        admin,
+        calendarIdFromPayload(job.payload),
+        account.id,
+      );
       try {
         await syncCalendar(admin, account, ctx, state);
       } catch (error) {
@@ -120,7 +124,7 @@ async function runJob(
               admin,
               account,
               ctx,
-              await requireStateForCalendar(admin, target.calendarId),
+              await requireStateForCalendar(admin, target.calendarId, account.id),
               { force: true },
             );
       if (!renewed) throw new EdgeError('UNKNOWN', 'Could not renew the change channel.', 502);
@@ -173,7 +177,11 @@ async function runJob(
   }
 }
 
-async function requireStateForCalendar(admin: SupabaseClient, calendarId: string) {
+async function requireStateForCalendar(
+  admin: SupabaseClient,
+  calendarId: string,
+  providerAccountId: string,
+) {
   if (!calendarId) {
     throw new EdgeError('VALIDATION_FAILED', 'Job is missing a calendar.', 400);
   }
@@ -184,6 +192,12 @@ async function requireStateForCalendar(admin: SupabaseClient, calendarId: string
     // nothing wrong — but the job must not retry forever, so it fails once and
     // its idempotency key stops the webhook from re-queuing it.
     throw new EdgeError('NOT_FOUND', 'That calendar is no longer imported.', 404);
+  }
+  if (state.provider_account_id !== providerAccountId) {
+    // A durable queue payload is untrusted after it has crossed the jsonb
+    // boundary. Never let a malformed or replayed job operate on another
+    // connection's local state.
+    throw new EdgeError('NOT_AUTHORIZED', 'That sync task belongs to another connection.', 403);
   }
   return state;
 }

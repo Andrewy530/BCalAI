@@ -38,8 +38,16 @@ export async function applyProviderEvents(
 ): Promise<UpsertOutcome> {
   if (events.length === 0) return { written: 0, deleted: 0, skippedPending: 0 };
 
-  const tombstones = events.filter((event) => event.deleted || event.status === 'cancelled');
-  const live = events.filter((event) => !event.deleted && event.status !== 'cancelled');
+  const tombstones = events.filter(
+    (event) =>
+      event.deleted || (event.status === 'cancelled' && !hasRecurrenceInstanceIdentity(event)),
+  );
+  // A cancelled recurring instance is data, not a row deletion: the client
+  // needs its original occurrence start to suppress the RRULE-generated copy.
+  const live = events.filter(
+    (event) =>
+      !event.deleted && (event.status !== 'cancelled' || hasRecurrenceInstanceIdentity(event)),
+  );
 
   const pending = await findPendingIds(admin, target.providerAccountId, events);
 
@@ -105,6 +113,8 @@ function toRow(
     timezone: event.timezone,
     status: event.status,
     recurrence_rule: event.recurrenceRule,
+    recurring_event_id: event.recurringEventId,
+    recurrence_original_start_at: event.recurrenceOriginalStartAt,
     alerts: event.alerts,
     source_type: sourceType,
     provider_account_id: target.providerAccountId,
@@ -115,6 +125,10 @@ function toRow(
     // what confirms a row we pushed a moment ago, without a second write.
     sync_status: 'synced',
   };
+}
+
+function hasRecurrenceInstanceIdentity(event: NormalisedEvent): boolean {
+  return event.recurringEventId !== null && event.recurrenceOriginalStartAt !== null;
 }
 
 async function findPendingIds(

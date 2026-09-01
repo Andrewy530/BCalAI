@@ -14,6 +14,8 @@ export interface MicrosoftRequest {
   body?: unknown;
   /** Sent for conditional event writes when Graph provides an @odata.etag. */
   etag?: string | null;
+  /** Additional Graph Prefer directive, such as odata.maxpagesize. */
+  prefer?: string;
   operation: MicrosoftRequestOperation;
   /** Opt in only when the operation is idempotent or has a Graph transaction id. */
   replaySafe?: boolean;
@@ -64,7 +66,7 @@ export function createMicrosoftClient(deps: MicrosoftClientDeps = {}): Microsoft
         continue;
       }
 
-      throw translateFailure(response.status, request.operation);
+      throw await translateFailure(response, request.operation);
     }
 
     // The loop always either returns or throws, but this keeps the return type
@@ -83,6 +85,7 @@ function buildHeaders(request: MicrosoftRequest): HeadersInit {
   };
   if (request.body !== undefined) headers['Content-Type'] = 'application/json';
   if (request.etag) headers['If-Match'] = request.etag;
+  headers.Prefer = ['IdType="ImmutableId"', request.prefer].filter(Boolean).join(', ');
   return headers;
 }
 
@@ -92,15 +95,11 @@ function isRetryable(status: number): boolean {
 
 function retryDelay(response: Response | null, attempt: number, now: () => number): number {
   const retryAfter = response?.headers.get('Retry-After');
-  const hinted = retryAfter === null || retryAfter === undefined
-    ? null
-    : parseRetryAfter(retryAfter, now());
+  const hinted =
+    retryAfter === null || retryAfter === undefined ? null : parseRetryAfter(retryAfter, now());
   if (hinted !== null) return Math.min(hinted, MAX_RETRY_DELAY_MS);
 
-  return Math.min(
-    INITIAL_RETRY_DELAY_MS * 2 ** (attempt - 1),
-    MAX_RETRY_DELAY_MS,
-  );
+  return Math.min(INITIAL_RETRY_DELAY_MS * 2 ** (attempt - 1), MAX_RETRY_DELAY_MS);
 }
 
 /** Retry-After is either delta-seconds or an HTTP-date. */
@@ -139,25 +138,39 @@ async function readSuccessBody(response: Response): Promise<unknown> {
   }
 }
 
-function translateFailure(status: number, operation: MicrosoftRequestOperation): EdgeError {
+async function translateFailure(
+  response: Response,
+  operation: MicrosoftRequestOperation,
+): Promise<EdgeError> {
+  const status = response.status;
+
+  // A 410 is only a cursor invalidation when Graph positively identifies the
+  // sync state in its machine-readable error body. Other 410s must remain
+  // ordinary provider failures (a watch or event request is not a delta).
+  if (status === 410 && operation === 'delta') {
+    const graphCode = await graphErrorCode(response);
+    if (
+      graphCode === 'syncStateNotFound' ||
+      graphCode === 'ErrorInvalidSyncState' ||
+      graphCode === 'resyncChangesApplyDifferences' ||
+      graphCode === 'resyncChangesUploadDifferences'
+    ) {
+      return new EdgeError('PROVIDER_SYNC_CURSOR_INVALID', 'The sync cursor expired.', 410);
+    }
+  }
+
   switch (status) {
     case 401:
       return new EdgeError('PROVIDER_AUTH_EXPIRED', 'Reconnect your Microsoft account.', 401);
     case 403:
       return new EdgeError('NOT_AUTHORIZED', 'Microsoft denied access to that resource.', 403);
     case 404:
-      return new EdgeError(
-        'NOT_FOUND',
-        'That Microsoft calendar or event no longer exists.',
-        404,
-      );
+      return new EdgeError('NOT_FOUND', 'That Microsoft calendar or event no longer exists.', 404);
     case 409:
     case 412:
       return new EdgeError('EVENT_PROVIDER_CONFLICT', 'That event changed in Microsoft.', 409);
     case 410:
-      return operation === 'delta'
-        ? new EdgeError('PROVIDER_SYNC_CURSOR_INVALID', 'The sync cursor expired.', 410)
-        : new EdgeError('UNKNOWN', 'Microsoft rejected the request.', 502);
+      return new EdgeError('UNKNOWN', 'Microsoft rejected the request.', 502);
     case 429:
       return new EdgeError(
         'PROVIDER_RATE_LIMITED',
@@ -170,6 +183,18 @@ function translateFailure(status: number, operation: MicrosoftRequestOperation):
         status >= 500 ? 'Microsoft is unavailable.' : 'Microsoft rejected the request.',
         502,
       );
+  }
+}
+
+async function graphErrorCode(response: Response): Promise<string | null> {
+  try {
+    const body: unknown = await response.json();
+    if (!body || typeof body !== 'object' || !('error' in body)) return null;
+    const error = body.error;
+    if (!error || typeof error !== 'object' || !('code' in error)) return null;
+    return typeof error.code === 'string' ? error.code : null;
+  } catch {
+    return null;
   }
 }
 

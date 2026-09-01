@@ -78,6 +78,7 @@ export const googleEventSchema = z.object({
   end: googleEventDateSchema.nullish(),
   recurrence: z.array(z.string()).nullish(),
   recurringEventId: z.string().nullish(),
+  originalStartTime: googleEventDateSchema.nullish(),
   transparency: z.string().nullish(),
   reminders: z
     .object({

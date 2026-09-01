@@ -38,11 +38,11 @@ provider-first write flow still need device-level verification.
 | Search across event/task titles, notes, and locations                         | Done — Sprint 3                                    |
 | Settings planning preferences                                                 | Done — Sprint 3                                    |
 | Google OAuth, calendar import, two-way sync, webhooks, retry                  | Done — Sprint 4; webhook delivery untested locally |
-| Microsoft / Outlook sync                                                      | Not started — Sprint 5                             |
+| Microsoft / Outlook sync                                                      | Implementation complete; live verification pending |
 | AI Find Time, RevenueCat                                                      | Not started — Sprint 6                             |
 
-The live implementation handoff is [`docs/sprint-4-active.md`](docs/sprint-4-active.md).
-Sprint 5 is planned but gated on it — see [`docs/sprint-5-active.md`](docs/sprint-5-active.md).
+The live implementation handoffs are [`docs/sprint-4-active.md`](docs/sprint-4-active.md)
+and [`docs/sprint-5-active.md`](docs/sprint-5-active.md).
 
 ---
 

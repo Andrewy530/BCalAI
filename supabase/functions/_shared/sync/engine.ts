@@ -125,10 +125,14 @@ export async function syncCalendar(
   );
 
   const now = new Date().toISOString();
-  await admin
+  const { error: stateError } = await admin
     .from('calendar_sync_states')
     .update({
-      sync_cursor: result.cursor ?? state.sync_cursor,
+      // A successful provider response owns the cursor. Preserving an older
+      // cursor when the provider returns null would replay stale incremental
+      // work forever and can make a provider that intentionally invalidated
+      // its cursor impossible to recover.
+      sync_cursor: result.cursor,
       needs_full_resync: false,
       retry_count: 0,
       last_error: null,
@@ -136,6 +140,10 @@ export async function syncCalendar(
       last_incremental_sync_at: now,
     })
     .eq('id', state.id);
+
+  if (stateError) {
+    throw new EdgeError('UNKNOWN', 'Could not save sync state.', 500);
+  }
 
   await touchSynced(admin, account.id);
 
@@ -198,8 +206,9 @@ export async function ensureWatch(
 
 /**
  * Ensure the one account-scoped registration owned by `provider_accounts`.
- * Initial imports reuse a still-live registration; cron passes `force` so a
- * renewal always replaces it before the provider's expiry.
+ * Initial imports reuse a still-live registration. Providers with an in-place
+ * renewal operation (Graph) extend the existing registration; providers that
+ * do not expose one use the stop-and-recreate fallback.
  */
 export async function ensureAccountWatch(
   admin: SupabaseClient,
@@ -220,6 +229,20 @@ export async function ensureAccountWatch(
       return true;
     }
 
+    if (options.force && previousRegistration?.token && provider.renewWatch) {
+      try {
+        const registration = await provider.renewWatch(ctx, previousRegistration);
+        await saveAccountWatch(admin, account.id, registration);
+        return true;
+      } catch (cause) {
+        // Graph returns 404 when an expired subscription has already been
+        // removed. In that one case create a fresh subscription below; other
+        // renewal failures should remain visible and must not create a second
+        // subscription while the old one may still be active.
+        if (!(cause instanceof EdgeError) || cause.code !== 'NOT_FOUND') throw cause;
+      }
+    }
+
     // Stop the previous provider watch first, or it may keep delivering to a
     // registration whose id we have already replaced.
     if (previousRegistration) await provider.unwatch(ctx, previousRegistration);
@@ -231,18 +254,7 @@ export async function ensureAccountWatch(
     );
 
     try {
-      const { error } = await admin
-        .from('provider_accounts')
-        .update({
-          webhook_channel_id: registration.channelId,
-          webhook_resource_id: registration.resourceId,
-          webhook_subscription_id: registration.subscriptionId,
-          webhook_token: registration.token,
-          webhook_expires_at: registration.expiresAt,
-        })
-        .eq('id', account.id);
-
-      if (error) throw new EdgeError('UNKNOWN', 'Could not save the watch registration.', 500);
+      await saveAccountWatch(admin, account.id, registration);
     } catch (cause) {
       await discardNewWatch(provider, ctx, registration);
       throw cause instanceof EdgeError
@@ -262,6 +274,25 @@ export async function ensureAccountWatch(
     }
     return false;
   }
+}
+
+async function saveAccountWatch(
+  admin: SupabaseClient,
+  accountId: string,
+  registration: WatchRegistration,
+): Promise<void> {
+  const { error } = await admin
+    .from('provider_accounts')
+    .update({
+      webhook_channel_id: registration.channelId,
+      webhook_resource_id: registration.resourceId,
+      webhook_subscription_id: registration.subscriptionId,
+      webhook_token: registration.token,
+      webhook_expires_at: registration.expiresAt,
+    })
+    .eq('id', accountId);
+
+  if (error) throw new EdgeError('UNKNOWN', 'Could not save the watch registration.', 500);
 }
 
 async function ensureCalendarWatch(

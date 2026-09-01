@@ -65,12 +65,18 @@ enabled = false
 # Everything defaults to requiring a user JWT. The two exceptions below are
 # called by parties that do not have one, and each authenticates itself another
 # way: the OAuth callback by the single-use `state` it must present, and the
-# Google webhook by the channel token it echoes back.
+# provider webhooks by the channel/subscription secret they echo back.
 # ---------------------------------------------------------------------------
 [functions.oauth-google-callback]
 verify_jwt = false
 
+[functions.oauth-microsoft-callback]
+verify_jwt = false
+
 [functions.webhook-google]
+verify_jwt = false
+
+[functions.webhook-microsoft]
 verify_jwt = false
 
 # Called by pg_cron with a shared secret, not by a signed-in user.

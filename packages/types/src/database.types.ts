@@ -258,6 +258,8 @@ export type Database = {
           provider_etag: string | null
           provider_event_id: string | null
           provider_updated_at: string | null
+          recurring_event_id: string | null
+          recurrence_original_start_at: string | null
           recurrence_rule: string | null
           source_type: Database["public"]["Enums"]["calendar_source"]
           start_at: string
@@ -281,6 +283,8 @@ export type Database = {
           provider_etag?: string | null
           provider_event_id?: string | null
           provider_updated_at?: string | null
+          recurring_event_id?: string | null
+          recurrence_original_start_at?: string | null
           recurrence_rule?: string | null
           source_type?: Database["public"]["Enums"]["calendar_source"]
           start_at: string
@@ -304,6 +308,8 @@ export type Database = {
           provider_etag?: string | null
           provider_event_id?: string | null
           provider_updated_at?: string | null
+          recurring_event_id?: string | null
+          recurrence_original_start_at?: string | null
           recurrence_rule?: string | null
           source_type?: Database["public"]["Enums"]["calendar_source"]
           start_at?: string
@@ -519,6 +525,7 @@ export type Database = {
       sync_jobs: {
         Row: {
           attempts: number
+          claim_token: string | null
           created_at: string
           id: string
           idempotency_key: string | null
@@ -533,6 +540,7 @@ export type Database = {
         }
         Insert: {
           attempts?: number
+          claim_token?: string | null
           created_at?: string
           id?: string
           idempotency_key?: string | null
@@ -547,6 +555,7 @@ export type Database = {
         }
         Update: {
           attempts?: number
+          claim_token?: string | null
           created_at?: string
           id?: string
           idempotency_key?: string | null
@@ -804,6 +813,7 @@ export type Database = {
         Args: { p_limit?: number }
         Returns: {
           attempts: number
+          claim_token: string | null
           created_at: string
           id: string
           idempotency_key: string | null
@@ -825,6 +835,7 @@ export type Database = {
       }
       complete_sync_job: {
         Args: {
+          p_claim_token: string
           p_error?: string
           p_job_id: string
           p_max_attempts?: number

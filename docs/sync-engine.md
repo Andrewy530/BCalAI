@@ -1,8 +1,8 @@
 # Sync engine
 
-Status: **Google built in Sprint 4; Microsoft not yet built.** This document is
-the contract both implementations satisfy. The live source of truth for the
-interface is `supabase/functions/_shared/providers/types.ts`.
+Status: **Google and Microsoft provider paths are implemented behind this
+contract; live Microsoft verification remains.** The live source of truth for
+the interface is `supabase/functions/_shared/providers/types.ts`.
 
 ## Provider adapter
 
@@ -12,13 +12,15 @@ Google- and Microsoft-specific code lives only behind this interface, in
 ```ts
 interface CalendarProvider {
   readonly kind: ProviderKind;
+  readonly watchScope: 'calendar' | 'account';
   listCalendars(ctx: ProviderContext): Promise<ExternalCalendar[]>;
   initialSync(ctx, providerCalendarId, window): Promise<SyncResult>;
   incrementalSync(ctx, providerCalendarId, cursor): Promise<SyncResult>;
   createEvent(ctx, providerCalendarId, input): Promise<NormalisedEvent>;
   updateEvent(ctx, providerCalendarId, providerEventId, input): Promise<NormalisedEvent>;
   deleteEvent(ctx, providerCalendarId, providerEventId): Promise<void>;
-  watch(ctx, providerCalendarId, callbackUrl): Promise<WatchRegistration>;
+  watch(ctx, target: WatchTarget, callbackUrl): Promise<WatchRegistration>;
+  renewWatch?(ctx, registration): Promise<WatchRegistration>;
   unwatch(ctx, registration): Promise<void>;
 }
 ```
@@ -83,10 +85,12 @@ experience as their calendar "changing back".
 ## Preventing loops
 
 Every row tracks `provider_event_id`, `provider_etag`, `provider_updated_at`,
-and `sync_status`. A webhook that reflects our own recent write **confirms** the
-local row rather than triggering a second write outward. The unique index on
-`(provider_account_id, provider_event_id)` makes the upsert idempotent, so a
-replayed delivery is harmless.
+and `sync_status`. Recurring instances additionally retain their provider
+series id and original occurrence start, so a moved or cancelled instance can
+override the stored RRULE master. A webhook that reflects our own recent write
+**confirms** the local row rather than triggering a second write outward. The
+unique index on `(provider_account_id, provider_event_id)` makes the upsert
+idempotent, so a replayed delivery is harmless.
 
 This is structural rather than heuristic: `_shared/sync/upsert.ts` has no path
 that writes outward at all, so an inbound event _cannot_ start a write loop
@@ -107,18 +111,24 @@ notification handling. So the system also needs:
 - Webhook renewal before `webhook_expires_at`.
 - Retry with backoff through `sync_jobs`, and a `dead` status for exhausted
   jobs so failures are visible rather than silent.
+- A claimed queue row carries a fencing token. Lease recovery can make an
+  abandoned row retryable, but the old worker cannot complete the replacement
+  claim if it returns late.
 - A user-visible sync health state — `sync_jobs` is readable by its owner for
   exactly this reason.
 
 ## Authenticating the untrusted callers
 
-Two endpoints run without a user JWT, and each authenticates itself:
+OAuth callbacks and provider webhooks run without a user JWT, and each
+authenticates itself:
 
-| Endpoint                | Caller             | Proof                                                                                                                    |
-| ----------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------ |
-| `oauth-google-callback` | the user's browser | single-use `state` row in `oauth_states`, deleted before the code is exchanged                                           |
-| `webhook-google`        | Google             | `X-Goog-Channel-Token`, generated when the channel was created and compared against `calendar_sync_states.webhook_token` |
-| `sync-cron`             | `pg_cron`          | `X-Sync-Cron-Secret`, and the function refuses to run at all if the secret is unset                                      |
+| Endpoint                   | Caller             | Proof                                                                                                                         |
+| -------------------------- | ------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| `oauth-google-callback`    | the user's browser | single-use `state` row in `oauth_states`, deleted before the code is exchanged                                                |
+| `oauth-microsoft-callback` | the user's browser | single-use `state` row in `oauth_states`, deleted before the code is exchanged                                                |
+| `webhook-google`           | Google             | `X-Goog-Channel-Token`, generated when the channel was created and compared against `calendar_sync_states.webhook_token`      |
+| `webhook-microsoft`        | Microsoft Graph    | subscription id plus `clientState`, generated at subscription creation and compared against `provider_accounts.webhook_token` |
+| `sync-cron`                | `pg_cron`          | `X-Sync-Cron-Secret`, and the function refuses to run at all if the secret is unset                                           |
 
 The webhook never returns a non-2xx. A failure there is logged and acknowledged,
 because teaching Google to back off the channel costs more than the one

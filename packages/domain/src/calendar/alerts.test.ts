@@ -21,6 +21,8 @@ function event(overrides: Partial<CalendarEvent> & { id: string }): CalendarEven
     alerts: [],
     sourceType: 'internal',
     providerEventId: null,
+    recurringEventId: null,
+    recurrenceOriginalStartAt: null,
     providerEtag: null,
     providerUpdatedAt: null,
     syncStatus: 'synced',

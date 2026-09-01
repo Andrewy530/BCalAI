@@ -1,4 +1,9 @@
-import { type ConnectResult, type ProviderKind, connectResultSchema } from '@cal/schemas';
+import {
+  type ConnectResult,
+  type ProviderKind,
+  connectResultSchema,
+  providerKindSchema,
+} from '@cal/schemas';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import * as WebBrowser from 'expo-web-browser';
 
@@ -36,7 +41,7 @@ export function useConnectProvider() {
       // Dismissing the sheet is a normal outcome, not a failure to report.
       if (result.type !== 'success') return 'cancelled';
 
-      return readStatus(result.url);
+      return readStatus(result.url, provider);
     },
 
     onSuccess: (status) => {
@@ -52,9 +57,13 @@ export function useConnectProvider() {
  * an account id, or a provider message — so an unrecognised value is treated as
  * a failure rather than shown to the user.
  */
-function readStatus(url: string): ConnectResult {
+function readStatus(url: string, expectedProvider: ProviderKind): ConnectResult {
   try {
-    const status = new URL(url).searchParams.get('status');
+    const params = new URL(url).searchParams;
+    const provider = providerKindSchema.safeParse(params.get('provider'));
+    if (!provider.success || provider.data !== expectedProvider) return 'failed';
+
+    const status = params.get('status');
     const parsed = connectResultSchema.safeParse(status);
     return parsed.success ? parsed.data : 'failed';
   } catch {

@@ -8,7 +8,7 @@
 begin;
 create extension if not exists pgtap;
 
-select plan(16);
+select plan(18);
 
 -- --- fixtures --------------------------------------------------------------
 insert into auth.users (instance_id, id, aud, role, email, created_at, updated_at)
@@ -88,6 +88,16 @@ select ok(
     'authenticated', 'public.provider_accounts', 'webhook_expires_at', 'SELECT'
   ),
   'account watch columns are unreadable by the client role'
+);
+
+select ok(
+  not has_table_privilege('authenticated', 'public.provider_accounts', 'DELETE'),
+  'provider accounts cannot be deleted directly by the client role'
+);
+
+select ok(
+  not has_column_privilege('authenticated', 'public.sync_jobs', 'claim_token', 'SELECT'),
+  'sync-job claim tokens are unreadable by the client role'
 );
 
 select is(

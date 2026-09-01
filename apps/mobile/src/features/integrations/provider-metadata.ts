@@ -29,8 +29,7 @@ export const PROVIDER_METADATA: Record<ProviderKind, ProviderMetadata> = {
     name: 'Outlook Calendar',
     connectLabel: 'Connect Outlook Calendar',
     oauthStartFunction: 'oauth-microsoft-start',
-    available: false,
-    unavailableSubtitle: 'Two-way sync via Microsoft Graph',
+    available: true,
   },
 };
 

@@ -153,7 +153,18 @@ export function IntegrationsScreen() {
               onPress={() => onConnect(provider.kind)}
             />
           ))
-        : null}
+        : connectableProviders
+            .slice(1)
+            .map((provider) => (
+              <Button
+                key={provider.kind}
+                label={provider.connectLabel}
+                variant="secondary"
+                fullWidth
+                loading={connect.isPending}
+                onPress={() => onConnect(provider.kind)}
+              />
+            ))}
 
       <Card eyebrow="Coming soon" padded={false}>
         {unavailableProviders.map((provider, index) => (

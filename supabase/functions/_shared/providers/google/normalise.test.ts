@@ -79,6 +79,38 @@ Deno.test('a cancelled event that still has content is not a tombstone', () => {
   assertEquals(result.status, 'cancelled');
 });
 
+Deno.test('keeps the original start of a modified recurring instance', () => {
+  const result = normaliseEvent(
+    event({
+      summary: 'Moved standup',
+      recurringEventId: 'master-1',
+      originalStartTime: { dateTime: '2026-03-10T09:00:00Z', timeZone: 'UTC' },
+      start: { dateTime: '2026-03-11T11:00:00Z', timeZone: 'UTC' },
+      end: { dateTime: '2026-03-11T12:00:00Z', timeZone: 'UTC' },
+    }),
+    'UTC',
+  );
+
+  assertEquals(result.recurringEventId, 'master-1');
+  assertEquals(result.recurrenceOriginalStartAt, '2026-03-10T09:00:00.000Z');
+});
+
+Deno.test('keeps a cancelled recurring instance as a suppression marker', () => {
+  const result = normaliseEvent(
+    event({
+      status: 'cancelled',
+      recurringEventId: 'master-1',
+      originalStartTime: { dateTime: '2026-03-10T09:00:00Z', timeZone: 'UTC' },
+    }),
+    'UTC',
+  );
+
+  assertEquals(result.deleted, false);
+  assertEquals(result.status, 'cancelled');
+  assertEquals(result.startAt, '2026-03-10T09:00:00.000Z');
+  assertEquals(result.recurrenceOriginalStartAt, '2026-03-10T09:00:00.000Z');
+});
+
 Deno.test('only the RRULE line survives; EXDATE and RDATE are dropped', () => {
   const result = normaliseEvent(
     event({

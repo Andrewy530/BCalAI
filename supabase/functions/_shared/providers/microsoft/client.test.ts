@@ -33,18 +33,17 @@ Deno.test('authenticates Graph requests and leaves response parsing to callers',
     Accept: 'application/json',
     'Content-Type': 'application/json',
     'If-Match': 'etag-value',
+    Prefer: 'IdType="ImmutableId"',
   });
   assertEquals(call.init?.body, JSON.stringify({ subject: 'Updated title' }));
 });
 
 Deno.test('returns null for no-content and empty JSON-success responses', async () => {
-  for (
-    const response of [
-      new Response(null, { status: 204 }),
-      new Response(null, { status: 205 }),
-      new Response('', { status: 200 }),
-    ]
-  ) {
+  for (const response of [
+    new Response(null, { status: 204 }),
+    new Response(null, { status: 205 }),
+    new Response('', { status: 200 }),
+  ]) {
     const { fetcher } = mockFetch(response);
     const microsoftFetch = createMicrosoftClient({ fetch: fetcher });
 
@@ -247,10 +246,7 @@ Deno.test('does not retry unsafe POST requests', async () => {
 
 Deno.test('allows an explicitly replay-safe POST to retry', async () => {
   const sleeps: number[] = [];
-  const { fetcher, calls } = mockFetch(
-    responseWithHeaders(503),
-    jsonResponse({ id: 'event-id' }),
-  );
+  const { fetcher, calls } = mockFetch(responseWithHeaders(503), jsonResponse({ id: 'event-id' }));
   const microsoftFetch = createMicrosoftClient({
     fetch: fetcher,
     sleep: (milliseconds) => {
@@ -293,7 +289,11 @@ Deno.test('maps Graph failures and keeps 410 context-sensitive', async () => {
   ];
 
   for (const testCase of cases) {
-    const { fetcher } = mockFetch(responseWithHeaders(testCase.status));
+    const { fetcher } = mockFetch(
+      testCase.status === 410 && testCase.operation === 'delta'
+        ? jsonResponse({ error: { code: 'syncStateNotFound' } }, 410)
+        : responseWithHeaders(testCase.status),
+    );
     const microsoftFetch = createMicrosoftClient({ fetch: fetcher });
 
     await expectEdgeError(
@@ -307,6 +307,22 @@ Deno.test('maps Graph failures and keeps 410 context-sensitive', async () => {
       testCase.edgeStatus,
     );
   }
+});
+
+Deno.test('does not call an arbitrary 410 a cursor invalidation', async () => {
+  const { fetcher } = mockFetch(jsonResponse({ error: { code: 'ErrorInvalidRequest' } }, 410));
+  const microsoftFetch = createMicrosoftClient({ fetch: fetcher });
+
+  await expectEdgeError(
+    () =>
+      microsoftFetch({
+        accessToken: 'access-token',
+        url: 'https://graph.microsoft.com/v1.0/me/calendars/calendar-1/calendarView/delta',
+        operation: 'delta',
+      }),
+    'UNKNOWN',
+    502,
+  );
 });
 
 Deno.test('retries a transient transport failure with injected sleep', async () => {

@@ -2,6 +2,8 @@ import { EdgeError } from '../errors/index.ts';
 
 import { googleAuth } from './google/auth.ts';
 import { googleProvider } from './google/provider.ts';
+import { microsoftAuth } from './microsoft/auth.ts';
+import { microsoftProvider } from './microsoft/provider.ts';
 import type { CalendarProvider, ProviderAuth, ProviderKind, WatchScope } from './types.ts';
 
 /**
@@ -13,10 +15,12 @@ import type { CalendarProvider, ProviderAuth, ProviderKind, WatchScope } from '.
 
 const PROVIDERS: Partial<Record<ProviderKind, CalendarProvider>> = {
   google: googleProvider,
+  microsoft: microsoftProvider,
 };
 
 const AUTHS: Partial<Record<ProviderKind, ProviderAuth>> = {
   google: googleAuth,
+  microsoft: microsoftAuth,
 };
 
 export function providerFor(kind: string): CalendarProvider {
