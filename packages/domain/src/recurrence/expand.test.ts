@@ -36,6 +36,13 @@ const standup = (recurrenceRule: string | null): RecurringEventInput => ({
   recurrenceRule,
 });
 
+const sundayStandup = (recurrenceRule: string): RecurringEventInput => ({
+  start: new Date('2026-08-30T13:00:00Z'),
+  end: new Date('2026-08-30T13:30:00Z'),
+  timeZone: NY,
+  recurrenceRule,
+});
+
 describe('expandOccurrences — non-recurring', () => {
   it('returns the single event when it overlaps the window', () => {
     const result = expandOccurrences(standup(null), {
@@ -188,6 +195,19 @@ describe('expandOccurrences — weekly', () => {
     ).toEqual(['2026-08-31 09:00', '2026-09-14 09:00', '2026-09-28 09:00']);
   });
 
+  it('uses WKST when counting an interval larger than one week', () => {
+    const window = { start: '2026-08-01T00:00:00Z', end: '2026-10-01T00:00:00Z' };
+    expect(localTimes(sundayStandup('FREQ=WEEKLY;INTERVAL=2;BYDAY=MO;WKST=SU'), window)).toEqual([
+      '2026-08-31 09:00',
+      '2026-09-14 09:00',
+      '2026-09-28 09:00',
+    ]);
+    expect(localTimes(sundayStandup('FREQ=WEEKLY;INTERVAL=2;BYDAY=MO;WKST=MO'), window)).toEqual([
+      '2026-09-07 09:00',
+      '2026-09-21 09:00',
+    ]);
+  });
+
   it('does not emit BYDAY days that precede the series start', () => {
     // Series starts Monday; asking for Sun+Mon must not yield the Sunday before.
     expect(
@@ -244,6 +264,51 @@ describe('expandOccurrences — monthly', () => {
       localTimes(first, { start: '2026-09-01T00:00:00Z', end: '2026-11-01T00:00:00Z' }),
     ).toEqual(['2026-09-01 09:00', '2026-09-15 09:00', '2026-10-01 09:00', '2026-10-15 09:00']);
   });
+
+  it('expands the second weekday of every month', () => {
+    const event: RecurringEventInput = {
+      start: new Date('2026-08-01T13:00:00Z'),
+      end: new Date('2026-08-01T13:30:00Z'),
+      timeZone: NY,
+      recurrenceRule: 'FREQ=MONTHLY;BYDAY=2MO',
+    };
+
+    expect(
+      localTimes(event, { start: '2026-08-01T00:00:00Z', end: '2026-11-01T00:00:00Z' }),
+    ).toEqual(['2026-08-10 09:00', '2026-09-14 09:00', '2026-10-12 09:00']);
+  });
+
+  it('expands the last weekday of every month', () => {
+    const event: RecurringEventInput = {
+      start: new Date('2026-08-01T13:00:00Z'),
+      end: new Date('2026-08-01T13:30:00Z'),
+      timeZone: NY,
+      recurrenceRule: 'FREQ=MONTHLY;BYDAY=-1FR',
+    };
+
+    expect(
+      localTimes(event, { start: '2026-08-01T00:00:00Z', end: '2026-11-01T00:00:00Z' }),
+    ).toEqual(['2026-08-28 09:00', '2026-09-25 09:00', '2026-10-30 09:00']);
+  });
+
+  it.each([
+    [1, '2026-08-03'],
+    [2, '2026-08-10'],
+    [3, '2026-08-17'],
+    [4, '2026-08-24'],
+    [-1, '2026-08-31'],
+  ])('supports the %s Monday ordinal', (ordinal, expectedDate) => {
+    const event: RecurringEventInput = {
+      start: new Date('2026-08-01T13:00:00Z'),
+      end: new Date('2026-08-01T13:30:00Z'),
+      timeZone: NY,
+      recurrenceRule: `FREQ=MONTHLY;BYDAY=${ordinal}MO;COUNT=1`,
+    };
+
+    expect(
+      localTimes(event, { start: '2026-08-01T00:00:00Z', end: '2026-09-01T00:00:00Z' }),
+    ).toEqual([`${expectedDate} 09:00`]);
+  });
 });
 
 describe('expandOccurrences — yearly', () => {
@@ -267,6 +332,68 @@ describe('expandOccurrences — yearly', () => {
     expect(
       localTimes(leapDay, { start: '2028-01-01T00:00:00Z', end: '2037-01-01T00:00:00Z' }),
     ).toEqual(['2028-02-29 09:00', '2032-02-29 09:00', '2036-02-29 09:00']);
+  });
+
+  it('expands an absolute yearly month/day and skips non-leap years', () => {
+    const event: RecurringEventInput = {
+      start: new Date('2026-01-01T14:00:00Z'),
+      end: new Date('2026-01-01T14:30:00Z'),
+      timeZone: NY,
+      recurrenceRule: 'FREQ=YEARLY;BYMONTH=2;BYMONTHDAY=29',
+    };
+
+    expect(
+      localTimes(event, { start: '2026-01-01T00:00:00Z', end: '2033-01-01T00:00:00Z' }),
+    ).toEqual(['2028-02-29 09:00', '2032-02-29 09:00']);
+  });
+
+  it('expands a relative yearly weekday', () => {
+    const event: RecurringEventInput = {
+      start: new Date('2026-01-01T14:00:00Z'),
+      end: new Date('2026-01-01T14:30:00Z'),
+      timeZone: NY,
+      recurrenceRule: 'FREQ=YEARLY;BYMONTH=11;BYDAY=-1WE',
+    };
+
+    expect(
+      localTimes(event, { start: '2026-01-01T00:00:00Z', end: '2029-01-01T00:00:00Z' }),
+    ).toEqual(['2026-11-25 09:00', '2027-11-24 09:00', '2028-11-29 09:00']);
+  });
+});
+
+describe('expandOccurrences — UNTIL semantics', () => {
+  it('includes a late local occurrence on a date-only end date across DST', () => {
+    const late: RecurringEventInput = {
+      // 23:30 EDT on October 31, then 23:30 EST after the clock change.
+      start: new Date('2026-11-01T03:30:00Z'),
+      end: new Date('2026-11-01T04:00:00Z'),
+      timeZone: NY,
+      recurrenceRule: 'FREQ=DAILY;UNTIL=20261102',
+    };
+
+    expect(
+      localTimes(late, { start: '2026-10-31T00:00:00Z', end: '2026-11-04T00:00:00Z' }),
+    ).toEqual(['2026-10-31 23:30', '2026-11-01 23:30', '2026-11-02 23:30']);
+  });
+
+  it('compares an instant UNTIL against the UTC occurrence instant', () => {
+    const event = standup('FREQ=DAILY;UNTIL=20260901T130000Z');
+    expect(
+      localTimes(event, { start: '2026-08-31T00:00:00Z', end: '2026-09-03T00:00:00Z' }),
+    ).toEqual(['2026-08-31 09:00', '2026-09-01 09:00']);
+  });
+
+  it('counts a relative series from the first matching occurrence', () => {
+    const event: RecurringEventInput = {
+      start: new Date('2017-08-29T16:00:00Z'),
+      end: new Date('2017-08-29T16:30:00Z'),
+      timeZone: NY,
+      recurrenceRule: 'FREQ=MONTHLY;BYDAY=1TH;COUNT=2',
+    };
+
+    expect(
+      localTimes(event, { start: '2017-08-01T00:00:00Z', end: '2017-11-01T00:00:00Z' }),
+    ).toEqual(['2017-09-07 12:00', '2017-10-05 12:00']);
   });
 });
 

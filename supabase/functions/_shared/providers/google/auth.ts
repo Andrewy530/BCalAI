@@ -61,7 +61,7 @@ export const googleAuth: ProviderAuth = {
       // Without a refresh token the connection would work for an hour and then
       // fail in a way that looks like a sync bug. Refuse it at the source.
       throw new EdgeError(
-        'GOOGLE_AUTH_EXPIRED',
+        'PROVIDER_AUTH_EXPIRED',
         'Google did not grant offline access. Try connecting again.',
         400,
       );
@@ -80,7 +80,7 @@ export const googleAuth: ProviderAuth = {
     });
 
     if (!response.ok) {
-      throw new EdgeError('GOOGLE_AUTH_EXPIRED', 'Could not read the Google account.', 401);
+      throw new EdgeError('PROVIDER_AUTH_EXPIRED', 'Could not read the Google account.', 401);
     }
 
     const parsed = googleUserInfoSchema.safeParse(await response.json());
@@ -124,7 +124,7 @@ async function postToken(fields: Record<string, string>): Promise<TokenSet> {
     console.error(JSON.stringify({ code: 'GOOGLE_TOKEN_FAILED', status: response.status, reason }));
 
     throw new EdgeError(
-      reason === 'invalid_grant' ? 'GOOGLE_AUTH_EXPIRED' : 'UNKNOWN',
+      reason === 'invalid_grant' ? 'PROVIDER_AUTH_EXPIRED' : 'UNKNOWN',
       'Google would not issue a token. Reconnect the account.',
       reason === 'invalid_grant' ? 401 : 502,
     );
@@ -154,22 +154,4 @@ async function safeReason(response: Response): Promise<string | null> {
   } catch {
     return null;
   }
-}
-
-/** RFC 7636 PKCE pair. `crypto` is available in the Edge runtime. */
-export async function createPkcePair(): Promise<{ verifier: string; challenge: string }> {
-  const verifier = base64Url(crypto.getRandomValues(new Uint8Array(64)));
-  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier));
-  return { verifier, challenge: base64Url(new Uint8Array(digest)) };
-}
-
-export function randomToken(bytes = 32): string {
-  return base64Url(crypto.getRandomValues(new Uint8Array(bytes)));
-}
-
-function base64Url(bytes: Uint8Array): string {
-  return btoa(String.fromCharCode(...bytes))
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '');
 }

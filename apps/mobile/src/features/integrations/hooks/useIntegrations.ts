@@ -40,7 +40,7 @@ export function useProviderCalendars(providerAccountId: string | null) {
     queryFn: () => fetchProviderCalendars(providerAccountId as string),
     enabled: Boolean(providerAccountId),
     // A provider round trip, so it is worth holding on to while the picker is
-    // open — but not so long that a calendar renamed in Google looks stuck.
+    // open — but not so long that a renamed calendar looks stuck.
     staleTime: 60_000,
   });
 }
@@ -82,8 +82,8 @@ export function useDisconnectAccount() {
 export function useSyncNow() {
   const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: (calendarId?: string) => requestSync(calendarId),
+  return useMutation<void, unknown, string>({
+    mutationFn: (providerAccountId) => requestSync({ providerAccountId }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.events.all() });
       void queryClient.invalidateQueries({ queryKey: queryKeys.integrations.health() });

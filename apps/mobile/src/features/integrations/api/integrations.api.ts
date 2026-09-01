@@ -2,6 +2,7 @@ import {
   type CalendarSyncHealth,
   type ExternalCalendar,
   type ProviderAccount,
+  type ProviderKind,
   calendarSyncHealthSchema,
   externalCalendarSchema,
   providerAccountSchema,
@@ -10,6 +11,7 @@ import { z } from 'zod';
 
 import { toAppError } from '../../../lib/errors/app-error';
 import { supabase } from '../../../lib/supabase/client';
+import { providerMetadata } from '../provider-metadata';
 
 /**
  * The only module that knows how calendar connections are read and changed.
@@ -113,9 +115,12 @@ export async function fetchProviderCalendars(
 // Mutations
 // ---------------------------------------------------------------------------
 
-/** Returns the consent URL for the app to open in a system browser. */
-export async function startGoogleConnect(): Promise<string> {
-  const data = await invoke<{ authorizationUrl: string }>('oauth-google-start', {});
+/** Returns a provider's consent URL for the app to open in a system browser. */
+export async function startProviderConnect(provider: ProviderKind): Promise<string> {
+  const data = await invoke<{ authorizationUrl: string }>(
+    providerMetadata(provider).oauthStartFunction,
+    {},
+  );
   return z.string().url().parse(data.authorizationUrl);
 }
 
@@ -132,9 +137,17 @@ export async function disconnectAccount(providerAccountId: string): Promise<void
   await invoke('integrations-disconnect', { providerAccountId });
 }
 
-/** Pull-to-refresh. Omit the calendar to sync everything connected. */
-export async function requestSync(calendarId?: string): Promise<void> {
-  await invoke('sync-run', { calendarId: calendarId ?? null });
+/**
+ * A manual sync can target one calendar, one provider account, or everything.
+ * The mutually exclusive shapes mirror the server contract and keep callers
+ * from accidentally asking for both scopes at once.
+ */
+export type SyncTarget =
+  | { calendarId: string; providerAccountId?: never }
+  | { providerAccountId: string; calendarId?: never };
+
+export async function requestSync(target?: SyncTarget): Promise<void> {
+  await invoke('sync-run', target ?? {});
 }
 
 /**
@@ -178,7 +191,7 @@ export async function writeProviderEvent(
  * `functions.invoke` reports a non-2xx as a generic FunctionsHttpError whose
  * message is the status line, which would lose the stable code the function
  * took care to return. Reading the body back is what keeps
- * `GOOGLE_AUTH_EXPIRED` distinguishable from a network blip at the call site.
+ * `PROVIDER_AUTH_EXPIRED` distinguishable from a network blip at the call site.
  */
 async function invoke<T>(name: string, body: Record<string, unknown>): Promise<T> {
   const { data, error } = await supabase.functions.invoke<T | { error?: unknown }>(name, { body });

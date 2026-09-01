@@ -2,7 +2,6 @@ import { z } from 'zod';
 
 import { adminClient, requireUser } from '../_shared/auth/index.ts';
 import { EdgeError, withErrorHandling } from '../_shared/errors/index.ts';
-import { runAfterResponse } from '../_shared/http/background.ts';
 import { jsonResponse, preflight } from '../_shared/http/cors.ts';
 import {
   loadAccount,
@@ -10,20 +9,16 @@ import {
   type ProviderAccountRow,
 } from '../_shared/providers/accounts.ts';
 import { providerFor } from '../_shared/providers/registry.ts';
-import {
-  ensureWatch,
-  loadSyncState,
-  recordSyncFailure,
-  syncCalendar,
-  type SyncStateRow,
-} from '../_shared/sync/engine.ts';
+import { watchRegistrationFromState } from '../_shared/providers/watch.ts';
+import { loadSyncState } from '../_shared/sync/engine.ts';
+import { JOB_KINDS, calendarInitialSyncKey, enqueue } from '../_shared/sync/jobs.ts';
 
 /**
  * Import or drop one provider calendar.
  *
- * Importing creates the local `calendars` row and its sync state, then does the
- * first sync *after* responding — a year of events can take longer than a
- * request should, and the client already knows to watch sync health.
+ * Importing creates the local `calendars` row and its sync state, then enqueues
+ * the durable first sync. A year of events can take longer than a request
+ * should, and the client already knows to watch sync health.
  *
  * Dropping is the inverse and is deliberately destructive: deleting the
  * `calendars` row cascades its events away, because those rows are copies whose
@@ -89,26 +84,33 @@ async function importCalendar(
     throw new EdgeError('UNKNOWN', 'Could not import that calendar.', 500);
   }
 
-  const { data: state, error: stateError } = await admin
-    .from('calendar_sync_states')
-    .upsert(
-      {
+  // A repeated import request must not reset a cursor while another initial or
+  // incremental sync is running. The local calendar row is the import
+  // identity; only a genuinely new state gets the full-sync defaults below.
+  const existingState = await loadSyncState(admin, account.id, providerCalendarId);
+  const stateValues: SyncStateImportValues = existingState
+    ? {
         provider_account_id: account.id,
         calendar_id: calendar.id,
         provider_calendar_id: providerCalendarId,
-        // A fresh import always starts from a full window, even if a previous
-        // import of the same calendar left a cursor behind.
+      }
+    : {
+        provider_account_id: account.id,
+        calendar_id: calendar.id,
+        provider_calendar_id: providerCalendarId,
         sync_cursor: null,
         needs_full_resync: true,
         retry_count: 0,
         last_error: null,
-      },
-      { onConflict: 'provider_account_id,provider_calendar_id' },
-    )
+      };
+
+  const { data: state, error: stateError } = await admin
+    .from('calendar_sync_states')
+    .upsert(stateValues, { onConflict: 'provider_account_id,provider_calendar_id' })
     .select(
       'id, provider_account_id, calendar_id, provider_calendar_id, sync_cursor, ' +
-        'needs_full_resync, webhook_channel_id, webhook_resource_id, webhook_token, ' +
-        'webhook_expires_at, retry_count',
+        'needs_full_resync, webhook_channel_id, webhook_resource_id, ' +
+        'webhook_subscription_id, webhook_token, webhook_expires_at, retry_count',
     )
     .single();
 
@@ -117,17 +119,12 @@ async function importCalendar(
     throw new EdgeError('UNKNOWN', 'Could not prepare that calendar for syncing.', 500);
   }
 
-  const syncState = state as unknown as SyncStateRow;
-
-  runAfterResponse(async () => {
-    try {
-      await syncCalendar(admin, account, ctx, syncState);
-      // Only worth a channel once there is something to keep up to date.
-      await ensureWatch(admin, account, ctx, syncState);
-    } catch (error) {
-      await recordSyncFailure(admin, syncState, error);
-      throw error;
-    }
+  await enqueue(admin, {
+    userId: account.user_id,
+    providerAccountId: account.id,
+    kind: JOB_KINDS.calendarInitialSync,
+    payload: { calendarId: calendar.id as string },
+    idempotencyKey: calendarInitialSyncKey(calendar.id as string),
   });
 
   console.log(
@@ -141,29 +138,41 @@ async function importCalendar(
   return jsonResponse({ calendarId: calendar.id, syncing: true });
 }
 
+type SyncStateImportValues = {
+  provider_account_id: string;
+  calendar_id: string;
+  provider_calendar_id: string;
+  sync_cursor?: string | null;
+  needs_full_resync?: boolean;
+  retry_count?: number;
+  last_error?: string | null;
+};
+
 async function dropCalendar(
   admin: ReturnType<typeof adminClient>,
   account: ProviderAccountRow,
   providerCalendarId: string,
 ): Promise<Response> {
   const state = await loadSyncState(admin, account.id, providerCalendarId);
+  const provider = providerFor(account.provider);
 
-  // Stop the channel before the state row disappears, or Google keeps
-  // delivering notifications we can no longer route.
-  if (state?.webhook_channel_id && state.webhook_resource_id) {
-    try {
-      const ctx = await resolveContext(admin, account);
-      await providerFor(account.provider).unwatch(ctx, {
-        channelId: state.webhook_channel_id,
-        resourceId: state.webhook_resource_id,
-        subscriptionId: null,
-        token: state.webhook_token ?? '',
-        expiresAt: state.webhook_expires_at ?? new Date().toISOString(),
-      });
-    } catch (cause) {
-      // An expired account cannot stop its channels; the channel lapses on its
-      // own within a week and every delivery until then is dropped as unknown.
-      console.error(JSON.stringify({ code: 'UNWATCH_ON_DROP_FAILED', detail: String(cause) }));
+  if (provider.watchScope === 'calendar') {
+    // Stop the provider watch before the state row disappears, or the provider
+    // may keep delivering notifications we can no longer route. Account-scoped
+    // registrations belong to the connection and survive dropping one calendar.
+    const previousRegistration = state
+      ? watchRegistrationFromState(state, new Date().toISOString())
+      : null;
+    if (previousRegistration) {
+      try {
+        const ctx = await resolveContext(admin, account);
+        await provider.unwatch(ctx, previousRegistration);
+      } catch (cause) {
+        // An expired account cannot stop its provider watch; it lapses according
+        // to provider limits (which may be only a few days), and every delivery
+        // until then is dropped as unknown.
+        console.error(JSON.stringify({ code: 'UNWATCH_ON_DROP_FAILED', detail: String(cause) }));
+      }
     }
   }
 

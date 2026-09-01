@@ -1,18 +1,13 @@
-import { parseRRule, type RecurrenceRule, type Weekday } from './rrule';
+import { parseRRule, type ByDay, type RecurrenceRule, type Weekday } from './rrule';
 import type { Interval } from '../time/interval';
 import { getZonedParts, zonedWallClockToUtc } from '../time/timezone';
 
 /**
- * Expanding a recurring event into the occurrences that fall in a window.
+ * Expand a recurring event into occurrences in a window.
  *
- * Two properties matter more than anything else here:
- *
- * 1. **Wall-clock stability.** A 09:00 standup stays at 09:00 local across a
- *    DST boundary. That is why occurrences are generated as *date parts in the
- *    event's own zone* and converted to instants afterwards, rather than by
- *    adding 86,400,000 ms repeatedly.
- * 2. **Duration preservation.** The end is `start + duration`, so an event that
- *    straddles a clock change keeps its length rather than its end wall-clock.
+ * Occurrences are generated as wall-clock date parts in the event's own zone
+ * and converted to instants afterwards. This keeps a 09:00 meeting at 09:00
+ * across DST boundaries while preserving its duration.
  */
 
 export interface RecurringEventInput {
@@ -29,7 +24,7 @@ export interface Occurrence extends Interval {
   index: number;
 }
 
-/** Belt-and-braces bound so a malformed rule can never hang the UI. */
+/** Belt-and-braces bound so malformed input can never hang the UI. */
 const MAX_ITERATIONS = 5_000;
 
 export function expandOccurrences(
@@ -39,11 +34,11 @@ export function expandOccurrences(
 ): Occurrence[] {
   const limit = options?.limit ?? 750;
   const durationMs = Math.max(0, event.end.getTime() - event.start.getTime());
-
   const rule = event.recurrenceRule ? parseRRule(event.recurrenceRule) : null;
 
-  // No rule, or one we do not fully implement: treat it as a single event
-  // rather than guessing at semantics we might get wrong.
+  // A rule outside the deliberate domain subset is not guessed at. The
+  // provider adapter must reject such a rule before persistence; this fallback
+  // keeps old local rows safe until they are repaired or replaced.
   if (!rule) {
     const single: Occurrence = {
       start: event.start.getTime(),
@@ -72,10 +67,8 @@ export function expandOccurrences(
       event.timeZone,
     );
 
-    // COUNT counts occurrences from the series start, including ones before
-    // the window — so the index has to keep incrementing regardless.
+    if (isAfterUntil(rule, parts, start)) break;
     if (rule.count !== undefined && index >= rule.count) break;
-    if (rule.until && start.getTime() > rule.until.getTime()) break;
 
     const occurrence: Occurrence = {
       start: start.getTime(),
@@ -100,19 +93,35 @@ const overlapsWindow = (occurrence: Interval, window: { start: Date; end: Date }
 interface DateParts {
   year: number;
   month: number; // 1-12
-  day: number;
+  day: number; // 1-31
+}
+
+interface AnchorParts extends DateParts {
+  weekday: number;
+  hour: number;
+  minute: number;
+}
+
+function isAfterUntil(rule: RecurrenceRule, parts: DateParts, start: Date): boolean {
+  if (!rule.until) return false;
+  if (rule.until.kind === 'date') return compareDate(parts, rule.until) > 0;
+  return start.getTime() > rule.until.value.getTime();
+}
+
+function compareDate(left: DateParts, right: DateParts): number {
+  if (left.year !== right.year) return left.year - right.year;
+  if (left.month !== right.month) return left.month - right.month;
+  return left.day - right.day;
 }
 
 /**
- * Yield candidate dates in chronological order.
- *
- * The generator is lazy so `expandOccurrences` can stop the moment it passes
- * the window, and it fast-forwards past whole periods that precede the window
- * instead of stepping through years of history one day at a time.
+ * Yield candidate dates in chronological order. The generator is lazy so the
+ * caller can stop at the window, and it skips whole periods before that window
+ * when COUNT is not present.
  */
 function* generateDates(
   rule: RecurrenceRule,
-  anchor: { year: number; month: number; day: number; weekday: number },
+  anchor: AnchorParts,
   window: { start: Date; end: Date },
   timeZone: string,
 ): Generator<DateParts> {
@@ -122,21 +131,10 @@ function* generateDates(
     case 'DAILY': {
       const anchorDay = daysFromEpoch(anchor);
       const windowDay = daysFromEpoch(windowStartParts);
-      // Skip whole intervals that end before the window, keeping one period of
-      // slack so an occurrence straddling the boundary is not lost.
       const skip =
-        windowDay > anchorDay
+        rule.count === undefined && windowDay > anchorDay
           ? Math.max(0, Math.floor((windowDay - anchorDay) / rule.interval) - 1)
           : 0;
-
-      // COUNT is relative to the series start, so a fast-forward is only safe
-      // when the caller does not need the earlier indices.
-      if (rule.count !== undefined) {
-        for (let step = 0; step < rule.count; step += 1) {
-          yield fromEpochDays(anchorDay + step * rule.interval);
-        }
-        return;
-      }
 
       for (let step = skip; ; step += 1) {
         yield fromEpochDays(anchorDay + step * rule.interval);
@@ -144,37 +142,36 @@ function* generateDates(
     }
 
     case 'WEEKLY': {
-      const days: Weekday[] =
+      const days: ByDay[] =
         rule.byDay.length > 0
-          ? [...rule.byDay].sort((a, b) => ((a + 6) % 7) - ((b + 6) % 7))
-          : [anchor.weekday as Weekday];
+          ? [...rule.byDay].sort(
+              (left, right) =>
+                weekdayOffset(left.weekday, rule.wkst) - weekdayOffset(right.weekday, rule.wkst),
+            )
+          : [{ weekday: anchor.weekday as Weekday }];
 
       const anchorDay = daysFromEpoch(anchor);
-      const anchorWeek = weekIndexOf(anchorDay);
-      const windowWeek = weekIndexOf(daysFromEpoch(windowStartParts));
-
+      const anchorWeekStart = anchorDay - weekdayOffset(dateWeekday(anchorDay), rule.wkst);
+      const windowDay = daysFromEpoch(windowStartParts);
+      const windowWeekStart = windowDay - weekdayOffset(dateWeekday(windowDay), rule.wkst);
       const skipWeeks =
-        rule.count === undefined && windowWeek > anchorWeek
-          ? Math.max(0, Math.floor((windowWeek - anchorWeek) / rule.interval) - 1)
+        rule.count === undefined && windowWeekStart > anchorWeekStart
+          ? Math.max(0, Math.floor((windowWeekStart - anchorWeekStart) / (rule.interval * 7)) - 1)
           : 0;
 
       for (let step = skipWeeks; ; step += 1) {
-        const weekStart = anchorDay - mondayOffset(anchorDay) + step * rule.interval * 7;
-        for (const weekday of days) {
-          // Monday-based offset, so the emitted days stay in weekday order.
-          const dayNumber = weekStart + ((weekday + 6) % 7);
-          if (dayNumber < anchorDay) continue; // Never before the series start.
+        const weekStart = anchorWeekStart + step * rule.interval * 7;
+        for (const day of days) {
+          const dayNumber = weekStart + weekdayOffset(day.weekday, rule.wkst);
+          if (dayNumber < anchorDay) continue;
           yield fromEpochDays(dayNumber);
         }
       }
     }
 
     case 'MONTHLY': {
-      const monthDays =
-        rule.byMonthDay.length > 0 ? [...rule.byMonthDay].sort((a, b) => a - b) : [anchor.day];
       const anchorMonths = anchor.year * 12 + (anchor.month - 1);
       const windowMonths = windowStartParts.year * 12 + (windowStartParts.month - 1);
-
       const skip =
         rule.count === undefined && windowMonths > anchorMonths
           ? Math.max(0, Math.floor((windowMonths - anchorMonths) / rule.interval) - 1)
@@ -185,16 +182,19 @@ function* generateDates(
         const year = Math.floor(absolute / 12);
         const month = (absolute % 12) + 1;
 
-        for (const day of monthDays) {
-          // RFC 5545: a date that does not exist in this month is skipped, not
-          // clamped. 31 Jan monthly means Jan, Mar, May… never 28 Feb.
-          if (day > daysInMonth(year, month)) continue;
-          if (
-            year < anchor.year ||
-            (year === anchor.year && month === anchor.month && day < anchor.day)
-          ) {
-            continue;
+        if (rule.byDay.length > 0) {
+          const day = ordinalWeekdayInMonth(year, month, rule.byDay[0]!);
+          if (day !== null && isOnOrAfterAnchor({ year, month, day }, anchor)) {
+            yield { year, month, day };
           }
+          continue;
+        }
+
+        const monthDays =
+          rule.byMonthDay.length > 0 ? [...rule.byMonthDay].sort((a, b) => a - b) : [anchor.day];
+        for (const day of monthDays) {
+          if (day > daysInMonth(year, month)) continue;
+          if (!isOnOrAfterAnchor({ year, month, day }, anchor)) continue;
           yield { year, month, day };
         }
       }
@@ -208,12 +208,39 @@ function* generateDates(
 
       for (let step = skip; ; step += 1) {
         const year = anchor.year + step * rule.interval;
-        // 29 February only recurs in leap years.
-        if (anchor.day > daysInMonth(year, anchor.month)) continue;
-        yield { year, month: anchor.month, day: anchor.day };
+        const month = rule.byMonth[0] ?? anchor.month;
+        const day =
+          rule.byDay.length > 0
+            ? ordinalWeekdayInMonth(year, month, rule.byDay[0]!)
+            : (rule.byMonthDay[0] ?? anchor.day);
+        if (day === null || day > daysInMonth(year, month)) continue;
+        if (!isOnOrAfterAnchor({ year, month, day }, anchor)) continue;
+        yield { year, month, day };
       }
     }
   }
+}
+
+function isOnOrAfterAnchor(parts: DateParts, anchor: DateParts): boolean {
+  return compareDate(parts, anchor) >= 0;
+}
+
+function ordinalWeekdayInMonth(year: number, month: number, byDay: ByDay): number | null {
+  if (byDay.ordinal === undefined) return null;
+  const length = daysInMonth(year, month);
+
+  if (byDay.ordinal === -1) {
+    const lastWeekday = dateWeekday(daysFromEpoch({ year, month, day: length }));
+    return length - weekdayOffset(lastWeekday, byDay.weekday);
+  }
+
+  const firstWeekday = dateWeekday(daysFromEpoch({ year, month, day: 1 }));
+  const day = 1 + weekdayOffset(byDay.weekday, firstWeekday) + (byDay.ordinal - 1) * 7;
+  return day <= length ? day : null;
+}
+
+function weekdayOffset(day: Weekday, start: Weekday): number {
+  return (day - start + 7) % 7;
 }
 
 const daysInMonth = (year: number, month: number): number =>
@@ -231,7 +258,6 @@ function fromEpochDays(days: number): DateParts {
   };
 }
 
-/** 1 Jan 1970 was a Thursday, so Monday-of-that-week is 3 days earlier. */
-const mondayOffset = (epochDay: number): number => (((epochDay + 3) % 7) + 7) % 7;
-
-const weekIndexOf = (epochDay: number): number => Math.floor((epochDay + 3) / 7);
+function dateWeekday(epochDay: number): Weekday {
+  return ((((epochDay + 4) % 7) + 7) % 7) as Weekday;
+}

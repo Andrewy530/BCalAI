@@ -1,14 +1,16 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { loadAccount, resolveContext } from './accounts.ts';
+import { loadAccount, resolveContext, type ProviderAccountRow } from './accounts.ts';
 import { authFor, isSupportedProvider, providerFor } from './registry.ts';
+import { watchRegistrationFromState, type StoredWatchState } from './watch.ts';
+import type { WatchRegistration } from './types.ts';
 
 /**
  * Releasing a provider grant.
  *
  * Shared by the explicit disconnect and by account deletion, which must not
  * differ: both leave the user with no live OAuth grant and no orphaned change
- * channel.
+ * notification registration.
  *
  * Every step is best-effort and ordered so the irreversible local delete
  * happens last, at the caller. A provider we cannot reach must never block a
@@ -31,9 +33,9 @@ export async function releaseProviderGrant(
     p_account_id: providerAccountId,
   });
 
-  // Channels need a live access token, so they are stopped before the grant is
-  // revoked — after revocation there is no way to reach them at all.
-  await stopChannels(admin, providerAccountId, account.provider);
+  // Provider watches need a live access token, so they are stopped before the
+  // grant is revoked — after revocation there is no way to reach them at all.
+  await stopChannels(admin, account);
 
   if (typeof refreshToken === 'string' && refreshToken) {
     await authFor(account.provider).revoke(refreshToken);
@@ -45,38 +47,56 @@ export async function releaseProviderGrant(
   }
 }
 
-async function stopChannels(
-  admin: SupabaseClient,
-  providerAccountId: string,
-  provider: string,
-): Promise<void> {
+async function stopChannels(admin: SupabaseClient, account: ProviderAccountRow): Promise<void> {
   const { data: states } = await admin
     .from('calendar_sync_states')
-    .select('webhook_channel_id, webhook_resource_id, webhook_token, webhook_expires_at')
-    .eq('provider_account_id', providerAccountId);
+    .select(
+      'webhook_channel_id, webhook_resource_id, webhook_subscription_id, ' +
+        'webhook_token, webhook_expires_at',
+    )
+    .eq('provider_account_id', account.id);
 
-  const live = (states ?? []).filter(
-    (state) => state.webhook_channel_id && state.webhook_resource_id,
-  );
-  if (live.length === 0) return;
+  const fallbackExpiresAt = new Date().toISOString();
+  const live: WatchRegistration[] = [];
+  const accountRegistration = watchRegistrationFromState(account, fallbackExpiresAt);
+  if (accountRegistration) live.push(accountRegistration);
+
+  for (const state of states ?? []) {
+    const registration = watchRegistrationFromState(
+      state as unknown as StoredWatchState,
+      fallbackExpiresAt,
+    );
+    if (registration) live.push(registration);
+  }
+
+  const seen = new Set<string>();
+  const registrations = live.filter((registration) => {
+    const key =
+      `${registration.channelId}\u0000${registration.resourceId ?? ''}` +
+      `\u0000${registration.subscriptionId ?? ''}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  if (registrations.length === 0) return;
 
   try {
-    const account = await loadAccount(admin, providerAccountId);
     const ctx = await resolveContext(admin, account);
-    const adapter = providerFor(provider);
+    const adapter = providerFor(account.provider);
 
-    for (const state of live) {
-      await adapter.unwatch(ctx, {
-        channelId: state.webhook_channel_id as string,
-        resourceId: state.webhook_resource_id as string,
-        subscriptionId: null,
-        token: (state.webhook_token as string | null) ?? '',
-        expiresAt: (state.webhook_expires_at as string | null) ?? new Date().toISOString(),
-      });
+    for (const registration of registrations) {
+      try {
+        await adapter.unwatch(ctx, registration);
+      } catch (cause) {
+        // One stale registration must not prevent the remaining registrations
+        // from being stopped during disconnect or account deletion.
+        console.error(JSON.stringify({ code: 'UNWATCH_FAILED', detail: String(cause) }));
+      }
     }
   } catch (cause) {
-    // An expired connection cannot stop its own channels. They lapse within the
-    // week, and every delivery until then is dropped as an unknown channel.
+    // An expired connection cannot stop its own provider watches. They lapse
+    // according to provider limits (which may be only a few days), and every
+    // delivery until then is dropped as an unknown watch.
     console.error(JSON.stringify({ code: 'UNWATCH_FAILED', detail: String(cause) }));
   }
 }

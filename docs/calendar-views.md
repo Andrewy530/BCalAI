@@ -59,15 +59,16 @@ Tapping a day drops into the day view for the detail.
 
 ## Recurrence support
 
-`parseRRule` implements a deliberate subset: FREQ, INTERVAL, COUNT, UNTIL,
-BYDAY (weekly), BYMONTHDAY (monthly). Anything else returns `null`, and the
-event is drawn as a single occurrence.
+`parseRRule` implements a deliberate subset: daily, weekly (including WKST),
+absolute and ordinal monthly/yearly patterns, INTERVAL, COUNT, and UNTIL.
+Anything else returns `null`, and the event is drawn as a single occurrence.
 
-That is a safety property, not a limitation to fix casually. Silently dropping
-an unsupported part such as `BYSETPOS` would generate occurrences that should
-not exist, and a calendar that invents meetings is worse than one that misses a
-repeat. Rules more exotic than the subset arrive only from Google or Microsoft,
-which own their own expansion.
+That is a safety property, not a limitation to fix casually. Provider adapters
+must reject unsupported recurrence before persistence; silently dropping an
+unsupported part such as `BYSETPOS` would generate occurrences that should not
+exist. For legacy local rows that predate adapter validation, the domain
+fallback treats an unsupported rule as one occurrence rather than inventing
+availability.
 
 ## Alerts
 

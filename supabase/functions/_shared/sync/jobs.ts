@@ -110,3 +110,14 @@ export function calendarSyncKey(calendarId: string, at = new Date()): string {
   const minute = Math.floor(at.getTime() / 60_000);
   return `calendar-sync:${calendarId}:${minute}`;
 }
+
+/**
+ * A local calendar row has one durable first-sync job.
+ *
+ * The calendar id is generated again after a calendar is dropped and imported
+ * again, so this key deduplicates concurrent imports without suppressing a
+ * genuinely new import later.
+ */
+export function calendarInitialSyncKey(calendarId: string): string {
+  return `calendar-initial-sync:${calendarId}`;
+}

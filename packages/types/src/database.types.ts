@@ -435,6 +435,11 @@ export type Database = {
           status: Database["public"]["Enums"]["provider_status"]
           updated_at: string
           user_id: string
+          webhook_channel_id: string | null
+          webhook_expires_at: string | null
+          webhook_resource_id: string | null
+          webhook_subscription_id: string | null
+          webhook_token: string | null
         }
         Insert: {
           connected_at?: string
@@ -450,6 +455,11 @@ export type Database = {
           status?: Database["public"]["Enums"]["provider_status"]
           updated_at?: string
           user_id: string
+          webhook_channel_id?: string | null
+          webhook_expires_at?: string | null
+          webhook_resource_id?: string | null
+          webhook_subscription_id?: string | null
+          webhook_token?: string | null
         }
         Update: {
           connected_at?: string
@@ -465,6 +475,11 @@ export type Database = {
           status?: Database["public"]["Enums"]["provider_status"]
           updated_at?: string
           user_id?: string
+          webhook_channel_id?: string | null
+          webhook_expires_at?: string | null
+          webhook_resource_id?: string | null
+          webhook_subscription_id?: string | null
+          webhook_token?: string | null
         }
         Relationships: []
       }

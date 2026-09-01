@@ -22,6 +22,11 @@ export interface ProviderAccountRow {
   email: string | null;
   status: string;
   scopes: string[];
+  webhook_channel_id: string | null;
+  webhook_resource_id: string | null;
+  webhook_subscription_id: string | null;
+  webhook_token: string | null;
+  webhook_expires_at: string | null;
 }
 
 export async function loadAccount(
@@ -30,14 +35,18 @@ export async function loadAccount(
 ): Promise<ProviderAccountRow> {
   const { data, error } = await admin
     .from('provider_accounts')
-    .select('id, user_id, provider, provider_user_id, email, status, scopes')
+    .select(
+      'id, user_id, provider, provider_user_id, email, status, scopes, ' +
+        'webhook_channel_id, webhook_resource_id, webhook_subscription_id, ' +
+        'webhook_token, webhook_expires_at',
+    )
     .eq('id', providerAccountId)
     .maybeSingle();
 
   if (error) throw new EdgeError('UNKNOWN', 'Could not read the connection.', 500);
   if (!data) throw new EdgeError('NOT_FOUND', 'That connection no longer exists.', 404);
 
-  return data as ProviderAccountRow;
+  return data as unknown as ProviderAccountRow;
 }
 
 /**
@@ -59,7 +68,7 @@ export async function resolveContext(
 
   if (error || !refreshToken || typeof refreshToken !== 'string') {
     await markAccount(admin, account.id, 'expired', 'No stored credential.');
-    throw new EdgeError('GOOGLE_AUTH_EXPIRED', 'Reconnect your calendar account.', 401);
+    throw new EdgeError('PROVIDER_AUTH_EXPIRED', 'Reconnect your calendar account.', 401);
   }
 
   try {
@@ -84,7 +93,7 @@ export async function resolveContext(
       accessToken: tokens.accessToken,
     };
   } catch (cause) {
-    const expired = cause instanceof EdgeError && cause.code === 'GOOGLE_AUTH_EXPIRED';
+    const expired = cause instanceof EdgeError && cause.code === 'PROVIDER_AUTH_EXPIRED';
     if (expired) {
       await markAccount(admin, account.id, 'expired', 'The provider rejected our credential.');
     }

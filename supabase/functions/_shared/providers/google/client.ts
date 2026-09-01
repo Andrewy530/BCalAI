@@ -107,7 +107,7 @@ function buildHeaders(request: GoogleRequest): HeadersInit {
 function translate(status: number, reason: string | null): EdgeError {
   switch (status) {
     case 401:
-      return new EdgeError('GOOGLE_AUTH_EXPIRED', 'Reconnect your Google account.', 401);
+      return new EdgeError('PROVIDER_AUTH_EXPIRED', 'Reconnect your Google account.', 401);
     case 403:
       return new EdgeError('NOT_AUTHORIZED', 'Google denied access to that calendar.', 403);
     case 404:
@@ -116,7 +116,7 @@ function translate(status: number, reason: string | null): EdgeError {
     case 412:
       return new EdgeError('EVENT_PROVIDER_CONFLICT', 'That event changed in Google.', 409);
     case 410:
-      return new EdgeError('GOOGLE_SYNC_CURSOR_INVALID', 'The sync cursor expired.', 410);
+      return new EdgeError('PROVIDER_SYNC_CURSOR_INVALID', 'The sync cursor expired.', 410);
     default:
       // The reason string is a Google enum ("notFound", "rateLimitExceeded"),
       // never user content, so it is safe to log — but it is not returned.

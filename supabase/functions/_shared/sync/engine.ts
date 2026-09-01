@@ -3,7 +3,8 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { EdgeError } from '../errors/index.ts';
 import { markAccount, touchSynced, type ProviderAccountRow } from '../providers/accounts.ts';
 import { providerFor } from '../providers/registry.ts';
-import type { ProviderContext, SyncResult } from '../providers/types.ts';
+import type { ProviderContext, SyncResult, WatchRegistration } from '../providers/types.ts';
+import { watchRegistrationFromState, watchRegistrationIsHealthy } from '../providers/watch.ts';
 
 import { applyProviderEvents } from './upsert.ts';
 import { initialSyncWindow, webhookUrlFor } from './window.ts';
@@ -25,6 +26,7 @@ export interface SyncStateRow {
   needs_full_resync: boolean;
   webhook_channel_id: string | null;
   webhook_resource_id: string | null;
+  webhook_subscription_id: string | null;
   webhook_token: string | null;
   webhook_expires_at: string | null;
   retry_count: number;
@@ -37,10 +39,15 @@ export interface SyncOutcome {
   skippedPending: number;
 }
 
+export interface EnsureWatchOptions {
+  /** Replace an existing account-scoped registration even when it is healthy. */
+  force?: boolean;
+}
+
 const SYNC_STATE_COLUMNS =
   'id, provider_account_id, calendar_id, provider_calendar_id, sync_cursor, ' +
-  'needs_full_resync, webhook_channel_id, webhook_resource_id, webhook_token, ' +
-  'webhook_expires_at, retry_count';
+  'needs_full_resync, webhook_channel_id, webhook_resource_id, webhook_subscription_id, ' +
+  'webhook_token, webhook_expires_at, retry_count';
 
 export async function loadSyncState(
   admin: SupabaseClient,
@@ -100,7 +107,7 @@ export async function syncCalendar(
 
   if (result.cursorInvalid) {
     console.warn(
-      JSON.stringify({ code: 'GOOGLE_SYNC_CURSOR_INVALID', calendarId: state.calendar_id }),
+      JSON.stringify({ code: 'PROVIDER_SYNC_CURSOR_INVALID', calendarId: state.calendar_id }),
     );
     mode = 'initial';
     result = await provider.initialSync(ctx, state.provider_calendar_id, initialSyncWindow());
@@ -161,55 +168,146 @@ export async function recordSyncFailure(
       last_error: code,
       retry_count: state.retry_count + 1,
       // An invalid cursor should not be presented again on the retry.
-      needs_full_resync: code === 'GOOGLE_SYNC_CURSOR_INVALID' ? true : state.needs_full_resync,
+      needs_full_resync: code === 'PROVIDER_SYNC_CURSOR_INVALID' ? true : state.needs_full_resync,
     })
     .eq('id', state.id);
 }
 
 /**
- * (Re)register the provider's change channel.
+ * (Re)register the provider's change-notification registration.
  *
  * Called on import and again by the hourly cron. Failure is logged but not
- * fatal: without a channel the calendar still converges through the daily
- * reconciliation, just less promptly.
+ * fatal: without a provider watch the calendar still converges through the
+ * daily reconciliation, just less promptly.
  */
 export async function ensureWatch(
   admin: SupabaseClient,
   account: ProviderAccountRow,
   ctx: ProviderContext,
   state: SyncStateRow,
+  options: EnsureWatchOptions = {},
 ): Promise<boolean> {
   const provider = providerFor(account.provider);
 
+  if (provider.watchScope === 'account') {
+    return ensureAccountWatch(admin, account, ctx, options);
+  }
+
+  return ensureCalendarWatch(admin, account, ctx, state);
+}
+
+/**
+ * Ensure the one account-scoped registration owned by `provider_accounts`.
+ * Initial imports reuse a still-live registration; cron passes `force` so a
+ * renewal always replaces it before the provider's expiry.
+ */
+export async function ensureAccountWatch(
+  admin: SupabaseClient,
+  account: ProviderAccountRow,
+  ctx: ProviderContext,
+  options: EnsureWatchOptions = {},
+): Promise<boolean> {
+  const provider = providerFor(account.provider);
+  if (provider.watchScope !== 'account') {
+    throw new EdgeError('VALIDATION_FAILED', 'This provider uses calendar watches.', 400);
+  }
+
   try {
-    // Stop the previous channel first, or Google keeps delivering to a channel
-    // whose id we have already forgotten.
-    if (state.webhook_channel_id && state.webhook_resource_id) {
-      await provider.unwatch(ctx, {
-        channelId: state.webhook_channel_id,
-        resourceId: state.webhook_resource_id,
-        subscriptionId: null,
-        token: state.webhook_token ?? '',
-        expiresAt: state.webhook_expires_at ?? new Date().toISOString(),
-      });
+    const now = new Date();
+    const previousRegistration = watchRegistrationFromState(account, now.toISOString());
+
+    if (!options.force && watchRegistrationIsHealthy(previousRegistration, now)) {
+      return true;
+    }
+
+    // Stop the previous provider watch first, or it may keep delivering to a
+    // registration whose id we have already replaced.
+    if (previousRegistration) await provider.unwatch(ctx, previousRegistration);
+
+    const registration = await provider.watch(
+      ctx,
+      { scope: 'account' },
+      webhookUrlFor(account.provider),
+    );
+
+    try {
+      const { error } = await admin
+        .from('provider_accounts')
+        .update({
+          webhook_channel_id: registration.channelId,
+          webhook_resource_id: registration.resourceId,
+          webhook_subscription_id: registration.subscriptionId,
+          webhook_token: registration.token,
+          webhook_expires_at: registration.expiresAt,
+        })
+        .eq('id', account.id);
+
+      if (error) throw new EdgeError('UNKNOWN', 'Could not save the watch registration.', 500);
+    } catch (cause) {
+      await discardNewWatch(provider, ctx, registration);
+      throw cause instanceof EdgeError
+        ? cause
+        : new EdgeError('UNKNOWN', 'Could not save the watch registration.', 500);
+    }
+
+    return true;
+  } catch (cause) {
+    const code = cause instanceof EdgeError ? cause.code : 'UNKNOWN';
+    console.error(
+      JSON.stringify({ code: 'WATCH_REGISTRATION_FAILED', reason: code, accountId: account.id }),
+    );
+
+    if (code === 'PROVIDER_AUTH_EXPIRED') {
+      await markAccount(admin, account.id, 'expired', 'Reconnect this account.');
+    }
+    return false;
+  }
+}
+
+async function ensureCalendarWatch(
+  admin: SupabaseClient,
+  account: ProviderAccountRow,
+  ctx: ProviderContext,
+  state: SyncStateRow,
+): Promise<boolean> {
+  const provider = providerFor(account.provider);
+  if (provider.watchScope !== 'calendar') {
+    throw new EdgeError('VALIDATION_FAILED', 'This provider uses account watches.', 400);
+  }
+
+  try {
+    // Stop the previous provider watch first, or it may keep delivering to a
+    // registration whose id we have already replaced.
+    const previousRegistration = watchRegistrationFromState(state, new Date().toISOString());
+    if (previousRegistration) {
+      await provider.unwatch(ctx, previousRegistration);
     }
 
     const registration = await provider.watch(
       ctx,
-      state.provider_calendar_id,
+      { scope: 'calendar', providerCalendarId: state.provider_calendar_id },
       webhookUrlFor(account.provider),
     );
 
-    await admin
-      .from('calendar_sync_states')
-      .update({
-        webhook_channel_id: registration.channelId,
-        webhook_resource_id: registration.resourceId,
-        webhook_subscription_id: registration.subscriptionId,
-        webhook_token: registration.token,
-        webhook_expires_at: registration.expiresAt,
-      })
-      .eq('id', state.id);
+    try {
+      const { error } = await admin
+        .from('calendar_sync_states')
+        .update({
+          webhook_channel_id: registration.channelId,
+          webhook_resource_id: registration.resourceId,
+          webhook_subscription_id: registration.subscriptionId,
+          webhook_token: registration.token,
+          webhook_expires_at: registration.expiresAt,
+        })
+        .eq('id', state.id);
+
+      if (error) throw new EdgeError('UNKNOWN', 'Could not save the watch registration.', 500);
+    } catch (cause) {
+      await discardNewWatch(provider, ctx, registration);
+      throw cause instanceof EdgeError
+        ? cause
+        : new EdgeError('UNKNOWN', 'Could not save the watch registration.', 500);
+    }
 
     return true;
   } catch (cause) {
@@ -218,9 +316,24 @@ export async function ensureWatch(
       JSON.stringify({ code: 'WATCH_REGISTRATION_FAILED', reason: code, stateId: state.id }),
     );
 
-    if (code === 'GOOGLE_AUTH_EXPIRED') {
+    if (code === 'PROVIDER_AUTH_EXPIRED') {
       await markAccount(admin, account.id, 'expired', 'Reconnect this account.');
     }
     return false;
+  }
+}
+
+/** Do not orphan a provider watch when its local persistence fails. */
+async function discardNewWatch(
+  provider: ReturnType<typeof providerFor>,
+  ctx: ProviderContext,
+  registration: WatchRegistration,
+): Promise<void> {
+  try {
+    await provider.unwatch(ctx, registration);
+  } catch (cause) {
+    console.error(
+      JSON.stringify({ code: 'UNWATCH_NEW_REGISTRATION_FAILED', detail: String(cause) }),
+    );
   }
 }

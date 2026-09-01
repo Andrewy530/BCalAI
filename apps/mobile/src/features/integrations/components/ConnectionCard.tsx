@@ -2,6 +2,8 @@ import type { CalendarSyncHealth, ProviderAccount } from '@cal/schemas';
 import { Badge, Button, Card, Divider, ListRow, Text, useTheme } from '@cal/ui';
 import { Alert, View } from 'react-native';
 
+import { providerMetadata } from '../provider-metadata';
+
 /**
  * One connected account: who it is, whether it is healthy, and what to do next.
  *
@@ -17,14 +19,9 @@ export interface ConnectionCardProps {
   isDisconnecting: boolean;
   onChooseCalendars: () => void;
   onSyncNow: () => void;
-  onReconnect: () => void;
+  onReconnect?: () => void;
   onDisconnect: () => void;
 }
-
-const PROVIDER_NAMES: Record<string, string> = {
-  google: 'Google Calendar',
-  microsoft: 'Outlook Calendar',
-};
 
 export function ConnectionCard({
   account,
@@ -37,6 +34,7 @@ export function ConnectionCard({
   onDisconnect,
 }: ConnectionCardProps) {
   const theme = useTheme();
+  const provider = providerMetadata(account.provider);
 
   const needsAttention = account.status !== 'active';
   const failing = health.filter((entry) => entry.hasError).length;
@@ -46,7 +44,7 @@ export function ConnectionCard({
     Alert.alert(
       'Disconnect this account?',
       'Its calendars and their events are removed from this app. Nothing changes in ' +
-        `${PROVIDER_NAMES[account.provider] ?? 'the provider'}.`,
+        `${provider.name}.`,
       [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Disconnect', style: 'destructive', onPress: onDisconnect },
@@ -56,7 +54,7 @@ export function ConnectionCard({
   return (
     <Card padded={false}>
       <ListRow
-        title={PROVIDER_NAMES[account.provider] ?? account.provider}
+        title={provider.name}
         subtitle={account.email ?? undefined}
         trailing={<Badge label={statusLabel(account.status)} tone={statusTone(account.status)} />}
       />
@@ -78,7 +76,7 @@ export function ConnectionCard({
             <Text variant="footnote" color="secondary">
               {reconnectMessage(account.status)}
             </Text>
-            <Button label="Reconnect" fullWidth onPress={onReconnect} />
+            {onReconnect ? <Button label="Reconnect" fullWidth onPress={onReconnect} /> : null}
           </>
         ) : (
           <Button

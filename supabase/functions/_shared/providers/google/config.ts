@@ -1,4 +1,6 @@
-import { EdgeError } from '../../errors/index.ts';
+import { requireEnv } from '../config.ts';
+
+export { appReturnUrl, requireEnv } from '../config.ts';
 
 /**
  * Google client configuration.
@@ -10,12 +12,6 @@ import { EdgeError } from '../../errors/index.ts';
  * Google issue a refresh token we can store in Vault, which a public native
  * client could not safely hold.
  */
-
-export const requireEnv = (name: string): string => {
-  const value = Deno.env.get(name);
-  if (!value) throw new EdgeError('UNKNOWN', `Missing ${name}`, 500);
-  return value;
-};
 
 export const GOOGLE_AUTH_ENDPOINT = 'https://accounts.google.com/o/oauth2/v2/auth';
 export const GOOGLE_TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token';
@@ -45,7 +41,3 @@ export const googleClientSecret = () => requireEnv('GOOGLE_OAUTH_CLIENT_SECRET')
 export const googleRedirectUri = (): string =>
   Deno.env.get('GOOGLE_OAUTH_REDIRECT_URI') ??
   `${requireEnv('SUPABASE_URL')}/functions/v1/oauth-google-callback`;
-
-/** Where the callback bounces the user afterwards, back into the app. */
-export const appReturnUrl = (): string =>
-  Deno.env.get('APP_OAUTH_RETURN_URL') ?? 'calendarapp://settings/integrations';

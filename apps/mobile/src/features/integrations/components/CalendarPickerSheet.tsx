@@ -1,3 +1,4 @@
+import type { ProviderKind } from '@cal/schemas';
 import {
   Badge,
   BottomSheet,
@@ -13,6 +14,7 @@ import { useState } from 'react';
 import { ActivityIndicator, ScrollView, Switch, View } from 'react-native';
 
 import { useProviderCalendars, useToggleCalendarImport } from '../hooks/useIntegrations';
+import { providerMetadata } from '../provider-metadata';
 
 /**
  * Which of an account's calendars to import.
@@ -25,15 +27,18 @@ import { useProviderCalendars, useToggleCalendarImport } from '../hooks/useInteg
 export interface CalendarPickerSheetProps {
   visible: boolean;
   providerAccountId: string | null;
+  provider: ProviderKind | null;
   onClose: () => void;
 }
 
 export function CalendarPickerSheet({
   visible,
   providerAccountId,
+  provider,
   onClose,
 }: CalendarPickerSheetProps) {
   const theme = useTheme();
+  const providerName = provider ? providerMetadata(provider).name : 'your provider';
   const { data, isLoading, isError, refetch } = useProviderCalendars(
     visible ? providerAccountId : null,
   );
@@ -61,7 +66,7 @@ export function CalendarPickerSheet({
 
       {isError ? (
         <ErrorState
-          title="Could not reach Google"
+          title={`Could not reach ${providerName}`}
           message="Your connection may need re-authorising."
           onRetry={() => void refetch()}
         />
@@ -107,7 +112,7 @@ export function CalendarPickerSheet({
       ) : null}
 
       <Text variant="footnote" color="tertiary" style={{ paddingTop: theme.spacing.md }}>
-        Turning a calendar off removes its events from this app. They stay in Google.
+        Turning a calendar off removes its events from this app. They stay with {providerName}.
       </Text>
     </BottomSheet>
   );

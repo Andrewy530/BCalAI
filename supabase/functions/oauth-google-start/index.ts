@@ -1,7 +1,7 @@
 import { adminClient, requireUser } from '../_shared/auth/index.ts';
 import { EdgeError, withErrorHandling } from '../_shared/errors/index.ts';
 import { jsonResponse, preflight } from '../_shared/http/cors.ts';
-import { createPkcePair } from '../_shared/providers/google/auth.ts';
+import { createPkcePair } from '../_shared/providers/crypto.ts';
 import { googleRedirectUri } from '../_shared/providers/google/config.ts';
 import { authFor } from '../_shared/providers/registry.ts';
 

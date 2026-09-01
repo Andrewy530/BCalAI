@@ -8,7 +8,7 @@
 begin;
 create extension if not exists pgtap;
 
-select plan(14);
+select plan(16);
 
 -- --- fixtures --------------------------------------------------------------
 insert into auth.users (instance_id, id, aud, role, email, created_at, updated_at)
@@ -69,6 +69,35 @@ select is((select count(*)::int from public.calendars), 1, 'Alice sees only her 
 select is(
   (select count(*)::int from public.calendar_sync_states), 0,
   'sync state is invisible to the client role'
+);
+
+select ok(
+  not has_column_privilege(
+    'authenticated', 'public.provider_accounts', 'webhook_channel_id', 'SELECT'
+  )
+  and not has_column_privilege(
+    'authenticated', 'public.provider_accounts', 'webhook_resource_id', 'SELECT'
+  )
+  and not has_column_privilege(
+    'authenticated', 'public.provider_accounts', 'webhook_subscription_id', 'SELECT'
+  )
+  and not has_column_privilege(
+    'authenticated', 'public.provider_accounts', 'webhook_token', 'SELECT'
+  )
+  and not has_column_privilege(
+    'authenticated', 'public.provider_accounts', 'webhook_expires_at', 'SELECT'
+  ),
+  'account watch columns are unreadable by the client role'
+);
+
+select is(
+  (select count(*)::int
+   from information_schema.columns
+   where table_schema = 'public'
+     and table_name = 'provider_accounts_public'
+     and column_name like 'webhook_%'),
+  0,
+  'account watch columns are absent from the public account view'
 );
 
 -- Writing on someone else's behalf must fail the WITH CHECK clause.

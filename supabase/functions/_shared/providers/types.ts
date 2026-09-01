@@ -96,6 +96,10 @@ export interface WatchRegistration {
   expiresAt: string;
 }
 
+export type WatchScope = 'calendar' | 'account';
+
+export type WatchTarget = { scope: 'calendar'; providerCalendarId: string } | { scope: 'account' };
+
 /** Resolved once per invocation and passed down. Never persisted. */
 export interface ProviderContext {
   providerAccountId: string;
@@ -111,6 +115,7 @@ export interface SyncWindow {
 
 export interface CalendarProvider {
   readonly kind: ProviderKind;
+  readonly watchScope: WatchScope;
 
   listCalendars(ctx: ProviderContext): Promise<ExternalCalendar[]>;
 
@@ -146,11 +151,7 @@ export interface CalendarProvider {
   ): Promise<void>;
 
   /** Register (or re-register) the change channel. Called on connect and by cron. */
-  watch(
-    ctx: ProviderContext,
-    providerCalendarId: string,
-    callbackUrl: string,
-  ): Promise<WatchRegistration>;
+  watch(ctx: ProviderContext, target: WatchTarget, callbackUrl: string): Promise<WatchRegistration>;
 
   /** Best-effort teardown. A failure here must not block a disconnect. */
   unwatch(ctx: ProviderContext, registration: WatchRegistration): Promise<void>;
@@ -169,6 +170,7 @@ export interface ProviderAuth {
   refresh(refreshToken: string): Promise<TokenSet>;
   /** Identify who just connected, so a re-connect updates rather than duplicates. */
   identify(accessToken: string): Promise<{ providerUserId: string; email: string | null }>;
+  /** Best effort only; some providers have no per-application revoke endpoint. */
   revoke(token: string): Promise<void>;
 }
 

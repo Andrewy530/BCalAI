@@ -17,10 +17,18 @@ import { drainQueue } from '../_shared/sync/worker.ts';
  * The same idempotency key as the webhook is used, so hammering refresh cannot
  * multiply the work.
  */
-const bodySchema = z.object({
-  /** Omit to sync everything the caller has connected. */
-  calendarId: z.string().uuid().nullish(),
-});
+/** Omit both target fields to sync every connected calendar. */
+const bodySchema = z
+  .object({
+    /** Sync only the connected calendar with this id. */
+    calendarId: z.string().uuid().nullish(),
+    /** Sync all imported calendars belonging to this connected account. */
+    providerAccountId: z.string().uuid().nullish(),
+  })
+  .refine(({ calendarId, providerAccountId }) => !(calendarId && providerAccountId), {
+    message: 'Choose a calendar or a provider account, not both.',
+    path: ['providerAccountId'],
+  });
 
 const handler = withErrorHandling(async (request) => {
   if (request.method === 'OPTIONS') return preflight();
@@ -40,9 +48,12 @@ const handler = withErrorHandling(async (request) => {
     .eq('user_id', user.id)
     .not('provider_account_id', 'is', null);
 
+  const providerQuery = parsed.data.providerAccountId
+    ? query.eq('provider_account_id', parsed.data.providerAccountId)
+    : query;
   const { data: calendars, error } = parsed.data.calendarId
-    ? await query.eq('id', parsed.data.calendarId)
-    : await query;
+    ? await providerQuery.eq('id', parsed.data.calendarId)
+    : await providerQuery;
 
   if (error) throw new EdgeError('UNKNOWN', 'Could not read your calendars.', 500);
 

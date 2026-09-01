@@ -11,6 +11,8 @@ describe('parseRRule', () => {
       until: undefined,
       byDay: [],
       byMonthDay: [],
+      byMonth: [],
+      wkst: 1,
     });
   });
 
@@ -20,21 +22,44 @@ describe('parseRRule', () => {
     expect(parsed?.interval).toBe(2);
   });
 
-  it('parses BYDAY into weekday numbers', () => {
-    expect(parseRRule('FREQ=WEEKLY;BYDAY=MO,WE,FR')?.byDay).toEqual([1, 3, 5]);
+  it('parses BYDAY into structured weekdays', () => {
+    expect(parseRRule('FREQ=WEEKLY;BYDAY=MO,WE,FR')?.byDay).toEqual([
+      { weekday: 1 },
+      { weekday: 3 },
+      { weekday: 5 },
+    ]);
   });
 
   it('parses COUNT and UNTIL', () => {
     expect(parseRRule('FREQ=DAILY;COUNT=5')?.count).toBe(5);
-    expect(parseRRule('FREQ=DAILY;UNTIL=20261231T235959Z')?.until?.toISOString()).toBe(
-      '2026-12-31T23:59:59.000Z',
-    );
+    expect(parseRRule('FREQ=DAILY;UNTIL=20261231T235959Z')?.until).toEqual({
+      kind: 'instant',
+      value: new Date('2026-12-31T23:59:59Z'),
+    });
   });
 
-  it('defaults a date-only UNTIL to the end of that day', () => {
-    expect(parseRRule('FREQ=DAILY;UNTIL=20261231')?.until?.toISOString()).toBe(
-      '2026-12-31T23:59:59.000Z',
-    );
+  it('preserves date-only UNTIL as a calendar date', () => {
+    expect(parseRRule('FREQ=DAILY;UNTIL=20261231')?.until).toEqual({
+      kind: 'date',
+      year: 2026,
+      month: 12,
+      day: 31,
+    });
+  });
+
+  it('parses Graph-shaped ordinal, month, and week-start selectors', () => {
+    expect(parseRRule('FREQ=MONTHLY;BYDAY=2MO')?.byDay).toEqual([{ weekday: 1, ordinal: 2 }]);
+    expect(parseRRule('FREQ=YEARLY;BYMONTH=11;BYDAY=-1WE')).toEqual({
+      freq: 'YEARLY',
+      interval: 1,
+      count: undefined,
+      until: undefined,
+      byDay: [{ weekday: 3, ordinal: -1 }],
+      byMonthDay: [],
+      byMonth: [11],
+      wkst: 1,
+    });
+    expect(parseRRule('FREQ=WEEKLY;INTERVAL=2;BYDAY=SU,MO;WKST=SU')?.wkst).toBe(0);
   });
 
   // The safety property: anything we do not fully implement must be rejected
@@ -45,10 +70,14 @@ describe('parseRRule', () => {
     expect(parseRRule('FREQ=YEARLY;BYMONTH=3')).toBeNull();
   });
 
-  it('rejects positional BYDAY and misplaced BY parts', () => {
-    expect(parseRRule('FREQ=MONTHLY;BYDAY=2MO')).toBeNull();
+  it('rejects unsupported positional and misplaced BY parts', () => {
+    expect(parseRRule('FREQ=MONTHLY;BYDAY=2MO,3TU')).toBeNull();
+    expect(parseRRule('FREQ=YEARLY;BYMONTH=3;BYDAY=MO')).toBeNull();
     expect(parseRRule('FREQ=DAILY;BYDAY=MO')).toBeNull();
     expect(parseRRule('FREQ=WEEKLY;BYMONTHDAY=15')).toBeNull();
+    expect(parseRRule('FREQ=MONTHLY;BYMONTH=3')).toBeNull();
+    expect(parseRRule('FREQ=YEARLY;BYMONTHDAY=15')).toBeNull();
+    expect(parseRRule('FREQ=YEARLY;BYMONTH=11;BYDAY=-1WE;BYMONTHDAY=15')).toBeNull();
   });
 
   it('rejects malformed input', () => {
@@ -58,7 +87,14 @@ describe('parseRRule', () => {
     expect(parseRRule('FREQ=DAILY;INTERVAL=-2')).toBeNull();
     expect(parseRRule('FREQ=DAILY;COUNT=0')).toBeNull();
     expect(parseRRule('FREQ=DAILY;UNTIL=notadate')).toBeNull();
+    expect(parseRRule('FREQ=DAILY;UNTIL=20260230')).toBeNull();
+    expect(parseRRule('FREQ=DAILY;UNTIL=20261231T235959')).toBeNull();
     expect(parseRRule('FREQ=MONTHLY;BYMONTHDAY=32')).toBeNull();
+    expect(parseRRule('FREQ=MONTHLY;BYMONTHDAY=-1')).toBeNull();
+    expect(parseRRule('FREQ=MONTHLY;BYDAY=0MO')).toBeNull();
+    expect(parseRRule('FREQ=MONTHLY;BYDAY=-2MO')).toBeNull();
+    expect(parseRRule('FREQ=DAILY;FREQ=WEEKLY')).toBeNull();
+    expect(parseRRule('FREQ=WEEKLY;WKST=MO;WKST=SU')).toBeNull();
     expect(parseRRule('JUSTGARBAGE')).toBeNull();
   });
 
@@ -86,6 +122,25 @@ describe('formatRRule', () => {
       expect(formatRRule(parseRRule(rule)!)).toBe(rule);
     }
   });
+
+  it('formats enriched rules canonically', () => {
+    expect(formatRRule(parseRRule('FREQ=YEARLY;BYDAY=-1WE;BYMONTH=11')!)).toBe(
+      'FREQ=YEARLY;BYMONTH=11;BYDAY=-1WE',
+    );
+    expect(formatRRule(parseRRule('FREQ=WEEKLY;BYDAY=SU,MO;WKST=SU;INTERVAL=2')!)).toBe(
+      'FREQ=WEEKLY;INTERVAL=2;BYDAY=SU,MO;WKST=SU',
+    );
+    expect(formatRRule(parseRRule('FREQ=DAILY;UNTIL=20261231')!)).toBe('FREQ=DAILY;UNTIL=20261231');
+  });
+
+  it('accepts absolute yearly rules and rejects ambiguous combinations', () => {
+    expect(formatRRule(parseRRule('FREQ=YEARLY;BYMONTH=2;BYMONTHDAY=29')!)).toBe(
+      'FREQ=YEARLY;BYMONTH=2;BYMONTHDAY=29',
+    );
+    expect(parseRRule('FREQ=YEARLY;BYMONTH=2,3;BYMONTHDAY=1')).toBeNull();
+    expect(parseRRule('FREQ=YEARLY;BYMONTH=2;BYMONTHDAY=1,2')).toBeNull();
+    expect(parseRRule('FREQ=MONTHLY;BYDAY=2MO;BYMONTHDAY=15')).toBeNull();
+  });
 });
 
 describe('describeRRule', () => {
@@ -111,5 +166,14 @@ describe('describeRRule', () => {
     expect(describeRRule(parseRRule('FREQ=DAILY;INTERVAL=3')!)).toBe('Every 3rd day');
     expect(describeRRule(parseRRule('FREQ=DAILY;INTERVAL=11')!)).toBe('Every 11th day');
     expect(describeRRule(parseRRule('FREQ=DAILY;INTERVAL=21')!)).toBe('Every 21st day');
+  });
+
+  it('includes the selected month in yearly descriptions', () => {
+    expect(describeRRule(parseRRule('FREQ=YEARLY;BYMONTH=2;BYMONTHDAY=29')!)).toBe(
+      'Every year on 29 Feb',
+    );
+    expect(describeRRule(parseRRule('FREQ=YEARLY;BYMONTH=11;BYDAY=-1WE')!)).toBe(
+      'Every year on the last Wednesday in Nov',
+    );
   });
 });

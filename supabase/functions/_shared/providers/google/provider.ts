@@ -7,9 +7,10 @@ import type {
   ProviderEventInput,
   SyncResult,
   WatchRegistration,
+  WatchTarget,
 } from '../types.ts';
 
-import { randomToken } from './auth.ts';
+import { randomToken } from '../crypto.ts';
 import { googleFetch } from './client.ts';
 import { GOOGLE_CALENDAR_API } from './config.ts';
 import { normaliseCalendar, normaliseEvent, toGoogleEvent } from './normalise.ts';
@@ -42,6 +43,7 @@ const MAX_PAGES = 40;
 
 export const googleProvider: CalendarProvider = {
   kind: 'google',
+  watchScope: 'calendar',
 
   async listCalendars(ctx: ProviderContext): Promise<ExternalCalendar[]> {
     const calendars: ExternalCalendar[] = [];
@@ -126,7 +128,12 @@ export const googleProvider: CalendarProvider = {
     }
   },
 
-  async watch(ctx, providerCalendarId, callbackUrl): Promise<WatchRegistration> {
+  async watch(ctx, target: WatchTarget, callbackUrl): Promise<WatchRegistration> {
+    if (target.scope !== 'calendar') {
+      throw new EdgeError('VALIDATION_FAILED', 'Google watches are calendar-scoped.', 400);
+    }
+
+    const providerCalendarId = target.providerCalendarId;
     const channelId = crypto.randomUUID();
     const token = randomToken();
 
@@ -229,7 +236,7 @@ async function listEvents(
     } catch (error) {
       // The caller's contract is a SyncResult, not an exception, for the one
       // failure that has a defined recovery: drop the cursor and resync.
-      if (error instanceof EdgeError && error.code === 'GOOGLE_SYNC_CURSOR_INVALID') {
+      if (error instanceof EdgeError && error.code === 'PROVIDER_SYNC_CURSOR_INVALID') {
         return { events: [], cursor: null, cursorInvalid: true };
       }
       throw error;

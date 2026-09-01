@@ -146,7 +146,7 @@ export function SettingsScreen() {
  * themselves, so it outranks the count.
  */
 function connectionSummary(connections: ProviderAccount[]): string {
-  if (connections.length === 0) return 'Sync Google Calendar';
+  if (connections.length === 0) return 'Connect a calendar';
 
   const attention = connections.filter((account) => account.status !== 'active').length;
   if (attention > 0) {

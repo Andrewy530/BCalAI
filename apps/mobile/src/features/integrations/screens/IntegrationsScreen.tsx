@@ -1,3 +1,4 @@
+import type { ProviderKind } from '@cal/schemas';
 import {
   Badge,
   Button,
@@ -23,6 +24,7 @@ import {
   useSyncHealth,
   useSyncNow,
 } from '../hooks/useIntegrations';
+import { PROVIDER_OPTIONS, providerMetadata } from '../provider-metadata';
 
 /**
  * Connected calendars.
@@ -46,8 +48,8 @@ export function IntegrationsScreen() {
   const [pickerAccountId, setPickerAccountId] = useState<string | null>(null);
   const [busyAccountId, setBusyAccountId] = useState<string | null>(null);
 
-  const onConnect = () => {
-    connect.mutate(undefined, {
+  const onConnect = (provider: ProviderKind) => {
+    connect.mutate(provider, {
       onSuccess: (status) => {
         if (status === 'connected') {
           void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -72,7 +74,7 @@ export function IntegrationsScreen() {
   const onSyncNow = (accountId: string) => {
     setBusyAccountId(accountId);
     void Haptics.selectionAsync();
-    syncNow.mutate(undefined, { onSettled: () => setBusyAccountId(null) });
+    syncNow.mutate(accountId, { onSettled: () => setBusyAccountId(null) });
   };
 
   if (connections.isLoading) return <LoadingState fullScreen />;
@@ -87,6 +89,14 @@ export function IntegrationsScreen() {
   }
 
   const accounts = connections.data ?? [];
+  const connectedKinds = new Set(accounts.map((account) => account.provider));
+  const connectableProviders = PROVIDER_OPTIONS.filter(
+    (provider) => provider.available && !connectedKinds.has(provider.kind),
+  );
+  const unavailableProviders = PROVIDER_OPTIONS.filter(
+    (provider) => !provider.available && !connectedKinds.has(provider.kind),
+  );
+  const firstConnectableProvider = connectableProviders[0];
   const healthFor = (accountId: string) =>
     (health.data ?? []).filter((entry) => entry.providerAccountId === accountId);
 
@@ -104,9 +114,13 @@ export function IntegrationsScreen() {
         <EmptyState
           icon="calendar-outline"
           title="No calendars connected"
-          message="Connect Google to see your existing calendar alongside your tasks."
-          actionLabel={connect.isPending ? 'Connecting…' : 'Connect Google Calendar'}
-          onAction={connect.isPending ? undefined : onConnect}
+          message="Connect a calendar to see your existing events alongside your tasks."
+          actionLabel={connect.isPending ? 'Connecting…' : firstConnectableProvider?.connectLabel}
+          onAction={
+            connect.isPending || !firstConnectableProvider
+              ? undefined
+              : () => onConnect(firstConnectableProvider.kind)
+          }
         />
       ) : (
         accounts.map((account) => (
@@ -118,30 +132,42 @@ export function IntegrationsScreen() {
             isDisconnecting={disconnect.isPending && busyAccountId === account.id}
             onChooseCalendars={() => setPickerAccountId(account.id)}
             onSyncNow={() => onSyncNow(account.id)}
-            onReconnect={onConnect}
+            onReconnect={
+              providerMetadata(account.provider).available
+                ? () => onConnect(account.provider)
+                : undefined
+            }
             onDisconnect={() => onDisconnect(account.id)}
           />
         ))
       )}
 
-      {accounts.length > 0 && !accounts.some((account) => account.provider === 'google') ? (
-        <Button
-          label="Connect Google Calendar"
-          variant="secondary"
-          fullWidth
-          loading={connect.isPending}
-          onPress={onConnect}
-        />
-      ) : null}
+      {accounts.length > 0
+        ? connectableProviders.map((provider) => (
+            <Button
+              key={provider.kind}
+              label={provider.connectLabel}
+              variant="secondary"
+              fullWidth
+              loading={connect.isPending}
+              onPress={() => onConnect(provider.kind)}
+            />
+          ))
+        : null}
 
       <Card eyebrow="Coming soon" padded={false}>
-        <ListRow
-          title="Outlook Calendar"
-          subtitle="Two-way sync via Microsoft Graph"
-          trailing={<Badge label="Sprint 5" />}
-          disabled
-        />
-        <Divider inset />
+        {unavailableProviders.map((provider, index) => (
+          <View key={provider.kind}>
+            {index > 0 ? <Divider inset /> : null}
+            <ListRow
+              title={provider.name}
+              subtitle={provider.unavailableSubtitle}
+              trailing={<Badge label="Sprint 5" />}
+              disabled
+            />
+          </View>
+        ))}
+        {unavailableProviders.length > 0 ? <Divider inset /> : null}
         <ListRow
           title="Find Time with AI"
           subtitle="Schedule flexible work around your commitments"
@@ -153,6 +179,7 @@ export function IntegrationsScreen() {
       <CalendarPickerSheet
         visible={pickerAccountId !== null}
         providerAccountId={pickerAccountId}
+        provider={accounts.find((account) => account.id === pickerAccountId)?.provider ?? null}
         onClose={() => setPickerAccountId(null)}
       />
     </View>

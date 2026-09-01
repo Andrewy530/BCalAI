@@ -1,8 +1,10 @@
 import { adminClient } from '../_shared/auth/index.ts';
 import { EdgeError, withErrorHandling } from '../_shared/errors/index.ts';
 import { jsonResponse } from '../_shared/http/cors.ts';
+import { providerFor, providerKindsForWatchScope } from '../_shared/providers/registry.ts';
 import { JOB_KINDS, enqueue } from '../_shared/sync/jobs.ts';
 import { drainQueue } from '../_shared/sync/worker.ts';
+import { watchRenewalThreshold } from '../_shared/providers/watch.ts';
 
 /**
  * The scheduled half of the sync engine.
@@ -41,36 +43,91 @@ const handler = withErrorHandling(async (request) => {
 });
 
 /**
- * Recreate channels before they lapse.
+ * Recreate provider watches before they lapse.
  *
  * The window is generous on purpose: a channel that expires unnoticed means
  * silent staleness until the next daily reconciliation, so it is renewed with
  * two days to spare and several hourly attempts in hand.
  */
 async function renewWatches(admin: ReturnType<typeof adminClient>) {
-  const threshold = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString();
+  const threshold = watchRenewalThreshold().toISOString();
+  const hour = new Date().toISOString().slice(0, 13);
 
-  const { data: states, error } = await admin
-    .from('calendar_sync_states')
-    .select('calendar_id, provider_account_id, provider_accounts!inner(user_id, status)')
-    .lt('webhook_expires_at', threshold)
-    .not('calendar_id', 'is', null)
-    .limit(100);
+  const calendarProviderKinds = providerKindsForWatchScope('calendar');
+  const accountProviderKinds = providerKindsForWatchScope('account');
+
+  const { data: states, error } =
+    calendarProviderKinds.length === 0
+      ? { data: [], error: null }
+      : await admin
+          .from('calendar_sync_states')
+          .select(
+            'calendar_id, provider_account_id, provider_accounts!inner(user_id, status, provider)',
+          )
+          .in('provider_accounts.provider', calendarProviderKinds)
+          .or(`webhook_expires_at.is.null,webhook_expires_at.lt.${threshold}`)
+          .not('calendar_id', 'is', null)
+          .limit(100);
 
   if (error) throw new EdgeError('UNKNOWN', 'Could not list expiring channels.', 500);
 
   let queued = 0;
   for (const state of states ?? []) {
-    const account = state.provider_accounts as unknown as { user_id: string; status: string };
+    const account = state.provider_accounts as unknown as {
+      user_id: string;
+      status: string;
+      provider: string;
+    };
     // No point renewing a channel for a connection the user must re-authorise.
     if (account.status !== 'active') continue;
+
+    let adapter;
+    try {
+      adapter = providerFor(account.provider);
+    } catch {
+      // A provider can be present in the enum before its adapter is deployed.
+      continue;
+    }
+    if (adapter.watchScope !== 'calendar') continue;
 
     await enqueue(admin, {
       userId: account.user_id,
       providerAccountId: state.provider_account_id as string,
       kind: JOB_KINDS.watchRenew,
-      payload: { calendarId: state.calendar_id },
-      idempotencyKey: `watch-renew:${state.calendar_id}:${new Date().toISOString().slice(0, 13)}`,
+      payload: { scope: 'calendar', calendarId: state.calendar_id },
+      idempotencyKey: `watch-renew:${state.calendar_id}:${hour}`,
+    });
+    queued += 1;
+  }
+
+  const { data: accounts, error: accountError } =
+    accountProviderKinds.length === 0
+      ? { data: [], error: null }
+      : await admin
+          .from('provider_accounts')
+          .select('id, user_id, provider, webhook_expires_at')
+          .in('provider', accountProviderKinds)
+          .eq('status', 'active')
+          .or(`webhook_expires_at.is.null,webhook_expires_at.lt.${threshold}`)
+          .limit(100);
+
+  if (accountError) throw new EdgeError('UNKNOWN', 'Could not list expiring account watches.', 500);
+
+  for (const account of accounts ?? []) {
+    let adapter;
+    try {
+      adapter = providerFor(account.provider as string);
+    } catch {
+      continue;
+    }
+    if (adapter.watchScope !== 'account') continue;
+
+    await enqueue(admin, {
+      userId: account.user_id as string,
+      providerAccountId: account.id as string,
+      kind: JOB_KINDS.watchRenew,
+      payload: { scope: 'account' },
+      idempotencyKey: `watch-renew:account:${account.id}:${hour}`,
     });
     queued += 1;
   }

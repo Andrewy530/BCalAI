@@ -1,6 +1,6 @@
 # Sprint 4 — Active implementation tracker
 
-Status: **Implementation complete; OAuth, import, and sync verified against live Google. Outward write and webhook delivery still unexercised.**
+Status: **Implementation complete; live Google OAuth, import, sync, and provider-first writes verified. Real webhook delivery remains unexercised.**
 Last updated: **2026-08-31**
 
 This is the live handoff for the Sprint 4 implementation. Update the

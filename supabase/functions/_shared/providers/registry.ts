@@ -2,7 +2,7 @@ import { EdgeError } from '../errors/index.ts';
 
 import { googleAuth } from './google/auth.ts';
 import { googleProvider } from './google/provider.ts';
-import type { CalendarProvider, ProviderAuth, ProviderKind } from './types.ts';
+import type { CalendarProvider, ProviderAuth, ProviderKind, WatchScope } from './types.ts';
 
 /**
  * The only place a provider kind becomes a concrete implementation.
@@ -37,4 +37,11 @@ export function authFor(kind: string): ProviderAuth {
 
 export function isSupportedProvider(kind: string): kind is ProviderKind {
   return kind in PROVIDERS;
+}
+
+/** Provider kinds grouped by their notification registration ownership. */
+export function providerKindsForWatchScope(scope: WatchScope): ProviderKind[] {
+  return (Object.keys(PROVIDERS) as ProviderKind[]).filter(
+    (kind) => PROVIDERS[kind]?.watchScope === scope,
+  );
 }

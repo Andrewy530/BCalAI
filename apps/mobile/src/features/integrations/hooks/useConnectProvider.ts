@@ -1,9 +1,9 @@
-import { type ConnectResult, connectResultSchema } from '@cal/schemas';
+import { type ConnectResult, type ProviderKind, connectResultSchema } from '@cal/schemas';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import * as WebBrowser from 'expo-web-browser';
 
 import { queryKeys } from '../../../lib/query/query-client';
-import { startGoogleConnect } from '../api/integrations.api';
+import { startProviderConnect } from '../api/integrations.api';
 
 /**
  * The OAuth round trip, from the app's side.
@@ -11,10 +11,10 @@ import { startGoogleConnect } from '../api/integrations.api';
  * `openAuthSessionAsync` is what makes this safe *and* usable: consent happens
  * in a system browser the app cannot read, and the app is still woken by the
  * redirect back to our scheme. An in-app WebView would be able to observe the
- * user's Google password, which is exactly why Google rejects it.
+ * provider account's password, which is exactly why providers reject it.
  *
- * The app never sees the authorisation code. It goes from Google straight to
- * our callback function, which is the only party holding the client secret.
+ * The app never sees the authorisation code. It goes from the provider straight
+ * to our callback function, which is the only party holding the client secret.
  */
 
 /** Must match the URL the callback function redirects to. */
@@ -23,12 +23,12 @@ const RETURN_URL = 'calendarapp://settings/integrations';
 export function useConnectProvider() {
   const queryClient = useQueryClient();
 
-  return useMutation<ConnectResult, unknown, void>({
-    mutationFn: async () => {
-      const authorizationUrl = await startGoogleConnect();
+  return useMutation<ConnectResult, unknown, ProviderKind>({
+    mutationFn: async (provider) => {
+      const authorizationUrl = await startProviderConnect(provider);
 
       const result = await WebBrowser.openAuthSessionAsync(authorizationUrl, RETURN_URL, {
-        // Nothing should be reused between connect attempts, and a stale Google
+        // Nothing should be reused between connect attempts, and a stale
         // session is a common source of "it connected the wrong account".
         preferEphemeralSession: true,
       });
@@ -67,5 +67,5 @@ export const CONNECT_MESSAGES: Record<Exclude<ConnectResult, 'connected'>, strin
   cancelled: 'Connection cancelled.',
   expired: 'That connection attempt timed out. Try again.',
   failed: 'We could not finish connecting. Try again.',
-  invalid_request: 'Google sent back something we did not expect.',
+  invalid_request: 'The provider sent back something we did not expect.',
 };

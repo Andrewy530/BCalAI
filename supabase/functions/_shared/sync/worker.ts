@@ -6,6 +6,7 @@ import { loadAccount, markAccount, resolveContext } from '../providers/accounts.
 import type { ProviderContext } from '../providers/types.ts';
 
 import {
+  ensureAccountWatch,
   ensureWatch,
   loadSyncState,
   loadSyncStateByCalendar,
@@ -36,25 +37,35 @@ export async function drainQueue(
   admin: SupabaseClient,
   limit = DEFAULT_BATCH,
 ): Promise<DrainSummary> {
-  const jobs = await claim(admin, limit);
-  const summary: DrainSummary = { claimed: jobs.length, succeeded: 0, failed: 0 };
+  const overallLimit = Number.isFinite(limit) ? Math.max(0, Math.floor(limit)) : DEFAULT_BATCH;
+  const summary: DrainSummary = { claimed: 0, succeeded: 0, failed: 0 };
 
   // Access tokens are resolved once per account rather than once per job: a
   // reconciliation run can hold a dozen jobs for the same connection.
   const contexts = new Map<string, ProviderContext>();
 
-  for (const job of jobs) {
-    try {
-      await runJob(admin, job, contexts);
-      await complete(admin, job.id, true);
-      summary.succeeded += 1;
-    } catch (error) {
-      const code = error instanceof EdgeError ? error.code : 'UNKNOWN';
-      console.error(
-        JSON.stringify({ code: 'SYNC_JOB_FAILED', kind: job.kind, reason: code, jobId: job.id }),
-      );
-      await complete(admin, job.id, false, error);
-      summary.failed += 1;
+  // claim_sync_jobs deliberately claims at most one job per provider account.
+  // Keep taking batches after each batch completes so an account with several
+  // calendars still drains in one invocation, while another worker can never
+  // overlap its provider work with a running job.
+  while (summary.claimed < overallLimit) {
+    const jobs = await claim(admin, Math.min(DEFAULT_BATCH, overallLimit - summary.claimed));
+    if (jobs.length === 0) break;
+
+    summary.claimed += jobs.length;
+    for (const job of jobs) {
+      try {
+        await runJob(admin, job, contexts);
+        await complete(admin, job.id, true);
+        summary.succeeded += 1;
+      } catch (error) {
+        const code = error instanceof EdgeError ? error.code : 'UNKNOWN';
+        console.error(
+          JSON.stringify({ code: 'SYNC_JOB_FAILED', kind: job.kind, reason: code, jobId: job.id }),
+        );
+        await complete(admin, job.id, false, error);
+        summary.failed += 1;
+      }
     }
   }
 
@@ -75,7 +86,7 @@ async function runJob(
   // A revoked connection cannot be repaired by retrying. Fail fast so the job
   // exhausts its attempts quickly and the user sees a reconnect prompt.
   if (account.status === 'revoked') {
-    throw new EdgeError('GOOGLE_AUTH_EXPIRED', 'That connection was revoked.', 401);
+    throw new EdgeError('PROVIDER_AUTH_EXPIRED', 'That connection was revoked.', 401);
   }
 
   let ctx = contexts.get(account.id);
@@ -87,7 +98,7 @@ async function runJob(
   switch (job.kind) {
     case JOB_KINDS.calendarInitialSync:
     case JOB_KINDS.calendarSync: {
-      const state = await requireStateForCalendar(admin, job);
+      const state = await requireStateForCalendar(admin, calendarIdFromPayload(job.payload));
       try {
         await syncCalendar(admin, account, ctx, state);
       } catch (error) {
@@ -101,8 +112,17 @@ async function runJob(
     }
 
     case JOB_KINDS.watchRenew: {
-      const state = await requireStateForCalendar(admin, job);
-      const renewed = await ensureWatch(admin, account, ctx, state);
+      const target = parseWatchRenewPayload(job.payload);
+      const renewed =
+        target.scope === 'account'
+          ? await ensureAccountWatch(admin, account, ctx, { force: true })
+          : await ensureWatch(
+              admin,
+              account,
+              ctx,
+              await requireStateForCalendar(admin, target.calendarId),
+              { force: true },
+            );
       if (!renewed) throw new EdgeError('UNKNOWN', 'Could not renew the change channel.', 502);
       return;
     }
@@ -153,9 +173,8 @@ async function runJob(
   }
 }
 
-async function requireStateForCalendar(admin: SupabaseClient, job: SyncJob) {
-  const calendarId = job.payload.calendarId;
-  if (typeof calendarId !== 'string') {
+async function requireStateForCalendar(admin: SupabaseClient, calendarId: string) {
+  if (!calendarId) {
     throw new EdgeError('VALIDATION_FAILED', 'Job is missing a calendar.', 400);
   }
 
@@ -167,6 +186,36 @@ async function requireStateForCalendar(admin: SupabaseClient, job: SyncJob) {
     throw new EdgeError('NOT_FOUND', 'That calendar is no longer imported.', 404);
   }
   return state;
+}
+
+const watchRenewPayloadSchema = z.union([
+  z.object({ scope: z.literal('account') }).strict(),
+  z.object({ scope: z.literal('calendar'), calendarId: z.string().uuid() }).strict(),
+  // Accept jobs queued before the scope discriminator was introduced.
+  z.object({ calendarId: z.string().uuid() }).strict(),
+]);
+
+function calendarIdFromPayload(payload: Record<string, unknown>): string {
+  const parsed = z.object({ calendarId: z.string().uuid() }).safeParse(payload);
+  if (!parsed.success) {
+    throw new EdgeError('VALIDATION_FAILED', 'Job is missing a calendar.', 400);
+  }
+  return parsed.data.calendarId;
+}
+
+type WatchRenewTarget = { scope: 'account' } | { scope: 'calendar'; calendarId: string };
+
+function parseWatchRenewPayload(payload: Record<string, unknown>): WatchRenewTarget {
+  const parsed = watchRenewPayloadSchema.safeParse(payload);
+  if (!parsed.success) {
+    throw new EdgeError('VALIDATION_FAILED', 'Watch renewal is missing its target.', 400);
+  }
+
+  if ('calendarId' in parsed.data) {
+    return { scope: 'calendar', calendarId: parsed.data.calendarId };
+  }
+
+  return { scope: 'account' };
 }
 
 /** Only retryable operations are ever enqueued; a create never is. */

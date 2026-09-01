@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 import { adminClient } from '../_shared/auth/index.ts';
 import { EdgeError } from '../_shared/errors/index.ts';
-import { appReturnUrl } from '../_shared/providers/google/config.ts';
+import { appReturnUrl } from '../_shared/providers/config.ts';
 import { authFor } from '../_shared/providers/registry.ts';
 
 /**
