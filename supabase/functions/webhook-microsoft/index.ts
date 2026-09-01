@@ -1,3 +1,3 @@
 import { handleMicrosoftWebhook } from './handler.ts';
 
-Deno.serve(handleMicrosoftWebhook);
+Deno.serve((request) => handleMicrosoftWebhook(request));

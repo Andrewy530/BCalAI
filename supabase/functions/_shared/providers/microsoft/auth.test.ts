@@ -22,9 +22,7 @@ Deno.test('builds the Microsoft authorization URL with exact PKCE parameters', (
   );
 
   assertEquals(
-    url.href.startsWith(
-      'https://login.microsoftonline.com/common/oauth2/v2.0/authorize?',
-    ),
+    url.href.startsWith('https://login.microsoftonline.com/common/oauth2/v2.0/authorize?'),
     true,
   );
   assertEquals(Object.fromEntries(url.searchParams), {
@@ -71,10 +69,7 @@ Deno.test('exchanges a code with client credentials, redirect URI, and PKCE veri
   });
 
   const call = onlyCall(calls);
-  assertEquals(
-    call.url,
-    'https://login.microsoftonline.com/organizations/oauth2/v2.0/token',
-  );
+  assertEquals(call.url, 'https://login.microsoftonline.com/organizations/oauth2/v2.0/token');
   assertEquals(call.init?.method, 'POST');
   const form = new URLSearchParams(bodyOf(call));
   assertEquals(Object.fromEntries(form), {
@@ -132,9 +127,7 @@ Deno.test('returns a rotated refresh token when Microsoft supplies one', async (
 });
 
 Deno.test('requires a refresh token on the initial exchange', async () => {
-  const { fetcher } = mockFetch(
-    jsonResponse({ access_token: 'access-token', expires_in: 3600 }),
-  );
+  const { fetcher } = mockFetch(jsonResponse({ access_token: 'access-token', expires_in: 3600 }));
   const auth = createMicrosoftAuth({
     fetch: fetcher,
     clientId: 'client-id',
@@ -153,42 +146,36 @@ Deno.test('requires a refresh token on the initial exchange', async () => {
   );
 });
 
-Deno.test('maps invalid_grant to provider auth expiration without exposing the description', async () => {
-  const { fetcher } = mockFetch(
-    jsonResponse(
-      { error: 'invalid_grant', error_description: 'private provider details' },
-      400,
-    ),
-  );
-  const auth = createMicrosoftAuth({
-    fetch: fetcher,
-    clientId: 'client-id',
-    clientSecret: 'client-secret',
-  });
+Deno.test(
+  'maps invalid_grant to provider auth expiration without exposing the description',
+  async () => {
+    const { fetcher } = mockFetch(
+      jsonResponse({ error: 'invalid_grant', error_description: 'private provider details' }, 400),
+    );
+    const auth = createMicrosoftAuth({
+      fetch: fetcher,
+      clientId: 'client-id',
+      clientSecret: 'client-secret',
+    });
 
-  const error = await expectEdgeError(
-    () => auth.refresh('stored-refresh-token'),
-    'PROVIDER_AUTH_EXPIRED',
-    401,
-  );
-  assertEquals(error.message.includes('private provider details'), false);
-});
+    const error = await expectEdgeError(
+      () => auth.refresh('stored-refresh-token'),
+      'PROVIDER_AUTH_EXPIRED',
+      401,
+    );
+    assertEquals(error.message.includes('private provider details'), false);
+  },
+);
 
 Deno.test('rejects a malformed token success response', async () => {
-  const { fetcher } = mockFetch(
-    jsonResponse({ access_token: 'access-token', expires_in: '3600' }),
-  );
+  const { fetcher } = mockFetch(jsonResponse({ access_token: 'access-token', expires_in: '3600' }));
   const auth = createMicrosoftAuth({
     fetch: fetcher,
     clientId: 'client-id',
     clientSecret: 'client-secret',
   });
 
-  await expectEdgeError(
-    () => auth.refresh('stored-refresh-token'),
-    'UNKNOWN',
-    502,
-  );
+  await expectEdgeError(() => auth.refresh('stored-refresh-token'), 'UNKNOWN', 502);
 });
 
 Deno.test('rejects a token response with a zero lifetime', async () => {
@@ -205,11 +192,7 @@ Deno.test('rejects a token response with a zero lifetime', async () => {
     clientSecret: 'client-secret',
   });
 
-  await expectEdgeError(
-    () => auth.refresh('stored-refresh-token'),
-    'UNKNOWN',
-    502,
-  );
+  await expectEdgeError(() => auth.refresh('stored-refresh-token'), 'UNKNOWN', 502);
 });
 
 Deno.test('identifies a Graph user and falls back from mail to userPrincipalName', async () => {
@@ -229,10 +212,7 @@ Deno.test('identifies a Graph user and falls back from mail to userPrincipalName
     email: 'person@example.com',
   });
   const call = onlyCall(calls);
-  assertEquals(
-    call.url,
-    'https://graph.microsoft.com/v1.0/me?$select=id,mail,userPrincipalName',
-  );
+  assertEquals(call.url, 'https://graph.microsoft.com/v1.0/me?$select=id,mail,userPrincipalName');
   assertEquals(call.init?.headers, {
     Authorization: 'Bearer access-token',
     Accept: 'application/json',
@@ -285,9 +265,7 @@ function jsonResponse(body: unknown, status = 200): Response {
   });
 }
 
-function mockFetch(
-  ...responses: Response[]
-): { fetcher: typeof fetch; calls: FetchCall[] } {
+function mockFetch(...responses: Response[]): { fetcher: typeof fetch; calls: FetchCall[] } {
   const calls: FetchCall[] = [];
   let index = 0;
   const fetcher: typeof fetch = (input, init) => {

@@ -67,6 +67,6 @@ export function microsoftRedirectUriFor(supabaseUrl: string): string {
 export function microsoftRedirectUri(): string {
   return (
     Deno.env.get('MICROSOFT_OAUTH_REDIRECT_URI') ??
-      microsoftRedirectUriFor(requireEnv('SUPABASE_URL'))
+    microsoftRedirectUriFor(requireEnv('SUPABASE_URL'))
   );
 }

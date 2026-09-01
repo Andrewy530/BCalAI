@@ -29,9 +29,7 @@ export interface MicrosoftAuthDeps {
  * The factory keeps network and clock effects injectable so token handling can
  * be tested without credentials or a live identity-platform account.
  */
-export function createMicrosoftAuth(
-  deps: MicrosoftAuthDeps = {},
-): ProviderAuth {
+export function createMicrosoftAuth(deps: MicrosoftAuthDeps = {}): ProviderAuth {
   const fetcher = deps.fetch ?? fetch;
   const now = deps.now ?? (() => Date.now());
   const clientId = () => deps.clientId ?? microsoftClientId();
@@ -109,11 +107,7 @@ export function createMicrosoftAuth(
         await responseJson(response, 'Microsoft returned an unexpected profile.'),
       );
       if (!parsed.success) {
-        throw new EdgeError(
-          'UNKNOWN',
-          'Microsoft returned an unexpected profile.',
-          502,
-        );
+        throw new EdgeError('UNKNOWN', 'Microsoft returned an unexpected profile.', 502);
       }
 
       return {
@@ -173,11 +167,7 @@ async function postToken(
     await responseJson(response, 'Microsoft returned an unexpected token response.'),
   );
   if (!parsed.success) {
-    throw new EdgeError(
-      'UNKNOWN',
-      'Microsoft returned an unexpected token response.',
-      502,
-    );
+    throw new EdgeError('UNKNOWN', 'Microsoft returned an unexpected token response.', 502);
   }
 
   if (requireRefreshToken && !parsed.data.refresh_token) {
@@ -192,8 +182,7 @@ async function postToken(
   return {
     accessToken: access_token,
     refreshToken: refresh_token ?? null,
-    expiresAt: new Date(now() + Math.max(expires_in - 60, 0) * 1000)
-      .toISOString(),
+    expiresAt: new Date(now() + Math.max(expires_in - 60, 0) * 1000).toISOString(),
     scopes: scope ? scope.split(' ').filter(Boolean) : [],
   };
 }

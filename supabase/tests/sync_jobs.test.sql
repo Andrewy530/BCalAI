@@ -177,15 +177,20 @@ select is(
   'the current claim token completes the recovered job'
 );
 
-select is(
-  public.enqueue_sync_job(
+create temporary table enqueued_initial_job (id uuid) on commit drop;
+
+insert into enqueued_initial_job (id)
+select public.enqueue_sync_job(
     'dddddddd-dddd-dddd-dddd-dddddddddddd',
     '11111111-1111-1111-1111-111111111111',
     'calendar.initial_sync',
     '{"calendarId":"a3"}',
     'calendar-initial-sync:calendar-a3',
     now()
-  ),
+  );
+
+select is(
+  (select id from enqueued_initial_job),
   (select id from public.sync_jobs where idempotency_key = 'calendar-initial-sync:calendar-a3'),
   'the first enqueue returns the durable job id'
 );

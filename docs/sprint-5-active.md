@@ -4,26 +4,27 @@ Status: **IMPLEMENTATION COMPLETE / EXTERNAL VERIFICATION REMAINING**
 Implementation: **Microsoft/Outlook provider, OAuth, Graph delta sync,
 subscriptions/webhook, provider-first CRUD, recurrence, disconnect, and mobile
 coexistence are implemented.**
-Automated verification: **Targeted current-host checks passed; Deno,
-Supabase/Docker, and aggregate verification remain environment-limited.**
+Automated verification: **Mac verification passed for Deno checks/tests,
+Supabase reset/database/RLS tests, full `pnpm verify`, and the unsigned iOS
+simulator build/smoke check.**
 External verification: **Microsoft OAuth/Graph/delta/CRUD, webhook delivery,
 renewal/teardown, and device/deep-link flows remain unexercised.**
-Current blocker: **Azure app registration/credentials, a public HTTPS webhook,
-and a toolchain-equipped environment/device are required for the remaining
+Current blocker: **Azure app registration/credentials and a public HTTPS
+webhook are required for the remaining Microsoft verification.**
+Next action: **Provision the Azure Web app and public HTTPS callback, then run
+the live Microsoft lifecycle matrix. Sprint 6 remains out of scope for this
 verification.**
-Next action: **Run the Microsoft live and missing runtime checks; after Sprint 5
-verification/hardening, Sprint 6 (AI Pro prototype) is next.**
 Last updated: **2026-09-01**
 
 Prior implementation checkpoint: **`1e2361910b1ae83dcc9441a45204722a1ddf79fa`**
-Current code baseline: **`38ac47f5e821a056a6cdeda9a27b5e24d84ccf86`**
-(`Complete Sprint 5 Microsoft calendar integration`), on `main` and aligned
-with `origin/main` at this reconciliation.
+Current code baseline: **`186baffeb811970c41d056c108a8be262d8a743e`**
+(`Reconcile Sprint 5 documentation status`), on `main` and aligned with
+`origin/main` before this verification.
 
 The checkpoint above is historical baseline evidence, not the current HEAD. The
-working Sprint 5 code was completed in the current code baseline; this update is
-documentation-only and does not change production code, tests, migrations, or
-application behavior. This file is the authoritative live Sprint 5 handoff.
+working Sprint 5 code was completed in the current code baseline; the Mac
+verification log below records targeted fixes and test corrections made while
+verifying it. This file is the authoritative live Sprint 5 handoff.
 
 ## Historical checkpoint reconciliation — 2026-08-31
 
@@ -74,11 +75,11 @@ branch above it.
 
 ## Gates and verification prerequisites
 
-- [x] **A working project toolchain baseline (inherited evidence).** A prior
-      machine passed formatting, lint, workspace typechecks, unit tests, Deno,
-      migrations, and database/RLS checks. This Windows host has since restored
-      the Node workspace dependencies, but does not have `deno`, `supabase`, or
-      Docker in PATH; local results below are separated by host/toolchain.
+- [x] **A working project toolchain baseline (verified on Mac, 2026-09-01).**
+      Node, pnpm, Deno, Supabase, Docker Desktop, and Xcode were available for
+      the checks recorded below. The standard Expo iOS wrapper still has a
+      pre-existing dependency/target-detection issue; the native simulator
+      build was verified with an unsigned direct `xcodebuild` invocation.
 - [x] **Sprint 4's Google backend/provider path verified against the live API.**
       OAuth start/callback, Vault-backed refresh-token storage, calendar
       listing, import, a 231-event initial sync, a valid-cursor incremental
@@ -196,9 +197,9 @@ have to route around them.
 - [x] **Successful sync responses own the persisted cursor.** `engine.ts` now
       stores `result.cursor` exactly and fails the job if the state write fails;
       it no longer preserves a stale cursor when a provider returns null.
-- [ ] **Still requires runtime verification.** The checks below need to be rerun
-      with the local Deno/Supabase toolchain; this machine currently has no
-      `deno` or `supabase` executable in PATH.
+- [x] **Runtime verification completed on Mac.** The Deno checks/tests and
+      Supabase reset/database/RLS suites passed; exact commands and counts are
+      recorded in the Mac verification log.
 
 Design conclusion: Google remains on its calendar-scoped watch path, while the
 shared worker/queue/write paths stay provider-neutral. The audit found no reason
@@ -216,7 +217,7 @@ security/integrity checks that apply equally to Google and Microsoft.
 - [x] Apply the continuation shared-safety audit: server-only provider-account
       disconnect, account-scoped queued state/write checks, exact cursor
       persistence, claim fencing for recovered jobs, and the tracked pnpm-store
-      hygiene fix. Runtime checks remain pending on this machine.
+      hygiene fix. Runtime checks now pass on the Mac; see the dated log below.
 - [x] Microsoft config module: endpoints, scopes, client id/secret accessors,
       redirect URI — mirroring `providers/google/config.ts`.
 - [x] `providers/microsoft/auth.ts` implementing `ProviderAuth`: authorisation
@@ -250,15 +251,15 @@ security/integrity checks that apply equally to Google and Microsoft.
 - [x] Edge Functions `oauth-microsoft-start`, `oauth-microsoft-callback`,
       `webhook-microsoft` are implemented with server-only token handling,
       validation-token acknowledgement, clientState checks, and queue-only
-      notification handling. Focused runtime tests remain unrun on this host.
+      notification handling. The Deno check/test suite passed on the Mac.
 - [x] Mobile: parameterise connect by provider kind; the shared UI remains
       provider-neutral and Microsoft is enabled only after the backend path was
       added.
 - [x] Enable the Microsoft connect action and two-provider Integrations screen;
       the callback result now also has to identify the requested provider.
-- [ ] Full verification pass: the root `pnpm verify` path on the repository's
-      pinned pnpm toolchain, Deno check/tests, and Supabase migration/RLS tests
-      remain to be rerun on a toolchain-equipped host.
+- [x] Full local verification pass: root `pnpm verify`, Deno check/tests,
+      Supabase reset/database/RLS tests, and the unsigned iOS simulator
+      build/smoke check passed on the Mac; see the dated log below.
 - [ ] External Microsoft verification: Azure OAuth round trip, calendar
       listing/import, delta sync, provider-first CRUD, Outlook-side changes,
       webhook delivery, renewal/replacement/teardown, reauth, and device/deep
@@ -306,6 +307,61 @@ Sprint 4's eight criteria, restated for Microsoft, plus:
     neutral safety, recurrence-instance metadata, and conditional versioning.
 
 ## Verification log
+
+### Mac Sprint 5 verification — 2026-09-01
+
+Tested HEAD: **`186baffeb811970c41d056c108a8be262d8a743e`** on `main`, confirmed
+equal to `origin/main`. The repository was clean before the run. `git fetch
+origin` advanced `origin/main` from `334ff6d` to this HEAD, and `git pull
+--ff-only origin main` fast-forwarded the local branch without resetting or
+discarding work. The verification changes listed below are now uncommitted and
+preserved for review; nothing was pushed.
+
+- **Root verification passed:** `pnpm verify` completed formatting, ESLint, all
+  six workspace typechecks, and the domain test suite (11 files, 146 tests).
+- **Deno passed:** from `supabase/functions`, `deno task check` passed all
+  function entry points and `deno task test` passed **89/89** tests.
+- **Database/RLS passed:** Docker Desktop was started because it was not
+  initially running. `supabase db reset` applied migrations `0001` through
+  `00014` and seed data successfully. `supabase test db` passed all **3 files
+  and 44 tests**, including the RLS and sync-job suites. `pnpm db:types` also
+  passed; generated types had no semantic schema drift.
+- **iOS simulator passed with a direct native fallback:** the unsigned Release
+  build of `apps/mobile/ios/Calendar.xcworkspace` succeeded for the booted
+  iPhone 17 Pro simulator, the app installed and launched as
+  `com.example.calendarapp`, and a delayed screenshot showed the login screen.
+  The first immediate frame was black while JavaScript started. After the Mac
+  was unlocked, Computer Use confirmed the accessibility tree exposes the
+  expected Email, Password, Sign in, Apple sign-in, and Create an account
+  controls.
+- **Standard Expo wrapper limitation:** `expo run:ios` stopped before building
+  because Expo classified the simulator target as a physical device and
+  requested code signing. The direct native build also required a temporary
+  `NODE_PATH` to the already-installed locked `babel-preset-expo` package:
+  `apps/mobile/package.json` does not declare that preset directly. This is a
+  pre-existing mobile dependency/CLI issue, not a Sprint 5 provider regression;
+  no dependency files were changed for it.
+- **Sprint 5 fixes made during verification:** added migration
+  `20260901000014_fix_sync_job_status_casts.sql` to correct enum casts in the
+  merged sync-job functions without editing the merged migration; made the
+  Deno webhook handler compatible with `Deno.serve`; made provider
+  `incrementalSync` consistently asynchronous; and corrected test-only DST,
+  URL-cursor, and SQL evaluation-order assumptions. Prettier-only changes were
+  applied to the files it reported.
+- **Failure classification:** the sync-job enum mismatch was a real Sprint 5
+  regression and is fixed. The Deno handler/async contract issues were real
+  Sprint 5 integration defects and are fixed. The DST, URL serialization, and
+  SQL evaluation-order failures were test defects, not product regressions.
+  Docker being stopped, the Expo target/signing behavior, and the undeclared
+  Babel preset are environment or pre-existing issues.
+
+Still requires external/manual verification: Azure Web app registration and
+real credentials; Microsoft OAuth callback and refresh-token flow; Graph
+calendar listing, initial/delta sync, provider-first create/update/delete,
+Outlook-side edits and deletions; a public HTTPS webhook validation and
+notification delivery; renewal/replacement/teardown and reauthentication; and
+real device/deep-link return from the mobile Settings flow. Microsoft E2E is
+not claimed here because no live Microsoft/Azure provider flow was exercised.
 
 ### Inherited Sprint 4 evidence — 2026-09-01
 
@@ -509,9 +565,11 @@ verify.
 
 ## Documentation reconciliation — 2026-09-01
 
-- Current code HEAD is `38ac47f5e821a056a6cdeda9a27b5e24d84ccf86`; the prior
-  `1e23619` checkpoint is historical baseline evidence. The code worktree was
-  clean before this documentation-only update.
+- The prior documentation reconciliation recorded code HEAD
+  `38ac47f5e821a056a6cdeda9a27b5e24d84ccf86`; the current verified HEAD is
+  `186baffeb811970c41d056c108a8be262d8a743e`. The prior `1e23619` checkpoint
+  remains historical baseline evidence. The code worktree was clean before the
+  Mac verification began.
 - README, the technical plan, architecture/database/sync references, and this
   tracker now agree that Sprint 5 implementation is complete but external
   Microsoft verification remains. Sprint 6 is next planned work and is not
@@ -523,12 +581,12 @@ verify.
   `docs/database.md`, `docs/sync-engine.md`,
   `docs/decisions/0003-provider-sync-model.md`, `docs/notifications.md`, and
   the Sprint 3, Sprint 4, and Sprint 5 trackers.
-- Documentation verification: the explicit Prettier check passed for the
-  changed Markdown files, `git diff --check` passed, and the targeted stale-
-  status search was reviewed. No production verification was rerun because
-  this reconciliation changes documentation only.
-- This reconciliation changed Markdown documentation only. No production code,
-  tests, migrations, dependency files, or application behavior changed.
+- The prior reconciliation's Markdown verification passed; the new Mac run
+  additionally passed the full repository, Deno, database, and simulator
+  checks recorded above.
+- This verification changed targeted Sprint 5 source/test/migration files and
+  this tracker; no dependency files were changed and no application UI was
+  redesigned.
 
 ## Follow-up work (not Sprint 5 blockers)
 
@@ -536,8 +594,12 @@ verify.
   scopes, redirect URI, and public HTTPS webhook deployment; run the complete
   Microsoft OAuth, calendar import, initial/delta sync, provider-first CRUD,
   Outlook-side change, webhook, lifecycle, renewal, teardown, and reauth flow.
-- Install Deno, the Supabase CLI, and Docker, then run the Deno checks/tests,
-  `supabase db reset`, `supabase test db`, and generated-type comparison.
+- Keep the local Deno, Supabase CLI, Docker, and generated-type checks in the
+  verification loop for future Sprint 5 changes.
+- For the standard Expo iOS command, declare the already-used
+  `babel-preset-expo` directly in `apps/mobile/package.json` and resolve the
+  simulator target-detection issue before relying on `expo run:ios` as the
+  canonical build command.
 - Expand the Microsoft Windows/IANA timezone alias table only if a required
   production timezone is outside the current fail-closed mapping.
 - Verify real Graph tombstones for cancelled recurring instances. If a

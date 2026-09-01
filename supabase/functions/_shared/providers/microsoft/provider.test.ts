@@ -109,7 +109,7 @@ Deno.test(
 
     assertEquals(
       result.cursor,
-      'https://graph.microsoft.com/v1.0/me/calendars/c1/calendarView/delta?%24deltatoken=cursor',
+      'https://graph.microsoft.com/v1.0/me/calendars/c1/calendarView/delta?$deltatoken=cursor',
     );
     assertEquals(result.events.length, 2);
     assertEquals(result.events[1]?.status, 'tentative');

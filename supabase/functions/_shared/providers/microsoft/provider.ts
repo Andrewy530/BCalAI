@@ -68,7 +68,7 @@ export function createMicrosoftProvider(deps: MicrosoftProviderDeps = {}): Calen
       return syncDelta(request, ctx, url.toString(), 'UTC');
     },
 
-    incrementalSync(ctx: ProviderContext, _providerCalendarId: string, cursor: string) {
+    async incrementalSync(ctx: ProviderContext, _providerCalendarId: string, cursor: string) {
       return syncDelta(request, ctx, trustedGraphUrl(cursor), 'UTC');
     },
 

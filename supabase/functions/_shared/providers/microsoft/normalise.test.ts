@@ -29,8 +29,8 @@ Deno.test('normalises a timed event with a Windows timezone and Graph metadata',
 
   assertEquals(result.providerEtag, 'W/"etag-1"');
   assertEquals(result.providerUpdatedAt, '2026-03-09T20:00:00.000Z');
-  assertEquals(result.startAt, '2026-03-10T14:00:00.000Z');
-  assertEquals(result.endAt, '2026-03-10T14:30:00.000Z');
+  assertEquals(result.startAt, '2026-03-10T13:00:00.000Z');
+  assertEquals(result.endAt, '2026-03-10T13:30:00.000Z');
   assertEquals(result.timezone, 'America/New_York');
   assertEquals(result.status, 'confirmed');
   assertEquals(result.description, 'Daily check-in');
@@ -199,8 +199,8 @@ Deno.test('builds timed and all-day Graph write bodies', () => {
       subject: 'Timed',
       body: { contentType: 'text', content: 'Notes' },
       location: { displayName: 'Room 1' },
-      start: { dateTime: '2026-03-10T09:00:00.1230000', timeZone: 'America/New_York' },
-      end: { dateTime: '2026-03-10T09:30:00.1230000', timeZone: 'America/New_York' },
+      start: { dateTime: '2026-03-10T10:00:00.1230000', timeZone: 'America/New_York' },
+      end: { dateTime: '2026-03-10T10:30:00.1230000', timeZone: 'America/New_York' },
       isAllDay: false,
       isReminderOn: true,
       reminderMinutesBeforeStart: 15,
