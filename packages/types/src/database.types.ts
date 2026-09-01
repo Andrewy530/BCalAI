@@ -258,9 +258,9 @@ export type Database = {
           provider_etag: string | null
           provider_event_id: string | null
           provider_updated_at: string | null
-          recurring_event_id: string | null
           recurrence_original_start_at: string | null
           recurrence_rule: string | null
+          recurring_event_id: string | null
           source_type: Database["public"]["Enums"]["calendar_source"]
           start_at: string
           status: Database["public"]["Enums"]["event_status"]
@@ -283,9 +283,9 @@ export type Database = {
           provider_etag?: string | null
           provider_event_id?: string | null
           provider_updated_at?: string | null
-          recurring_event_id?: string | null
           recurrence_original_start_at?: string | null
           recurrence_rule?: string | null
+          recurring_event_id?: string | null
           source_type?: Database["public"]["Enums"]["calendar_source"]
           start_at: string
           status?: Database["public"]["Enums"]["event_status"]
@@ -308,9 +308,9 @@ export type Database = {
           provider_etag?: string | null
           provider_event_id?: string | null
           provider_updated_at?: string | null
-          recurring_event_id?: string | null
           recurrence_original_start_at?: string | null
           recurrence_rule?: string | null
+          recurring_event_id?: string | null
           source_type?: Database["public"]["Enums"]["calendar_source"]
           start_at?: string
           status?: Database["public"]["Enums"]["event_status"]
@@ -1029,3 +1029,4 @@ export const Constants = {
     },
   },
 } as const
+

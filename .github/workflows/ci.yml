@@ -47,7 +47,7 @@ jobs:
 
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: 2.116.0
 
       # Applies every migration from scratch, which also proves they are
       # replayable in order on an empty database.
