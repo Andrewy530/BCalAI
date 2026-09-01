@@ -308,6 +308,27 @@ Sprint 4's eight criteria, restated for Microsoft, plus:
 
 ## Verification log
 
+### Live Microsoft setup — 2026-09-01
+
+- Azure registration is complete: a Web app registration exists with the
+  localhost OAuth callback and delegated `Calendars.ReadWrite` permission.
+- The local server environment is populated from the Azure client secret; the
+  ignored `supabase/.env` file is not committed.
+- Live Microsoft OAuth completed successfully. The local database records one
+  active Microsoft connection with the expected delegated scopes and a
+  Vault-backed credential reference.
+- Microsoft Graph returned three calendars. The one writable calendar was
+  imported, and the initial plus incremental delta syncs completed without
+  sync errors; this test account had no events in the imported window.
+- A webhook-only local proxy passed the POST validation handshake through a
+  temporary HTTPS tunnel. Graph still rejected creation of the change
+  notification subscription before reaching that endpoint, so live webhook
+  delivery and renewal remain open verification work.
+
+This clears the Microsoft OAuth and calendar-read setup gate for a handoff,
+but Sprint 5 should remain marked as live-verification incomplete until the
+Graph subscription behavior and provider-first event CRUD are exercised.
+
 ### Mac Sprint 5 verification — 2026-09-01
 
 Tested HEAD: **`186baffeb811970c41d056c108a8be262d8a743e`** on `main`, confirmed
