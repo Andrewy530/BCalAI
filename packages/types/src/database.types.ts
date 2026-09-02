@@ -25,9 +25,9 @@ export type Database = {
           provider: string | null
           reasoning_tokens: number | null
           status: Database["public"]["Enums"]["ai_request_status"]
+          target_calendar_id: string | null
           task_id: string
           task_version: string | null
-          target_calendar_id: string | null
           total_tokens: number | null
           user_id: string
         }
@@ -41,14 +41,14 @@ export type Database = {
           input_tokens?: number | null
           latency_ms?: number | null
           model?: string | null
-          status?: Database["public"]["Enums"]["ai_request_status"]
           output_tokens?: number | null
           prompt_version?: string | null
           provider?: string | null
           reasoning_tokens?: number | null
+          status?: Database["public"]["Enums"]["ai_request_status"]
+          target_calendar_id?: string | null
           task_id: string
           task_version?: string | null
-          target_calendar_id?: string | null
           total_tokens?: number | null
           user_id: string
         }
@@ -67,25 +67,25 @@ export type Database = {
           provider?: string | null
           reasoning_tokens?: number | null
           status?: Database["public"]["Enums"]["ai_request_status"]
+          target_calendar_id?: string | null
           task_id?: string
           task_version?: string | null
-          target_calendar_id?: string | null
           total_tokens?: number | null
           user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "ai_schedule_requests_task_id_fkey"
-            columns: ["task_id"]
-            isOneToOne: false
-            referencedRelation: "tasks"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "ai_schedule_requests_target_calendar_id_fkey"
             columns: ["target_calendar_id"]
             isOneToOne: false
             referencedRelation: "calendars"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_schedule_requests_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
             referencedColumns: ["id"]
           },
         ]
@@ -854,7 +854,7 @@ export type Database = {
     Functions: {
       claim_ai_schedule_request: {
         Args: { p_limit?: number; p_task_id: string; p_user_id: string }
-        Returns: string | null
+        Returns: string
       }
       claim_sync_jobs: {
         Args: { p_limit?: number }
