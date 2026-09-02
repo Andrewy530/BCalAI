@@ -751,7 +751,7 @@ No failure may partially schedule a task.
 
 Checkpoint SHA:
 
-`TBD`
+`f43e4e4e5d7278f09859a2c940931e1b2c2f8e77`
 
 ---
 
@@ -1373,8 +1373,8 @@ Starting HEAD:
 
 Ending HEAD:
 
-`4678adc381cd0e85326772a5e7d6864af9589a1c` (implementation remains
-uncommitted; no commit or push was requested)
+`f43e4e4e5d7278f09859a2c940931e1b2c2f8e77` (Phase 3 implementation
+checkpoint pushed to `origin/main`; verification remains pending)
 
 Work completed:
 
@@ -1508,7 +1508,12 @@ verification pending`
 Last verified checkpoint:
 
 `4678adc381cd0e85326772a5e7d6864af9589a1c` (clean, pushed foundation
-checkpoint; current Phase 2 hardening and Phase 3 wiring are uncommitted)
+checkpoint)
+
+Phase 3 implementation checkpoint:
+
+`f43e4e4e5d7278f09859a2c940931e1b2c2f8e77` (pushed; Deno, Supabase/RLS,
+and live model verification remain pending)
 
 Current blocker:
 
