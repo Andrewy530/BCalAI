@@ -138,7 +138,7 @@ Deno.test(
   async () => {
     let claimCalls = 0;
     let providerCalls = 0;
-    let failedUpdate: Record<string, unknown> | null = null;
+    const failedUpdates: Array<Record<string, unknown>> = [];
     const error = await assertRejects(
       () =>
         generateAiFindTimeProposal(
@@ -167,7 +167,7 @@ Deno.test(
                 return Promise.resolve(REQUEST_ID);
               },
               updateRequest: (_userId, _requestId, patch) => {
-                failedUpdate = { ...patch };
+                failedUpdates.push({ ...patch });
                 return Promise.resolve();
               },
             }),
@@ -183,9 +183,11 @@ Deno.test(
     assertEquals(error.code, 'AI_NO_VALID_SLOT');
     assertEquals(claimCalls, 1);
     assertEquals(providerCalls, 0);
-    assertEquals(failedUpdate?.status, 'failed');
-    assertEquals(failedUpdate?.errorCode, 'AI_NO_VALID_SLOT');
-    assertEquals(failedUpdate?.candidateCount, 0);
+    const failedUpdate = failedUpdates[0];
+    if (failedUpdate === undefined) throw new Error('Expected a failed request update.');
+    assertEquals(failedUpdate.status, 'failed');
+    assertEquals(failedUpdate.errorCode, 'AI_NO_VALID_SLOT');
+    assertEquals(failedUpdate.candidateCount, 0);
   },
 );
 

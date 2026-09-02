@@ -161,7 +161,13 @@ export function openAiRankingConfigFromEnv(
   const reasoningEffort = reasoningEffortSchema.safeParse(getEnv('AI_REASONING_EFFORT') ?? 'low');
   const timeoutMs = parseInteger(getEnv('AI_TIMEOUT_MS') ?? String(DEFAULT_TIMEOUT_MS));
   const model = getEnv('AI_MODEL') ?? 'gpt-5.6-luna';
-  if (!reasoningEffort.success || timeoutMs < 1_000 || timeoutMs > 60_000 || model.length === 0) {
+  if (
+    !reasoningEffort.success ||
+    !Number.isFinite(timeoutMs) ||
+    timeoutMs < 1_000 ||
+    timeoutMs > 60_000 ||
+    model.length === 0
+  ) {
     throw new EdgeError('AI_PROVIDER_UNAVAILABLE', 'AI ranking configuration is invalid.', 503);
   }
 

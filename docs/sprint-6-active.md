@@ -1,7 +1,7 @@
 # Sprint 6 — AI Pro / Find Time
 
 Status: PHASE 2 FOUNDATION IMPLEMENTED — PHASE 3 PROPOSAL IMPLEMENTATION
-COMPLETE; VERIFICATION PENDING
+AND LOCAL VERIFICATION COMPLETE; LIVE MODEL EVALUATION PENDING
 
 This file is the source of truth for Sprint 6 implementation and agent handoff.
 
@@ -665,8 +665,9 @@ Record result summary here.
 
 The provider abstraction, strict OpenAI Responses adapter, offline fixtures,
 and fixture grader are implemented in checkpoint `4678adc`. The live Luna /
-Terra comparison has not run: this environment has no Deno runtime and no
-server-side `OPENAI_API_KEY`. No production model is selected yet.
+Terra comparison has not run because it requires an authorized server-side
+`OPENAI_API_KEY` and explicit cost authorization. No production model is
+selected yet.
 
 ### Selected production default
 
@@ -692,7 +693,8 @@ production wiring are currently uncommitted)
 
 # Phase 3 — Production `ai-find-time` Endpoint
 
-Status: IMPLEMENTATION COMPLETE; VERIFICATION PENDING (2026-09-02)
+Status: IMPLEMENTATION AND LOCAL VERIFICATION COMPLETE; CHECKPOINT UPDATE
+PENDING (2026-09-02)
 
 Goal: create the complete proposal-generation request.
 
@@ -1411,35 +1413,35 @@ Files materially changed:
 
 Verification:
 
-- `pnpm lint` — PASS
-- `pnpm typecheck` — PASS for all workspace projects with typecheck scripts
-- `pnpm --filter @cal/domain test` — PASS (12 files, 149 tests)
-- targeted Prettier check — PASS
+- `pnpm verify` — PASS (format, lint, workspace typecheck, and 149 domain tests)
+- `deno task check` — PASS for all Edge Function entry points
+- `deno task test` — PASS (15 files, 121 tests)
+- `supabase migration up` — PASS (applied `20260901000015` to the local stack)
+- `supabase db reset --yes` — PASS after creating a local data-only backup
+- `supabase test db` — PASS (3 files, 53 pgTAP/RLS tests)
 - `git diff --check` — PASS
-- `deno task check` — BLOCKED: Deno is not installed in this environment
-- `deno task test` — BLOCKED: Deno is not installed in this environment
 
 Findings:
 
 - The endpoint now reaches the Phase 3 proposal boundary, but it does not
   schedule or confirm an event. Confirmation remains Phase 4.
+- OpenAI timeout configuration now rejects non-finite values such as `NaN`.
+- The RLS regression test now verifies that server-managed request state is
+  unchanged after a client update attempt.
 - The live Luna/Terra evaluation still has not run, so the production model
   choice remains intentionally unset.
 
 Known blockers:
 
-- Edge Function checks/tests require Deno.
 - Live model comparison requires a server-side OpenAI key and explicit cost
   authorization.
-- Full `pnpm verify` still has the repository-wide formatting gate and must be
-  rerun in the project’s expected tool environment before a checkpoint is
-  considered verified.
+- The verified fixes and handoff-document updates are currently uncommitted.
 
 Next exact action:
 
-- Run the Deno and local database/RLS tests in an environment with the expected
-  Supabase toolchain, then run the authorized Luna/Terra evaluation before
-  selecting a production default. After that, implement Phase 4 confirmation.
+- Create a new checkpoint containing the verified fixes, then run the
+  authorized Luna/Terra evaluation before selecting a production default.
+  After that, implement Phase 4 confirmation.
 
 ---
 
@@ -1502,8 +1504,8 @@ The next agent must:
 
 Current phase:
 
-`Phase 2 foundation implemented; Phase 3 proposal implementation complete,
-verification pending`
+`Phase 2 foundation implemented; Phase 3 proposal implementation and local
+verification complete; live model evaluation pending`
 
 Last verified checkpoint:
 
@@ -1512,18 +1514,16 @@ checkpoint)
 
 Phase 3 implementation checkpoint:
 
-`f43e4e4e5d7278f09859a2c940931e1b2c2f8e77` (pushed; Deno, Supabase/RLS,
-and live model verification remain pending)
+`f43e4e4e5d7278f09859a2c940931e1b2c2f8e77` (pushed implementation
+checkpoint; verified fixes are currently uncommitted)
 
 Current blocker:
 
-`No known code blocker. Deno is unavailable here, and live Luna/Terra
-evaluation needs an authorized server-side OpenAI key. RevenueCat setup remains
-a later external gate.`
+`Live Luna/Terra evaluation needs an authorized server-side OpenAI key and
+explicit cost authorization. RevenueCat setup remains a later external gate.`
 
 Next exact action:
 
-Run the Deno/Supabase migration and RLS checks in the expected toolchain,
-perform the authorized Luna/Terra evaluation, and then continue with Phase 4
-server-authoritative confirmation. Preserve deterministic candidate membership
-as the sole availability authority.
+Create a checkpoint for the verified fixes, perform the authorized Luna/Terra
+evaluation, and then continue with Phase 4 server-authoritative confirmation.
+Preserve deterministic candidate membership as the sole availability authority.

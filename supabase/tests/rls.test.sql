@@ -8,7 +8,7 @@
 begin;
 create extension if not exists pgtap;
 
-select plan(23);
+select plan(24);
 
 -- --- fixtures --------------------------------------------------------------
 insert into auth.users (instance_id, id, aud, role, email, created_at, updated_at)
@@ -166,12 +166,18 @@ select throws_ok(
   'AI requests cannot be inserted by the client role'
 );
 
-select throws_ok(
+select lives_ok(
   $$update public.ai_schedule_requests
     set status = 'rejected'
     where id = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'$$,
-  '42501', null,
-  'AI requests cannot be updated by the client role'
+  'client update of AI requests is filtered by RLS'
+);
+
+select is(
+  (select status::text from public.ai_schedule_requests
+   where id = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'),
+  'proposed',
+  'AI request status remains server-managed'
 );
 
 select throws_ok(
