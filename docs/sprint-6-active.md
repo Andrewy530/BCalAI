@@ -753,7 +753,7 @@ No failure may partially schedule a task.
 
 Checkpoint SHA:
 
-`feb1fa51344193532b1e730cea44ef09ca94953a`
+`3950c77f28420e7cdfb2c7a9450c96c754661a9a`
 
 ---
 
@@ -1504,6 +1504,57 @@ Next exact action:
 
 ---
 
+### 2026-09-02 — Phase 3 / CI generated-type alignment
+
+Agent/model:
+
+Codex
+
+Starting HEAD:
+
+`2643ad0e55d2f3362caa55d6ea88554331756b0e`
+
+Ending HEAD:
+
+`3950c77f28420e7cdfb2c7a9450c96c754661a9a` (generated database types aligned
+with the clean migration schema)
+
+Work completed:
+
+- Regenerated `packages/types/src/database.types.ts` from the clean local
+  Supabase schema.
+- Matched the generated field/relationship ordering and the RPC return type
+  expected by CI.
+
+Files materially changed:
+
+- `packages/types/src/database.types.ts`
+
+Verification:
+
+- `pnpm verify` — PASS
+- `supabase test db` — PASS (3 files, 53 pgTAP/RLS tests)
+- `supabase gen types typescript --local` comparison — PASS
+- `git diff --check` — PASS
+
+Findings:
+
+- GitHub CI runs #25 and #26 passed lint, types, and unit tests but rejected
+  the stale generated database types; this follow-up addresses that gate.
+- Phase 3 remains locally verified; live Luna/Terra evaluation remains
+  pending and Phase 4 is not started.
+
+Known blockers:
+
+- Live model comparison requires an authorized server-side OpenAI key and
+  explicit cost authorization.
+
+Next exact action:
+
+- Confirm the final GitHub CI run, then stop at the Phase 3 checkpoint.
+
+---
+
 # Current Decisions
 
 | Decision                                     | Status   | Choice                                                   |
@@ -1568,13 +1619,13 @@ verification complete; live model evaluation pending`
 
 Last verified checkpoint:
 
-`feb1fa51344193532b1e730cea44ef09ca94953a` (clean, pushed Phase 3
+`3950c77f28420e7cdfb2c7a9450c96c754661a9a` (clean, pushed Phase 3
 verification checkpoint)
 
 Phase 3 implementation checkpoint:
 
-`feb1fa51344193532b1e730cea44ef09ca94953a` (pushed implementation and
-verification checkpoint)
+`3950c77f28420e7cdfb2c7a9450c96c754661a9a` (pushed implementation and
+verification checkpoint; generated database types aligned for CI)
 
 Current blocker:
 
