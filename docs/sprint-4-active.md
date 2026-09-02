@@ -5,7 +5,7 @@ Last updated: **2026-09-01**
 
 This document records the Sprint 4 implementation and verification history. It
 is not the current implementation plan. The current source of truth is
-[`docs/sprint-5-active.md`](sprint-5-active.md); use this file for Google
+[`docs/sprint-6-active.md`](sprint-6-active.md); use this file for Google
 provider history and inherited verification evidence.
 
 ## Mac continuation note

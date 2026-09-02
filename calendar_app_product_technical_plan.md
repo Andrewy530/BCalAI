@@ -22,11 +22,12 @@
   Windows host; Deno, Supabase CLI/Docker, and the aggregate `pnpm verify`
   path were unavailable or did not reach project scripts there. The exact
   evidence is maintained in [`docs/sprint-5-active.md`](docs/sprint-5-active.md).
-- Microsoft live OAuth/Graph/delta/CRUD, real webhook delivery, subscription
-  renewal/teardown, and device/deep-link testing remain external verification.
-  Azure app registration/credentials and a public HTTPS callback are the main
-  blockers. Sprint 6 — AI Pro prototype — is next, after this verification and
-  hardening; Sprint 6 implementation has not started.
+- Microsoft live webhook delivery, subscription renewal/teardown, provider
+  CRUD, and device/deep-link testing retain external-verification gaps recorded
+  in the Sprint 5 tracker. Sprint 6 — AI Pro prototype — has completed its
+  architecture audit and deterministic server Find Time path; model ranking,
+  persistence/confirmation, mobile UI, and RevenueCat remain. See
+  [`docs/sprint-6-active.md`](docs/sprint-6-active.md).
 
 ## 1. Executive Summary
 
@@ -1758,12 +1759,12 @@ device verification remain before this sprint is fully verified.
 
 ## Sprint 6 — AI Pro prototype
 
-Status: **NEXT PLANNED SPRINT — NOT STARTED**
+Status: **PHASE 1 IMPLEMENTED AND VERIFIED — PHASE 2 NOT STARTED**
 
-- Availability engine
-- Task constraints
-- Candidate slot generation
-- Server AI endpoint
+- Availability engine (existing foundation)
+- Task constraints (existing schema; server normalization pending)
+- Candidate slot generation (existing whole-duration engine)
+- Deterministic server Find Time endpoint (implemented)
 - Structured proposals
 - Confirmation UI
 - RevenueCat entitlement gate
@@ -2095,7 +2096,8 @@ The following sources were reviewed while preparing this plan.
 # 33. Next Planning Documents to Create
 
 The core repository documents below now exist and are maintained alongside the
-implementation. The current sprint handoff is `docs/sprint-5-active.md`.
+implementation. The current sprint handoff is `docs/sprint-6-active.md`;
+`docs/sprint-5-active.md` retains Sprint 5 external-verification evidence.
 
 1. `docs/database.md` — exact tables, indexes, constraints, RLS policies.
 2. `docs/design-system.md` — exact visual tokens and reusable UI component rules.

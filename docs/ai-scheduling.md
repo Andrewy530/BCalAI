@@ -1,8 +1,9 @@
 # AI scheduling
 
-Status: **engine built and unit-tested; model layer designed, not yet built.**
-The engine is `packages/domain/src/scheduling/availability.ts`. Sprint 6 adds
-the server endpoint and the proposal UI.
+Status: **engine and deterministic server Find Time path built and tested;
+Sprint 6 Phase 2 model integration has not started.** The engine is
+`packages/domain/src/scheduling/availability.ts`. The live implementation and
+handoff source of truth is [`sprint-6-active.md`](sprint-6-active.md).
 
 ## The division of labour
 
@@ -23,9 +24,11 @@ Create time block
 ```
 
 The engine guarantees: no overlap, correct time maths across DST, buffers
-honoured, working hours respected, deadline met. The model handles what code
-cannot: _"I focus better in the morning"_, _"not right after my class"_,
-_"gym before dinner"_.
+honoured, working hours respected, deadline met. The model ranks sanitized
+candidates for preferences such as morning versus afternoon, earliest/latest,
+deadline urgency, and avoiding a slot immediately next to busy time.
+Entity-specific instructions such as _"after my class"_ are out of scope for
+v1 because event titles/descriptions are not sent to the model.
 
 ## The engine
 
@@ -39,26 +42,26 @@ _"gym before dinner"_.
 4. Emit every placement of `durationMinutes` on the granularity grid, aligned to
    local clock time so proposals land on 10:15, not 10:07.
 
-`rankSlotsHeuristically` provides an explainable ordering used when the Pro tier
-is unavailable, and as the baseline the model's ranking is sanity-checked
-against.
+`rankSlotsHeuristically` provides an explainable offline baseline/test oracle.
+Find Time remains server-gated to Pro users, and v1 does not use heuristic
+ranking as a production fallback for a failed model call.
 
 Intervals are half-open `[start, end)`, so back-to-back meetings do not
 "overlap" — which is what users expect.
 
 ## Model contract
 
-Server tools are narrow and enumerated. The model never receives permission to
-execute SQL:
+The v1 provider seam is one narrow operation:
 
+```text
+rankCandidateSlots(sanitizedInput) -> AIScheduleProposal
 ```
-get_task(task_id)
-get_calendar_window(start, end)
-get_available_slots(constraints)
-rank_schedule_slots(task, slots, preferences)
-create_time_block(task_id, slot_id)
-reschedule_time_block(event_id, slot_id)
-```
+
+The model receives no tools, database access, provider APIs, or event content.
+It cannot create or reschedule anything. OpenAI is the first server-side
+adapter, using the Responses API with `store: false`, strict JSON Schema
+Structured Outputs, configurable low reasoning, and post-response Zod plus
+candidate-set validation.
 
 Output must satisfy `aiScheduleProposalSchema`:
 
@@ -68,8 +71,9 @@ Output must satisfy `aiScheduleProposalSchema`:
 }
 ```
 
-`slotId` must be one the engine generated in this request. A response referring
-to any other id — or proposing a raw time — is rejected as `AI_INVALID_OUTPUT`.
+`slotId` must be one opaque request-scoped id the server mapped to an engine
+candidate and persisted for this request. Duplicate/unknown ids, non-contiguous
+ranks, extra fields, or raw timestamps are rejected as `AI_INVALID_OUTPUT`.
 That is the structural reason the model cannot put an appointment on top of an
 existing meeting.
 
@@ -78,7 +82,8 @@ existing meeting.
 Before any model call, the Edge Function checks, in order:
 
 1. `has_active_entitlement(user_id, 'pro')` — never a client-supplied flag.
-2. Per-user rate limit against `ai_schedule_requests` (indexed for it).
+2. Atomic per-user limit of 10 accepted attempts per rolling 60 minutes
+   (server-configurable).
 3. Constraints parse against `scheduleConstraintsSchema`.
 
 If the engine returns zero slots, no model call happens at all: the answer is
@@ -86,9 +91,26 @@ If the engine returns zero slots, no model call happens at all: the answer is
 
 ## Privacy
 
-The prompt carries times, durations, and the task title — not event
-descriptions, attendees, locations, or anything from email. Calendar contents
-are never logged.
+The model receives opaque candidate ids, candidate start/end and derived local
+time features, task duration/priority/deadline, explicit preferences, and the
+untrusted task title/optional note. It receives no raw calendar rows, event
+titles/descriptions, attendees, locations, email content, OAuth data, or
+provider credentials. Full prompts and provider bodies are neither persisted
+nor logged.
+
+## Sprint 6 v1 product boundary
+
+- Whole-duration tasks only; deterministic split scheduling is deferred.
+- The task estimate is required; a profile default is not silently substituted.
+- The horizon ends at the task deadline (or a bounded explicit window), is
+  capped at 14 days, and uses the profile timezone/working hours.
+- Hidden calendars still block time. Recurrence and provider exceptions must be
+  expanded in shared domain code before candidates are generated.
+- Confirmation targets the provisioned internal default BCal calendar. It
+  reloads and revalidates the persisted suggestion, then atomically creates the
+  internal block, links the task, and records acceptance idempotently.
+- Provider-calendar targets are deferred; when added, they must continue using
+  the provider-first write architecture.
 
 ## Autonomy
 

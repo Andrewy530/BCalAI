@@ -1,2 +1,2 @@
-export * from './interval';
-export * from './timezone';
+export * from './interval.ts';
+export * from './timezone.ts';

@@ -7,7 +7,7 @@ import {
   timeZoneSchema,
   uuidSchema,
   weekdaySchema,
-} from './primitives';
+} from './primitives.ts';
 
 /**
  * Working hours drive the deterministic availability engine. They are stored on

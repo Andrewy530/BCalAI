@@ -12,21 +12,23 @@ Architecture decisions live in [`docs/`](docs/). Coding rules are in
 
 ## Current status
 
-**Sprint 5 — Microsoft Calendar implementation complete; external verification
-remaining.** Sprints 0 through 4 are complete/implemented, and Sprint 5 adds
-Microsoft/Outlook behind the existing provider boundary. The current code
-baseline is commit `38ac47f5e821a056a6cdeda9a27b5e24d84ccf86` on `main`.
+**Sprint 6 — AI Pro / Find Time: Phase 1 deterministic server path implemented
+and verified; Phase 2 not started.** Sprints 0 through 4 are
+complete/implemented. Sprint 5's Microsoft
+implementation is complete in code with external lifecycle/device verification
+still tracked separately. The Phase 0 audit used
+`33fc8d3aea6ebfc0d11f747f03349081e1f993c1` on `main`.
 
 Google live OAuth, calendar import, initial/incremental sync, and
-provider-first create/update/delete were verified in Sprint 4. Microsoft
-OAuth, Graph delta sync, subscriptions/webhooks, provider-first writes,
-recurrence translation, disconnect cleanup, and the shared mobile flow are
-implemented, but Microsoft live OAuth/Graph/webhook/device verification remains.
+provider-first create/update/delete were verified in Sprint 4. Microsoft OAuth,
+calendar listing/import, and initial/incremental delta sync have live evidence;
+real provider CRUD, webhook delivery/renewal/teardown, and device/deep-link
+verification remain open in the Sprint 5 tracker.
 
 The current source-of-truth handoff is
-[`docs/sprint-5-active.md`](docs/sprint-5-active.md). The Sprint 3 and Sprint 4
-trackers are closed historical records. Sprint 6 (AI Pro prototype) is the next
-planned sprint after Sprint 5 verification and hardening; it has not started.
+[`docs/sprint-6-active.md`](docs/sprint-6-active.md). The Sprint 3 and Sprint 4
+trackers are closed historical records; the Sprint 5 tracker retains Microsoft
+external-verification evidence.
 
 | Area                                                                          | State                                                                  |
 | ----------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
@@ -44,7 +46,7 @@ planned sprint after Sprint 5 verification and hardening; it has not started.
 | Settings planning preferences                                                 | Done — Sprint 3                                                        |
 | Google OAuth, calendar import, two-way sync, webhooks, retry                  | Done — Sprint 4; live major flows verified; webhook/device gaps remain |
 | Microsoft / Outlook sync                                                      | Done in code — Sprint 5; live verification pending                     |
-| AI Find Time, RevenueCat                                                      | Not started — Sprint 6                                                 |
+| AI Find Time, RevenueCat                                                      | Deterministic server path done; AI/confirmation/RevenueCat pending     |
 
 ---
 
@@ -132,8 +134,9 @@ Database tests need the local stack running:
 supabase test db
 ```
 
-The exact Sprint 5 verification results and unavailable-toolchain blockers are
-recorded in [`docs/sprint-5-active.md`](docs/sprint-5-active.md).
+Sprint 6 decisions and handoff are recorded in
+[`docs/sprint-6-active.md`](docs/sprint-6-active.md). Exact Sprint 5 verification
+evidence remains in [`docs/sprint-5-active.md`](docs/sprint-5-active.md).
 
 ## Layout
 

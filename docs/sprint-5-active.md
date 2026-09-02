@@ -1,4 +1,4 @@
-# Sprint 5 — Current implementation handoff
+# Sprint 5 — Microsoft implementation and external-verification handoff
 
 Status: **IMPLEMENTATION COMPLETE / EXTERNAL VERIFICATION REMAINING**
 Implementation: **Microsoft/Outlook provider, OAuth, Graph delta sync,
@@ -16,6 +16,10 @@ the live Microsoft lifecycle matrix. Sprint 6 remains out of scope for this
 verification.**
 Last updated: **2026-09-01**
 
+Sprint 6 is now the current implementation plan; see
+[`docs/sprint-6-active.md`](sprint-6-active.md). This file remains authoritative
+for Sprint 5 implementation and external-verification evidence.
+
 Prior implementation checkpoint: **`1e2361910b1ae83dcc9441a45204722a1ddf79fa`**
 Current code baseline: **`186baffeb811970c41d056c108a8be262d8a743e`**
 (`Reconcile Sprint 5 documentation status`), on `main` and aligned with
@@ -24,7 +28,7 @@ Current code baseline: **`186baffeb811970c41d056c108a8be262d8a743e`**
 The checkpoint above is historical baseline evidence, not the current HEAD. The
 working Sprint 5 code was completed in the current code baseline; the Mac
 verification log below records targeted fixes and test corrections made while
-verifying it. This file is the authoritative live Sprint 5 handoff.
+verifying it.
 
 ## Historical checkpoint reconciliation — 2026-08-31
 

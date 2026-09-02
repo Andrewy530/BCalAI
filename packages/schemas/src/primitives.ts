@@ -23,7 +23,20 @@ export const timeZoneSchema = z
   .max(64)
   .refine((value) => value.includes('/') || value === 'UTC', {
     message: 'Expected an IANA time zone identifier such as America/New_York',
-  });
+  })
+  .refine(
+    (value) => {
+      try {
+        new Intl.DateTimeFormat('en-US', { timeZone: value }).format();
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    {
+      message: 'Unsupported IANA time zone',
+    },
+  );
 
 /** Minutes from local midnight, used for working hours. 0..1440 */
 export const minuteOfDaySchema = z

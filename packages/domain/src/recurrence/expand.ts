@@ -1,6 +1,6 @@
-import { parseRRule, type ByDay, type RecurrenceRule, type Weekday } from './rrule';
-import type { Interval } from '../time/interval';
-import { getZonedParts, zonedWallClockToUtc } from '../time/timezone';
+import { parseRRule, type ByDay, type RecurrenceRule, type Weekday } from './rrule.ts';
+import type { Interval } from '../time/interval.ts';
+import { getZonedParts, zonedWallClockToUtc } from '../time/timezone.ts';
 
 /**
  * Expand a recurring event into occurrences in a window.

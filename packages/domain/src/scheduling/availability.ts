@@ -1,12 +1,12 @@
-import type { ScheduleConstraints, WorkingHours } from '@cal/schemas';
+import type { ScheduleConstraints, WorkingHours } from '@cal/schemas/scheduling';
 
-import { MINUTE_MS, type Interval, intersect, normalize, pad, subtract } from '../time/interval';
+import { MINUTE_MS, type Interval, intersect, normalize, pad, subtract } from '../time/interval.ts';
 import {
   addZonedDays,
   getZonedParts,
   startOfZonedDay,
   zonedWallClockToUtc,
-} from '../time/timezone';
+} from '../time/timezone.ts';
 
 /**
  * The deterministic availability engine.
