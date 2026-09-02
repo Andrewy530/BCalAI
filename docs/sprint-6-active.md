@@ -938,7 +938,7 @@ accepted-retry idempotency.
 
 Checkpoint SHA:
 
-`Pending hardening checkpoint commit; see the closeout entry below.`
+`682d1d5f8f91e001d93e11a746fec06ab2596957`
 
 ---
 
@@ -1781,7 +1781,7 @@ Starting HEAD:
 
 Ending HEAD:
 
-`Pending hardening checkpoint commit.`
+`682d1d5f8f91e001d93e11a746fec06ab2596957`
 
 Documentation corrections:
 
@@ -1938,8 +1938,8 @@ started`
 
 Last verified checkpoint:
 
-`Pending hardening checkpoint commit; the prior clean Phase 4 checkpoint was
-004472669f0c9e8770709f836471461bd9610c5e (GitHub CI run #28 green).`
+`682d1d5f8f91e001d93e11a746fec06ab2596957` (Phase 4 recurrence-hardening
+checkpoint; GitHub CI pending push)
 
 Phase 3 implementation checkpoint:
 
