@@ -1,7 +1,7 @@
 # Sprint 6 — AI Pro / Find Time
 
-Status: PHASE 4 SAFE CONFIRMATION AND RECURRENCE HARDENING IMPLEMENTED AND
-VERIFIED — LIVE MODEL EVALUATION AND PHASE 5 REMAIN OUT OF SCOPE
+Status: PHASE 4 SAFE CONFIRMATION AND RECURRENCE HARDENING IMPLEMENTED,
+VERIFIED, AND PUSHED — LIVE MODEL EVALUATION AND PHASE 5 REMAIN OUT OF SCOPE
 
 This file is the source of truth for Sprint 6 implementation and agent handoff.
 
@@ -770,7 +770,7 @@ Checkpoint SHA:
 # Phase 4 — Safe Confirmation / Scheduling
 
 Status: DOCUMENTATION RECONCILED; IMPLEMENTATION AND RECURRENCE HARDENING
-VERIFIED (2026-09-02)
+VERIFIED; CHECKPOINT PUSHED (2026-09-02)
 
 Goal: convert a proposal into a real scheduled block safely.
 
@@ -938,7 +938,8 @@ accepted-retry idempotency.
 
 Checkpoint SHA:
 
-`682d1d5f8f91e001d93e11a746fec06ab2596957`
+`682d1d5f8f91e001d93e11a746fec06ab2596957` (implementation checkpoint;
+tracker closeout pushed separately)
 
 ---
 
@@ -1858,7 +1859,8 @@ Verification:
 - `supabase gen types typescript --local | diff - packages/types/src/database.types.ts`
   — PASS
 - `git diff --check` — PASS
-- GitHub CI — pending the pushed hardening checkpoint
+- GitHub CI — PASS (run #30; Lint, types, unit tests, and Migrations/RLS all
+  green): https://github.com/Andrewy530/BCalAI/actions/runs/33636188575
 
 Known blockers/manual items:
 
@@ -1868,9 +1870,8 @@ Known blockers/manual items:
 
 Next exact action:
 
-- Commit and push this verified Phase 4 hardening checkpoint, confirm its
-  GitHub CI status, then stop and await authorized live model evaluation. Do
-  not begin Phase 5.
+- Checkpoint is committed, pushed, and CI-green. Stop and await authorized live
+  model evaluation. Do not begin Phase 5.
 
 ---
 
@@ -1939,7 +1940,7 @@ started`
 Last verified checkpoint:
 
 `682d1d5f8f91e001d93e11a746fec06ab2596957` (Phase 4 recurrence-hardening
-checkpoint; GitHub CI pending push)
+checkpoint; GitHub CI run #30 is green)
 
 Phase 3 implementation checkpoint:
 
