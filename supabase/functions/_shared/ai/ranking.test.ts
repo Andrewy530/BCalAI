@@ -19,7 +19,12 @@ function deterministicResult(candidateCount = 2): DeterministicFindTimeResult {
     targetCalendar: {
       id: '22222222-2222-2222-2222-222222222222',
       name: 'Personal',
+      sourceType: 'internal',
+      isDefault: true,
+      isReadOnly: false,
+      updatedAt: '2026-09-01T10:00:00.000Z',
     },
+    profileVersion: '2026-09-01T10:00:00.000Z',
     constraints: {
       durationMinutes: 60,
       windowStart: '2026-09-01T12:00:00.000Z',

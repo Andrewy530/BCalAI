@@ -40,6 +40,7 @@ function profile(overrides: Partial<FindTimeProfile> = {}): FindTimeProfile {
   return {
     timezone: 'America/New_York',
     workingHours: WORKING_HOURS,
+    updatedAt: '2026-08-31T10:00:00.000Z',
     ...overrides,
   };
 }
@@ -48,7 +49,15 @@ function dataSource(overrides: Partial<FindTimeDataSource> = {}): FindTimeDataSo
   return {
     loadTask: () => Promise.resolve(task()),
     loadProfile: () => Promise.resolve(profile()),
-    loadTargetCalendar: () => Promise.resolve({ id: CALENDAR_ID, name: 'Personal' }),
+    loadTargetCalendar: () =>
+      Promise.resolve({
+        id: CALENDAR_ID,
+        name: 'Personal',
+        sourceType: 'internal' as const,
+        isDefault: true,
+        isReadOnly: false,
+        updatedAt: '2026-08-31T10:30:00.000Z',
+      }),
     loadEvents: () => Promise.resolve([]),
     ...overrides,
   };
@@ -69,7 +78,14 @@ Deno.test('builds opaque deterministic candidates from owned task and profile st
     candidateId,
   );
 
-  assertEquals(result.targetCalendar, { id: CALENDAR_ID, name: 'Personal' });
+  assertEquals(result.targetCalendar, {
+    id: CALENDAR_ID,
+    name: 'Personal',
+    sourceType: 'internal',
+    isDefault: true,
+    isReadOnly: false,
+    updatedAt: '2026-08-31T10:30:00.000Z',
+  });
   assertEquals(result.task.durationMinutes, 60);
   assertEquals(result.constraints.timezone, 'America/New_York');
   assertEquals(result.constraints.granularityMinutes, 15);

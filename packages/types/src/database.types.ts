@@ -11,6 +11,7 @@ export type Database = {
     Tables: {
       ai_schedule_requests: {
         Row: {
+          accepted_event_id: string | null
           candidate_count: number
           completed_at: string | null
           constraints: Json
@@ -21,17 +22,20 @@ export type Database = {
           latency_ms: number | null
           model: string | null
           output_tokens: number | null
+          profile_version: string | null
           prompt_version: string | null
           provider: string | null
           reasoning_tokens: number | null
           status: Database["public"]["Enums"]["ai_request_status"]
           target_calendar_id: string | null
+          target_calendar_version: string | null
           task_id: string
           task_version: string | null
           total_tokens: number | null
           user_id: string
         }
         Insert: {
+          accepted_event_id?: string | null
           candidate_count?: number
           completed_at?: string | null
           constraints?: Json
@@ -42,17 +46,20 @@ export type Database = {
           latency_ms?: number | null
           model?: string | null
           output_tokens?: number | null
+          profile_version?: string | null
           prompt_version?: string | null
           provider?: string | null
           reasoning_tokens?: number | null
           status?: Database["public"]["Enums"]["ai_request_status"]
           target_calendar_id?: string | null
+          target_calendar_version?: string | null
           task_id: string
           task_version?: string | null
           total_tokens?: number | null
           user_id: string
         }
         Update: {
+          accepted_event_id?: string | null
           candidate_count?: number
           completed_at?: string | null
           constraints?: Json
@@ -63,17 +70,26 @@ export type Database = {
           latency_ms?: number | null
           model?: string | null
           output_tokens?: number | null
+          profile_version?: string | null
           prompt_version?: string | null
           provider?: string | null
           reasoning_tokens?: number | null
           status?: Database["public"]["Enums"]["ai_request_status"]
           target_calendar_id?: string | null
+          target_calendar_version?: string | null
           task_id?: string
           task_version?: string | null
           total_tokens?: number | null
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "ai_schedule_requests_accepted_event_id_fkey"
+            columns: ["accepted_event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "ai_schedule_requests_target_calendar_id_fkey"
             columns: ["target_calendar_id"]
@@ -889,6 +905,13 @@ export type Database = {
           p_succeeded: boolean
         }
         Returns: undefined
+      }
+      confirm_ai_schedule_suggestion: {
+        Args: { p_suggestion_id: string; p_user_id: string }
+        Returns: {
+          event_id: string
+          status: string
+        }[]
       }
       delete_provider_secret: {
         Args: { p_account_id: string }

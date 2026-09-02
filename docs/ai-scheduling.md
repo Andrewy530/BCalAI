@@ -1,9 +1,9 @@
 # AI scheduling
 
-Status: **engine, deterministic server Find Time path, provider foundation, and
-Phase 3 proposal implementation are built; verification is pending.** The engine is
-`packages/domain/src/scheduling/availability.ts`. The live implementation and
-handoff source of truth is [`sprint-6-active.md`](sprint-6-active.md).
+Status: **engine, deterministic server Find Time path, provider foundation,
+Phase 3 proposal implementation, and Phase 4 confirmation path are built; full
+verification is tracked in** [`sprint-6-active.md`](sprint-6-active.md). The
+engine is `packages/domain/src/scheduling/availability.ts`.
 
 ## The division of labour
 
@@ -18,9 +18,11 @@ AI ranking / intent interpretation               (model)
   ↓  ordered slot ids + reasons
 Structured proposal
   ↓
-User confirmation                                (always, in v1)
+Persisted suggestion ID confirmation             (always, in v1)
   ↓
-Create time block
+Server revalidation against current state
+  ↓
+Atomic internal BCal event + task linkage
 ```
 
 The engine guarantees: no overlap, correct time maths across DST, buffers
@@ -109,11 +111,15 @@ nor logged.
   capped at 14 days, and uses the profile timezone/working hours.
 - Hidden calendars still block time. Recurrence and provider exceptions must be
   expanded in shared domain code before candidates are generated.
-- Confirmation targets the provisioned internal default BCal calendar. It
-  reloads and revalidates the persisted suggestion, then atomically creates the
-  internal block, links the task, and records acceptance idempotently.
-- Provider-calendar targets are deferred; when added, they must continue using
-  the provider-first write architecture.
+- Confirmation targets only the provisioned internal default BCal calendar in
+  Sprint 6 v1. The client sends a persisted suggestion ID; the server reloads
+  the request, suggestion, task, profile, default calendar, and current busy
+  events, then reuses the deterministic availability engine to revalidate the
+  exact persisted slot. One transaction creates the internal event, links the
+  task, marks the suggestion/request accepted, and stores the canonical event
+  ID. A repeated confirmation returns that event and creates no duplicate.
+- Provider-calendar targets are outside Sprint 6 v1. Any later provider target
+  must use the existing provider-first write architecture.
 
 ## Autonomy
 

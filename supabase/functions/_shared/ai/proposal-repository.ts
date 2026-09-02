@@ -11,6 +11,8 @@ export interface AiRequestSnapshot {
   taskId: string;
   targetCalendarId: string;
   taskVersion: string;
+  profileVersion: string;
+  targetCalendarVersion: string;
   constraints: ScheduleConstraints;
   candidateCount: number;
 }
@@ -33,6 +35,8 @@ export interface AiRequestUpdate {
   constraints?: ScheduleConstraints;
   targetCalendarId?: string;
   taskVersion?: string;
+  profileVersion?: string;
+  targetCalendarVersion?: string;
   candidateCount?: number;
   provider?: string | null;
   model?: string | null;
@@ -79,6 +83,10 @@ export function supabaseAiScheduleRepository(admin: SupabaseClient): AiScheduleR
         payload.target_calendar_id = patch.targetCalendarId;
       }
       if (patch.taskVersion !== undefined) payload.task_version = patch.taskVersion;
+      if (patch.profileVersion !== undefined) payload.profile_version = patch.profileVersion;
+      if (patch.targetCalendarVersion !== undefined) {
+        payload.target_calendar_version = patch.targetCalendarVersion;
+      }
       if (patch.candidateCount !== undefined) payload.candidate_count = patch.candidateCount;
       if (patch.provider !== undefined) payload.provider = patch.provider;
       if (patch.model !== undefined) payload.model = patch.model;

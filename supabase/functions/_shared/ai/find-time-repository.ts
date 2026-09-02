@@ -36,15 +36,30 @@ const taskRowSchema = z
   }));
 
 const profileRowSchema = z
-  .object({ timezone: z.string(), working_hours: z.unknown() })
+  .object({ timezone: z.string(), working_hours: z.unknown(), updated_at: z.string() })
   .transform((row): FindTimeProfile => ({
     timezone: row.timezone,
     workingHours: row.working_hours,
+    updatedAt: row.updated_at,
   }));
 
 const targetCalendarRowSchema = z
-  .object({ id: z.string().uuid(), name: z.string() })
-  .transform((row): FindTimeTargetCalendar => row);
+  .object({
+    id: z.string().uuid(),
+    name: z.string(),
+    source_type: z.enum(['internal', 'google', 'microsoft', 'device']),
+    is_default: z.boolean(),
+    is_read_only: z.boolean(),
+    updated_at: z.string(),
+  })
+  .transform((row): FindTimeTargetCalendar => ({
+    id: row.id,
+    name: row.name,
+    sourceType: row.source_type,
+    isDefault: row.is_default,
+    isReadOnly: row.is_read_only,
+    updatedAt: row.updated_at,
+  }));
 
 const eventRowSchema = z
   .object({
@@ -95,7 +110,7 @@ export function supabaseFindTimeDataSource(admin: SupabaseClient): FindTimeDataS
     async loadProfile(userId) {
       const { data, error } = await admin
         .from('profiles')
-        .select('timezone, working_hours')
+        .select('timezone, working_hours, updated_at')
         .eq('id', userId)
         .maybeSingle();
       if (error) throw databaseReadError('planning preferences', error.code);
@@ -105,7 +120,7 @@ export function supabaseFindTimeDataSource(admin: SupabaseClient): FindTimeDataS
     async loadTargetCalendar(userId) {
       const { data, error } = await admin
         .from('calendars')
-        .select('id, name')
+        .select('id, name, source_type, is_default, is_read_only, updated_at')
         .eq('user_id', userId)
         .eq('source_type', 'internal')
         .eq('is_default', true)

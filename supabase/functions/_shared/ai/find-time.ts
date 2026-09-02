@@ -32,11 +32,16 @@ export interface FindTimeTask {
 export interface FindTimeProfile {
   timezone: string;
   workingHours: unknown;
+  updatedAt: string;
 }
 
 export interface FindTimeTargetCalendar {
   id: string;
   name: string;
+  sourceType: 'internal' | 'google' | 'microsoft' | 'device';
+  isDefault: boolean;
+  isReadOnly: boolean;
+  updatedAt: string;
 }
 
 export interface FindTimeDataSource {
@@ -66,6 +71,7 @@ export interface DeterministicFindTimeResult {
     deadlineAt: string | null;
     version: string;
   };
+  profileVersion: string;
   note: string | null;
   targetCalendar: FindTimeTargetCalendar;
   constraints: ScheduleConstraints;
@@ -157,6 +163,7 @@ export async function prepareDeterministicFindTime(
       deadlineAt: window.taskDeadline?.toISOString() ?? null,
       version: task.updatedAt,
     },
+    profileVersion: profile.updatedAt,
     note: input.request.note ?? null,
     targetCalendar,
     constraints,

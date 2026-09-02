@@ -66,6 +66,8 @@ export async function generateAiFindTimeProposal(
         constraints: snapshot.constraints,
         targetCalendarId: snapshot.targetCalendarId,
         taskVersion: snapshot.taskVersion,
+        profileVersion: snapshot.profileVersion,
+        targetCalendarVersion: snapshot.targetCalendarVersion,
         candidateCount: snapshot.candidateCount,
         errorCode: 'AI_NO_VALID_SLOT',
         completedAt,
@@ -83,6 +85,8 @@ export async function generateAiFindTimeProposal(
       constraints: snapshot.constraints,
       targetCalendarId: snapshot.targetCalendarId,
       taskVersion: snapshot.taskVersion,
+      profileVersion: snapshot.profileVersion,
+      targetCalendarVersion: snapshot.targetCalendarVersion,
       candidateCount: snapshot.candidateCount,
     });
 
@@ -146,6 +150,8 @@ function requestSnapshot(result: DeterministicFindTimeResult): AiRequestSnapshot
     taskId: result.task.id,
     targetCalendarId: result.targetCalendar.id,
     taskVersion: result.task.version,
+    profileVersion: result.profileVersion,
+    targetCalendarVersion: result.targetCalendar.updatedAt,
     constraints: result.constraints,
     candidateCount: result.candidates.length,
   };

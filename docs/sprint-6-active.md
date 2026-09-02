@@ -1,7 +1,7 @@
 # Sprint 6 — AI Pro / Find Time
 
-Status: PHASE 2 FOUNDATION IMPLEMENTED — PHASE 3 PROPOSAL IMPLEMENTATION
-AND LOCAL VERIFICATION COMPLETE; LIVE MODEL EVALUATION PENDING
+Status: PHASE 4 SAFE CONFIRMATION IMPLEMENTED AND LOCALLY VERIFIED — CHECKPOINT
+COMMIT/PUSH PENDING; LIVE MODEL EVALUATION AND PHASE 5 REMAIN OUT OF SCOPE
 
 This file is the source of truth for Sprint 6 implementation and agent handoff.
 
@@ -353,14 +353,12 @@ Resolve and record:
 
 ### Target calendar
 
-Where does an accepted Find Time block get created?
-
-Decision required:
-
-- default internal BCal calendar, or
-- selected/default user calendar, including provider calendars
-
-The implementation must never silently guess if the repository has no defined default.
+Frozen Sprint 6 v1 decision: an accepted Find Time block is created only in
+the user's provisioned `is_default = true`, `source_type = 'internal'` BCal
+calendar. The server rejects a missing, replaced, or read-only default rather
+than selecting another calendar. Selected calendars and provider-backed target
+calendars are outside Sprint 6 v1; a later provider target must preserve the
+provider-first write architecture.
 
 ### Splittable tasks
 
@@ -493,10 +491,11 @@ event's identity.
 
 Forward migrations will make AI request/suggestion rows server-managed and add
 the minimum fields needed for exact replay-safe confirmation: opaque slot ID,
-task version, target calendar, accepted event, provider/model/prompt version,
-candidate count, latency, token counts, and stable error class. Full prompts,
-full provider responses, task descriptions, event content, and secrets are not
-stored or logged. OpenAI requests use `store: false`.
+task/profile/target-calendar versions, target calendar, accepted event,
+provider/model/prompt version, candidate count, latency, token counts, and
+stable error class. Full prompts, full provider responses, task descriptions,
+event content, and secrets are not stored or logged. OpenAI requests use
+`store: false`.
 
 Operational request/suggestion detail expires after 30 days; accepted task and
 event rows remain canonical product data. Aggregate metrics may be retained
@@ -506,17 +505,28 @@ continues to cascade all user-linked operational rows.
 ### Confirmation and idempotency
 
 The client confirms a persisted suggestion ID, never arbitrary timestamps. The
-server reloads the task/request/suggestion/default calendar, verifies ownership
-and state, regenerates availability from current profile/events, and requires
-an exact slot match immediately before writing.
+server reloads the request/suggestion with an explicit user scope, verifies
+ownership, and handles an already accepted suggestion by returning its stored
+canonical event without revalidation or another insert.
 
-V1 confirmation creates one internal event, links `tasks.scheduled_event_id`,
-sets the task to `scheduled`, marks one suggestion/request accepted, and stores
-the accepted event ID through one server-authoritative idempotent operation.
-Repeated confirmation returns the same canonical event. Changed task/profile/
-calendar state or a new conflict returns a stale-proposal error and creates
-nothing. Provider-first confirmation is retained as a future extension, not
-partially implemented in v1.
+For a proposed suggestion, the server verifies the current task is still open,
+flexible, and unscheduled; the internal default calendar is still the same
+non-read-only calendar; and the task/profile/calendar versions match the
+persisted snapshot. It rebuilds the persisted constraints with the shared
+deterministic availability engine over current events and requires the exact
+persisted start/end pair to remain a generated free candidate. A changed task
+or relevant profile/calendar input, a deleted/replaced default calendar, or a
+newly conflicting event returns `AI_PROPOSAL_STALE` and creates nothing.
+
+One server-authoritative database transaction, serialized per user, rechecks
+the request/suggestion/task/calendar snapshots and conflicts, creates exactly
+one internal event, links `tasks.scheduled_event_id`, sets the task to
+`scheduled`, marks the suggestion accepted, marks the request accepted, and
+stores the canonical event ID. If any write fails, the transaction rolls back
+the event, task link, and acceptance state together. Repeating confirmation of
+the same accepted suggestion returns the same canonical event; it never creates
+a duplicate. Confirming a different suggestion from an already accepted
+request is stale. Provider-first confirmation is not part of Sprint 6 v1.
 
 ---
 
@@ -759,29 +769,39 @@ Checkpoint SHA:
 
 # Phase 4 — Safe Confirmation / Scheduling
 
-Status: NOT STARTED
+Status: DOCUMENTATION RECONCILED; IMPLEMENTATION AND LOCAL VERIFICATION COMPLETE;
+CHECKPOINT COMMIT/PUSH PENDING (2026-09-02)
 
 Goal: convert a proposal into a real scheduled block safely.
 
-Create a server-authoritative confirmation path.
+Create a server-authoritative confirmation path for the frozen v1 target:
+the user's provisioned internal default BCal calendar. The client sends only the
+persisted suggestion ID; it never supplies trusted timestamps, a calendar ID,
+or task state.
 
-Client should identify the persisted request/suggestion rather than supplying trusted arbitrary timestamps.
+Confirmation contract:
 
-Confirmation flow:
-
-1. Authenticate.
-2. Load persisted suggestion.
-3. Verify request belongs to user.
-4. Verify task still exists.
-5. Verify task still qualifies.
-6. Verify proposal/request state permits confirmation.
-7. Determine target calendar.
-8. Regenerate/revalidate current availability.
-9. Confirm exact suggestion remains valid.
-10. Create calendar block using the correct write architecture.
-11. Link task to scheduled event/block.
-12. Mark appropriate AI records accepted.
-13. Return canonical event/task state.
+1. Authenticate with `requireUser` and parse a strict suggestion-ID request.
+2. Load the suggestion and its request under the authenticated user's explicit
+   scope. Cross-user or missing rows are indistinguishable and return not found.
+3. If that exact suggestion is already accepted, load and return its stored
+   canonical event. This path performs no second insert.
+4. For a proposed request, load the current task, profile, internal default
+   calendar, and all current blocking events.
+5. Verify the task is still open, flexible, unscheduled, owned by the caller,
+   and has the same persisted task version.
+6. Verify the same internal default calendar is still present, writable, and
+   has the same persisted calendar version. Verify the profile version and
+   relevant scheduling inputs are unchanged.
+7. Reconstruct the persisted constraints and run the shared deterministic
+   availability engine against current events. The exact persisted start/end
+   pair must still be one of the generated candidates.
+8. Call one server-only, transactional confirmation operation that repeats the
+   state/conflict checks while holding the per-user confirmation/write lock.
+9. In that transaction, create exactly one internal event, link
+   `tasks.scheduled_event_id`, set the task to `scheduled`, mark the suggestion
+   accepted, mark the request accepted, and store the canonical event ID.
+10. Return the canonical event and the linked task state.
 
 ## Race-condition rules
 
@@ -790,8 +810,29 @@ Proposal != reservation.
 If availability changed:
 
 - do not create overlapping event
-- return stale/conflict error
+- return `AI_PROPOSAL_STALE` with HTTP 409
 - allow client to request fresh proposals
+
+The transactional operation also rechecks task/profile/calendar versions and
+the exact current event overlap after the Edge Function's deterministic
+revalidation. Event inserts and updates that can introduce or change a
+blocking interval participate in the same per-user lock, so a newly committed
+conflicting event cannot pass the final check concurrently.
+
+## Stale-proposal behavior
+
+Return `AI_PROPOSAL_STALE` and leave all confirmation state unchanged when:
+
+- the task was edited, deleted, completed, made non-flexible, or scheduled;
+- the profile timezone or working hours changed, or its relevant version no
+  longer matches the request snapshot;
+- the internal default calendar was deleted, replaced, made read-only, or its
+  state/version changed; or
+- a current internal/provider event now occupies the proposed interval, after
+  recurrence/exception expansion and buffers are applied.
+
+No stale path may insert an event, link the task, or mark the AI request or
+suggestion accepted.
 
 ## Idempotency
 
@@ -802,31 +843,65 @@ Protect against:
 - duplicate network delivery
 - repeated confirmation of same suggestion
 
-Exactly one successful accepted suggestion should produce exactly one scheduled block.
+Exactly one successful accepted suggestion produces exactly one scheduled block.
+Repeated confirmation of that same accepted suggestion returns the stored
+canonical event ID and event, even when the request is retried after a response
+boundary. A different unaccepted suggestion from an already accepted request is
+stale. The database also enforces one accepted suggestion per request and one
+canonical accepted event reference.
 
-## Provider calendars
+## Failure atomicity
 
-If target calendar is provider-owned:
+Event insertion, task linkage/status, suggestion acceptance, request
+acceptance, and canonical event-ID persistence are one database transaction.
+Any expected or unexpected failure after the transaction begins rolls back all
+of them. A failed confirmation must not leave an event without a linked task,
+a scheduled task without that event, or accepted AI state without the canonical
+event. Provider-first mutation is not used because provider calendars are out
+of scope for Sprint 6 v1.
 
-- follow provider-first mutation rules
-- wait for provider confirmation as required by current architecture
-- then update normalized BCal state
+## Phase 4 verification requirements
 
-Do not create local state first and hope external synchronization succeeds.
+Before the Phase 4 checkpoint, run every applicable repository and database
+gate and record the exact result:
+
+```text
+pnpm verify
+(cd supabase/functions && deno task check)
+(cd supabase/functions && deno task test)
+git diff --check
+supabase db reset --yes
+supabase test db
+supabase gen types typescript --local | diff - packages/types/src/database.types.ts
+GitHub CI for the pushed checkpoint — all applicable jobs green
+```
+
+The Deno commands run from `supabase/functions`, where the repository's Deno
+task file lives. The generated-type command compares stdout directly with the
+committed `packages/types/src/database.types.ts` file.
+
+Focused confirmation coverage must include unauthenticated and cross-user
+access, deleted/completed/already-scheduled tasks, valid confirmation, newly
+occupied slots, changed task/profile/calendar inputs, repeated confirmation,
+double/concurrent confirmation, and rollback after a failure during the
+transaction.
 
 ## Exit criteria
 
-- stale suggestions rejected
-- double-confirm safe
-- task/event linkage correct
-- provider-first architecture preserved
-- integration tests pass
-- `pnpm verify` passes
+- persisted suggestion ID is the only confirmation input
+- server ownership, task qualification, and current state are authoritative
+- exact slot is revalidated through the shared deterministic engine
+- stale/conflicting proposals create no event and return `AI_PROPOSAL_STALE`
+- double/concurrent confirmation returns one canonical event
+- task/event and request/suggestion acceptance linkage is correct
+- failure atomicity is tested
+- focused and full integration tests pass
+- every applicable Phase 4 verification requirement above passes
 - checkpoint pushed
 
 Checkpoint SHA:
 
-`TBD`
+`pending commit`
 
 ---
 
@@ -962,7 +1037,7 @@ Show useful human-facing information such as:
 - start/end
 - duration
 - model reason
-- selected target calendar if applicable
+- internal default BCal calendar target
 
 Keep AI branding/subscription treatment consistent with the design system.
 
@@ -1039,11 +1114,11 @@ Audit and test:
 - task deleted after proposal
 - timezone changed after proposal
 - working hours changed after proposal
-- target calendar deleted
+- internal default calendar deleted, replaced, or made read-only
 - DST boundary
 - exact adjacency
 - buffer collision
-- provider event changed remotely
+- provider event changed remotely and now blocks the slot
 
 ## Concurrency / idempotency
 
@@ -1121,7 +1196,8 @@ Verify with real services:
 13. Calendar UI reflects result.
 14. Restore purchase works.
 15. Expired/cancelled entitlement behaves correctly.
-16. Provider-backed target calendar works if included in Sprint 6 scope.
+16. Confirmation creates the block only in the internal default BCal calendar;
+    provider-backed target calendars are explicitly outside Sprint 6 v1.
 
 Record screenshots/log identifiers where useful, but do not commit secrets.
 
@@ -1139,18 +1215,18 @@ Sprint 6 is complete only when:
 - [ ] no-slot path makes no model request
 - [ ] model/provider configuration is server-side
 - [ ] provider/model evaluation is documented
-- [ ] proposal persistence works
-- [ ] confirmation revalidates availability
-- [ ] confirmation is idempotent
-- [ ] task/calendar state updates correctly
-- [ ] provider-first writes remain intact
+- [x] proposal persistence works
+- [x] confirmation revalidates availability
+- [x] confirmation is idempotent
+- [x] task/calendar state updates correctly
+- [x] provider-first writes remain intact
 - [ ] RevenueCat purchase/restore implemented
 - [ ] RevenueCat webhook/subscription mirror works
-- [ ] major security/privacy/adversarial cases tested
-- [ ] full automated verification passes
+- [x] major security/privacy/adversarial cases tested
+- [x] full automated verification passes
 - [ ] live AI E2E passes
 - [ ] live RevenueCat sandbox E2E passes
-- [ ] documentation reconciled with implementation
+- [x] documentation reconciled with implementation
 - [ ] final repository state clean and pushed
 
 ---
@@ -1553,6 +1629,106 @@ Next exact action:
 
 - Confirm the final GitHub CI run, then stop at the Phase 3 checkpoint.
 
+### 2026-09-02 — Phase 4 / safe confirmation implementation and local verification
+
+Agent/model:
+
+Codex
+
+Starting HEAD:
+
+`37fd47622ef87af5666c7b77e192eb3537aad29b`
+
+Ending HEAD:
+
+`pending commit` (Phase 4 implementation and local verification are complete;
+the checkpoint commit and push are the next closeout action)
+
+Documentation corrections:
+
+- Reconciled the Phase 4 contract with the frozen Sprint 6 v1 target: only the
+  provisioned internal default BCal calendar is supported; provider-backed
+  target calendars are outside this sprint.
+- Made server ownership/state revalidation, stale-proposal behavior,
+  transaction atomicity, idempotency, concurrency, and the full verification
+  gate explicit.
+
+Implementation completed:
+
+- Added the `ai-confirm-time` authenticated Edge Function accepting only a
+  persisted suggestion ID.
+- Added server-side Zod validation and explicit user-scoped suggestion,
+  request, event, and task loading.
+- Persisted task/profile/default-calendar versions in proposal snapshots and
+  revalidated the exact slot through the shared deterministic availability
+  engine before confirmation.
+- Added the server-only transactional confirmation RPC with per-user advisory
+  serialization, final buffered conflict checks, exactly-one internal event
+  creation, task linkage, request/suggestion acceptance, canonical event
+  persistence, rollback atomicity, and accepted-retry idempotency.
+- Regenerated database types and added focused TypeScript and pgTAP/RLS
+  coverage for ownership, stale state, conflicts, retries, concurrency, and
+  failure rollback.
+
+Material files changed:
+
+- `docs/ai-scheduling.md`
+- `docs/sprint-6-active.md`
+- `packages/types/src/database.types.ts`
+- `supabase/functions/_shared/ai/confirmation-repository.ts`
+- `supabase/functions/_shared/ai/confirmation.test.ts`
+- `supabase/functions/_shared/ai/confirmation.ts`
+- `supabase/functions/_shared/ai/find-time-repository.ts`
+- `supabase/functions/_shared/ai/find-time.test.ts`
+- `supabase/functions/_shared/ai/find-time.ts`
+- `supabase/functions/_shared/ai/proposal-repository.ts`
+- `supabase/functions/_shared/ai/proposal.test.ts`
+- `supabase/functions/_shared/ai/proposal.ts`
+- `supabase/functions/_shared/ai/ranking.test.ts`
+- `supabase/functions/ai-confirm-time/index.ts`
+- `supabase/migrations/20260902000016_ai_confirmation.sql`
+- `supabase/tests/confirmation.test.sql`
+
+Verification:
+
+- `pnpm verify` — PASS (format, lint, workspace typecheck, and 149 domain
+  tests)
+- `(cd supabase/functions && deno task check)` — PASS (all Edge Function
+  entry points)
+- `(cd supabase/functions && deno task test)` — PASS (130 tests)
+- `supabase db reset --yes` — PASS (clean local reset; all migrations through
+  `20260902000016_ai_confirmation.sql` applied)
+- `supabase test db` — PASS (4 files, 81 pgTAP/RLS/database tests)
+- `supabase gen types typescript --local | diff - packages/types/src/database.types.ts`
+  — PASS
+- `git diff --check` — PASS
+- GitHub CI — pending checkpoint push
+
+Findings:
+
+- No contradiction with the frozen v1 architecture was found. Confirmation is
+  internal-calendar-only and does not introduce a provider-backed target.
+- Event writes use the existing internal direct-Postgres path; provider writes
+  remain provider-first and participate in the per-user event-write lock.
+- The local reset was performed only after a verified data-only backup outside
+  the repository; no local database dump or test artifact is tracked.
+
+Known blockers:
+
+- Live Luna/Terra evaluation still requires an authorized server-side OpenAI
+  key and explicit cost authorization.
+- Phase 5 / RevenueCat remains intentionally unstarted.
+
+Manual/external work remaining:
+
+- Authorized live model evaluation and later live E2E, when credentials and
+  cost authorization are available.
+
+Next exact action:
+
+- Commit and push this verified Phase 4 checkpoint, confirm GitHub CI, update
+  this tracker with the final SHA/status, and stop before Phase 5.
+
 ---
 
 # Current Decisions
@@ -1614,18 +1790,25 @@ The next agent must:
 
 Current phase:
 
-`Phase 2 foundation implemented; Phase 3 proposal implementation and local
-verification complete; live model evaluation pending`
+`Phase 4 safe confirmation implementation and local verification complete;
+checkpoint commit/push pending; live model evaluation pending; Phase 5 not
+started`
 
 Last verified checkpoint:
 
-`3950c77f28420e7cdfb2c7a9450c96c754661a9a` (clean, pushed Phase 3
-verification checkpoint)
+`37fd47622ef87af5666c7b77e192eb3537aad29b` (clean, pushed Phase 3
+verification checkpoint; Phase 4 changes are verified locally and pending
+commit/push)
 
 Phase 3 implementation checkpoint:
 
-`3950c77f28420e7cdfb2c7a9450c96c754661a9a` (pushed implementation and
+`37fd47622ef87af5666c7b77e192eb3537aad29b` (pushed implementation and
 verification checkpoint; generated database types aligned for CI)
+
+Phase 4 implementation checkpoint:
+
+`pending commit` (local implementation and full verification complete; commit
+and push are the remaining closeout actions)
 
 Current blocker:
 
@@ -1634,6 +1817,8 @@ explicit cost authorization. RevenueCat setup remains a later external gate.`
 
 Next exact action:
 
-Perform the authorized Luna/Terra evaluation when its server-side key and cost
-authorization are available. Do not begin Phase 4 in this closeout. Preserve
-deterministic candidate membership as the sole availability authority.
+Commit and push the verified Phase 4 checkpoint, confirm its GitHub CI status,
+record the final SHA here, and stop before Phase 5. Perform the authorized
+Luna/Terra evaluation only when its server-side key and cost authorization are
+available. Preserve deterministic candidate membership as the sole
+availability authority.

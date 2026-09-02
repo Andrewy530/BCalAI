@@ -34,14 +34,26 @@ function task(overrides: Partial<FindTimeTask> = {}): FindTimeTask {
 }
 
 function profile(): FindTimeProfile {
-  return { timezone: 'America/New_York', workingHours: WORKING_HOURS };
+  return {
+    timezone: 'America/New_York',
+    workingHours: WORKING_HOURS,
+    updatedAt: '2026-08-31T10:00:00.000Z',
+  };
 }
 
 function source(overrides: Partial<FindTimeDataSource> = {}): FindTimeDataSource {
   return {
     loadTask: () => Promise.resolve(task()),
     loadProfile: () => Promise.resolve(profile()),
-    loadTargetCalendar: () => Promise.resolve({ id: CALENDAR_ID, name: 'Personal' }),
+    loadTargetCalendar: () =>
+      Promise.resolve({
+        id: CALENDAR_ID,
+        name: 'Personal',
+        sourceType: 'internal' as const,
+        isDefault: true,
+        isReadOnly: false,
+        updatedAt: '2026-08-31T10:30:00.000Z',
+      }),
     loadEvents: () => Promise.resolve([]),
     ...overrides,
   };
