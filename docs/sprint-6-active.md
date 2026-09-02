@@ -686,15 +686,15 @@ TBD pending the live Luna / Terra comparison.
 
 Checkpoint SHA:
 
-`4678adc381cd0e85326772a5e7d6864af9589a1c` (foundation; later hardening and
-production wiring are currently uncommitted)
+`4678adc381cd0e85326772a5e7d6864af9589a1c` (foundation checkpoint; subsequent
+Phase 3 implementation is recorded below)
 
 ---
 
 # Phase 3 — Production `ai-find-time` Endpoint
 
-Status: IMPLEMENTATION AND LOCAL VERIFICATION COMPLETE; CHECKPOINT UPDATE
-PENDING (2026-09-02)
+Status: IMPLEMENTATION AND LOCAL VERIFICATION COMPLETE; CHECKPOINT PUSHED
+(2026-09-02)
 
 Goal: create the complete proposal-generation request.
 
@@ -753,7 +753,7 @@ No failure may partially schedule a task.
 
 Checkpoint SHA:
 
-`f43e4e4e5d7278f09859a2c940931e1b2c2f8e77`
+`feb1fa51344193532b1e730cea44ef09ca94953a`
 
 ---
 
@@ -1435,13 +1435,72 @@ Known blockers:
 
 - Live model comparison requires a server-side OpenAI key and explicit cost
   authorization.
-- The verified fixes and handoff-document updates are currently uncommitted.
 
 Next exact action:
 
-- Create a new checkpoint containing the verified fixes, then run the
-  authorized Luna/Terra evaluation before selecting a production default.
-  After that, implement Phase 4 confirmation.
+- Run the authorized Luna/Terra evaluation before selecting a production
+  default. Phase 4 confirmation remains not started.
+
+---
+
+### 2026-09-02 — Phase 3 / local verification closeout
+
+Agent/model:
+
+Codex
+
+Starting HEAD:
+
+`f43e4e4e5d7278f09859a2c940931e1b2c2f8e77`
+
+Ending HEAD:
+
+`feb1fa51344193532b1e730cea44ef09ca94953a` (Phase 3 fixes and local
+verification checkpoint pushed to `origin/main`)
+
+Work completed:
+
+- Rejected non-finite `AI_TIMEOUT_MS` values in the OpenAI configuration path.
+- Made the proposal test’s captured update assertion type-safe.
+- Corrected the pgTAP assertion for server-managed AI request updates.
+- Recorded the final local verification results and checkpoint.
+
+Files materially changed:
+
+- `supabase/functions/_shared/ai/openai.ts`
+- `supabase/functions/_shared/ai/proposal.test.ts`
+- `supabase/tests/rls.test.sql`
+- `docs/sprint-6-active.md`
+
+Verification:
+
+- `pnpm verify` — PASS
+- `deno task check` — PASS
+- `deno task test` — PASS (121 tests)
+- `supabase db reset --yes` — PASS after a recoverable local data backup
+- `supabase test db` — PASS (3 files, 53 pgTAP/RLS tests)
+- `git diff --check` — PASS
+
+Findings:
+
+- Phase 3 proposal generation is locally verified and does not schedule or
+  confirm events; confirmation remains Phase 4.
+- Live Luna/Terra evaluation remains pending and no production model is
+  selected.
+
+Known blockers:
+
+- Live model comparison requires an authorized server-side OpenAI key and
+  explicit cost authorization.
+
+Manual/external work remaining:
+
+- Authorized Luna/Terra evaluation.
+- Phase 4 safe confirmation, when explicitly started.
+
+Next exact action:
+
+- Stop at the Phase 3 checkpoint. Do not begin Phase 4 in this closeout.
 
 ---
 
@@ -1509,13 +1568,13 @@ verification complete; live model evaluation pending`
 
 Last verified checkpoint:
 
-`4678adc381cd0e85326772a5e7d6864af9589a1c` (clean, pushed foundation
-checkpoint)
+`feb1fa51344193532b1e730cea44ef09ca94953a` (clean, pushed Phase 3
+verification checkpoint)
 
 Phase 3 implementation checkpoint:
 
-`f43e4e4e5d7278f09859a2c940931e1b2c2f8e77` (pushed implementation
-checkpoint; verified fixes are currently uncommitted)
+`feb1fa51344193532b1e730cea44ef09ca94953a` (pushed implementation and
+verification checkpoint)
 
 Current blocker:
 
@@ -1524,6 +1583,6 @@ explicit cost authorization. RevenueCat setup remains a later external gate.`
 
 Next exact action:
 
-Create a checkpoint for the verified fixes, perform the authorized Luna/Terra
-evaluation, and then continue with Phase 4 server-authoritative confirmation.
-Preserve deterministic candidate membership as the sole availability authority.
+Perform the authorized Luna/Terra evaluation when its server-side key and cost
+authorization are available. Do not begin Phase 4 in this closeout. Preserve
+deterministic candidate membership as the sole availability authority.
