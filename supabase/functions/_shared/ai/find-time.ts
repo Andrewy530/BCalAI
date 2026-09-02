@@ -79,6 +79,8 @@ export async function prepareDeterministicFindTime(
     userId: string;
     request: AiScheduleRequest;
     now?: Date;
+    /** Phase 3 persists a controlled no-slot request instead of losing context. */
+    allowNoValidSlot?: boolean;
   },
   source: FindTimeDataSource,
   candidateIdFactory: CandidateIdFactory = opaqueCandidateId,
@@ -122,7 +124,7 @@ export async function prepareDeterministicFindTime(
   const events = await source.loadEvents(input.userId, window);
   const busy = schedulingEventsToBusyIntervals(events, window);
   const generated = generateCandidateSlots({ constraints, busy });
-  if (generated.length === 0) {
+  if (generated.length === 0 && !input.allowNoValidSlot) {
     throw new EdgeError(
       'AI_NO_VALID_SLOT',
       'No open time fits this task before its deadline.',

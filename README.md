@@ -12,12 +12,12 @@ Architecture decisions live in [`docs/`](docs/). Coding rules are in
 
 ## Current status
 
-**Sprint 6 — AI Pro / Find Time: Phase 1 deterministic server path implemented
-and verified; Phase 2 not started.** Sprints 0 through 4 are
+**Sprint 6 — AI Pro / Find Time: Phase 2 provider foundation implemented;
+Phase 3 proposal implementation complete, verification pending.** Sprints 0 through 4 are
 complete/implemented. Sprint 5's Microsoft
 implementation is complete in code with external lifecycle/device verification
 still tracked separately. The Phase 0 audit used
-`33fc8d3aea6ebfc0d11f747f03349081e1f993c1` on `main`.
+`4678adc381cd0e85326772a5e7d6864af9589a1c` on `main`.
 
 Google live OAuth, calendar import, initial/incremental sync, and
 provider-first create/update/delete were verified in Sprint 4. Microsoft OAuth,

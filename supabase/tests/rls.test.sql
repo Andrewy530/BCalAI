@@ -8,7 +8,7 @@
 begin;
 create extension if not exists pgtap;
 
-select plan(18);
+select plan(23);
 
 -- --- fixtures --------------------------------------------------------------
 insert into auth.users (instance_id, id, aud, role, email, created_at, updated_at)
@@ -38,6 +38,35 @@ values
   ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Alice task'),
   ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'Bob task');
 
+insert into public.ai_schedule_requests (
+  id, user_id, task_id, status, target_calendar_id, task_version, candidate_count
+)
+select
+  'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
+  'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+  t.id,
+  'proposed',
+  c.id,
+  now(),
+  1
+from public.tasks t
+join public.calendars c on c.user_id = t.user_id and c.is_default
+where t.user_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+
+insert into public.ai_schedule_suggestions (
+  id, request_id, slot_id, start_at, end_at, score, reason, rank
+)
+values (
+  'ffffffff-ffff-ffff-ffff-ffffffffffff',
+  'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
+  'candidate_rls_a1',
+  now() + interval '1 hour',
+  now() + interval '2 hours',
+  0.9,
+  'A valid proposed slot.',
+  1
+);
+
 -- --- RLS is switched on at all -------------------------------------------
 select ok(
   (select relrowsecurity from pg_class where oid = 'public.tasks'::regclass),
@@ -64,6 +93,16 @@ select is((select count(*)::int from public.tasks), 1, 'Alice sees only her own 
 select is((select title from public.tasks), 'Alice task', 'and it is hers');
 select is((select count(*)::int from public.profiles), 1, 'Alice sees only her own profile');
 select is((select count(*)::int from public.calendars), 1, 'Alice sees only her own calendar');
+
+select is(
+  (select count(*)::int from public.ai_schedule_requests), 1,
+  'Alice sees her own AI request'
+);
+
+select is(
+  (select count(*)::int from public.ai_schedule_suggestions), 1,
+  'Alice sees suggestions only for her proposed request'
+);
 
 -- Server-only tables must be invisible even to a signed-in user.
 select is(
@@ -117,6 +156,31 @@ select throws_ok(
   '42501',
   null,
   'a user cannot insert a task owned by someone else'
+);
+
+select throws_ok(
+  $$insert into public.ai_schedule_requests (user_id, task_id)
+    select 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', id
+    from public.tasks where user_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'$$,
+  '42501', null,
+  'AI requests cannot be inserted by the client role'
+);
+
+select throws_ok(
+  $$update public.ai_schedule_requests
+    set status = 'rejected'
+    where id = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'$$,
+  '42501', null,
+  'AI requests cannot be updated by the client role'
+);
+
+select throws_ok(
+  $$select public.claim_ai_schedule_request(
+    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    (select id from public.tasks where user_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')
+  )$$,
+  '42501', null,
+  'the rate-limit claim is server-only'
 );
 
 select is(

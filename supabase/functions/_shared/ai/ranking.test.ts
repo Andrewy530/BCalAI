@@ -88,6 +88,17 @@ Deno.test('rejects unknown, duplicate, malformed, and timestamp-bearing model ou
       ],
     },
     { suggestions: [{ slotId: firstId, rank: 2, score: 1, reason: 'Bad rank.' }] },
+    {
+      suggestions: [
+        { slotId: firstId, rank: 2, score: 1, reason: 'Reordered.' },
+        {
+          slotId: input.candidates[1]?.id,
+          rank: 1,
+          score: 0.5,
+          reason: 'Reordered second option.',
+        },
+      ],
+    },
     { suggestions: [{ slotId: firstId, rank: 1, score: 2, reason: 'Bad score.' }] },
     {
       suggestions: [

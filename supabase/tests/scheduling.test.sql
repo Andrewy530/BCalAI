@@ -6,12 +6,15 @@
 begin;
 create extension if not exists pgtap;
 
-select plan(6);
+select plan(9);
 
 insert into auth.users (instance_id, id, aud, role, email, created_at, updated_at)
 values ('00000000-0000-0000-0000-000000000000',
         'cccccccc-cccc-cccc-cccc-cccccccccccc',
         'authenticated', 'authenticated', 'carol@example.com', now(), now());
+
+insert into public.tasks (user_id, title, estimated_minutes)
+values ('cccccccc-cccc-cccc-cccc-cccccccccccc', 'AI rate-limit fixture', 60);
 
 select throws_ok(
   $$insert into public.events (user_id, calendar_id, title, start_at, end_at)
@@ -48,6 +51,45 @@ select throws_ok(
 select ok(
   not public.has_active_entitlement('cccccccc-cccc-cccc-cccc-cccccccccccc', 'pro'),
   'a user with no subscription row has no Pro entitlement'
+);
+
+create temporary table ai_claim_ids (id uuid) on commit drop;
+
+insert into ai_claim_ids (id)
+select public.claim_ai_schedule_request(
+  'cccccccc-cccc-cccc-cccc-cccccccccccc',
+  (select id from public.tasks where title = 'AI rate-limit fixture'),
+  10
+)
+from generate_series(1, 10);
+
+select is(
+  (select count(*)::int from ai_claim_ids where id is not null),
+  10,
+  'the atomic AI claim allows ten attempts'
+);
+
+select is(
+  public.claim_ai_schedule_request(
+    'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    (select id from public.tasks where title = 'AI rate-limit fixture'),
+    10
+  ),
+  null::uuid,
+  'the eleventh live AI attempt is rate limited'
+);
+
+update public.ai_schedule_requests
+set status = 'failed', error_code = 'AI_PROVIDER_UNAVAILABLE', completed_at = now()
+where id = (select id from ai_claim_ids limit 1);
+
+select ok(
+  public.claim_ai_schedule_request(
+    'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    (select id from public.tasks where title = 'AI rate-limit fixture'),
+    10
+  ) is null,
+  'a failed attempt still consumes its rolling quota slot'
 );
 
 -- Back to the owning role so finish() is unaffected by RLS.

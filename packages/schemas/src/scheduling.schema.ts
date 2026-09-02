@@ -145,11 +145,13 @@ export const aiScheduleProposalSchema = z
       ranks.add(suggestion.rank);
     }
 
-    const expectedRanks = proposal.suggestions.map((_, index) => index + 1);
-    if (expectedRanks.some((rank) => !ranks.has(rank))) {
+    const ranksAreOrdered = proposal.suggestions.every(
+      (suggestion, index) => suggestion.rank === index + 1,
+    );
+    if (!ranksAreOrdered) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'Suggestion ranks must be contiguous from 1',
+        message: 'Suggestion ranks must be ordered contiguously from 1',
         path: ['suggestions'],
       });
     }

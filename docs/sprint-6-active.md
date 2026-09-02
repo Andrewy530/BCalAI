@@ -1,6 +1,7 @@
 # Sprint 6 — AI Pro / Find Time
 
-Status: PHASE 1 IMPLEMENTED AND VERIFIED — PHASE 2 NOT STARTED
+Status: PHASE 2 FOUNDATION IMPLEMENTED — PHASE 3 PROPOSAL IMPLEMENTATION
+COMPLETE; VERIFICATION PENDING
 
 This file is the source of truth for Sprint 6 implementation and agent handoff.
 
@@ -57,10 +58,7 @@ Authenticated server endpoint
         |
         +--> verify Pro entitlement
         |
-        +--> apply rate limit
-        |
-        v
-Normalize task + preferences into ScheduleConstraints
+        +--> normalize task + preferences into ScheduleConstraints
         |
         v
 Fetch relevant calendar events
@@ -71,7 +69,10 @@ Deterministic availability engine
         v
 Valid candidate slots
         |
-        +--> zero slots -> return controlled no-slot result
+        +--> zero slots -> apply rate limit, mark failed, return no-slot
+        |
+        +--> one or more slots -> apply atomic rate limit and persist pending
+             request
         |
         v
 AI provider adapter
@@ -521,7 +522,7 @@ partially implemented in v1.
 
 # Phase 1 — Deterministic Server Find-Time Path
 
-Status: IMPLEMENTED AND VERIFIED (2026-09-01; checkpoint uncommitted)
+Status: IMPLEMENTED AND VERIFIED (2026-09-01; included in `4678adc`)
 
 Goal: complete the entire scheduling path up to the AI boundary without making a model request.
 
@@ -579,13 +580,13 @@ Test:
 
 Record checkpoint SHA:
 
-`TBD — implementation is verified but uncommitted`
+`4678adc381cd0e85326772a5e7d6864af9589a1c`
 
 ---
 
 # Phase 2 — AI Provider Abstraction + Evaluation Harness
 
-Status: NOT STARTED
+Status: FOUNDATION IMPLEMENTED; LIVE EVALUATION PENDING (2026-09-02)
 
 Goal: add AI ranking without coupling scheduling logic to one vendor.
 
@@ -662,11 +663,14 @@ Record result summary here.
 
 ### Evaluation result
 
-TBD
+The provider abstraction, strict OpenAI Responses adapter, offline fixtures,
+and fixture grader are implemented in checkpoint `4678adc`. The live Luna /
+Terra comparison has not run: this environment has no Deno runtime and no
+server-side `OPENAI_API_KEY`. No production model is selected yet.
 
 ### Selected production default
 
-TBD
+TBD pending the live Luna / Terra comparison.
 
 ## Exit criteria
 
@@ -681,13 +685,14 @@ TBD
 
 Checkpoint SHA:
 
-`TBD`
+`4678adc381cd0e85326772a5e7d6864af9589a1c` (foundation; later hardening and
+production wiring are currently uncommitted)
 
 ---
 
 # Phase 3 — Production `ai-find-time` Endpoint
 
-Status: NOT STARTED
+Status: IMPLEMENTATION COMPLETE; VERIFICATION PENDING (2026-09-02)
 
 Goal: create the complete proposal-generation request.
 
@@ -701,20 +706,18 @@ Flow:
 
 1. Authenticate.
 2. Validate request.
-3. Verify task ownership.
-4. Check `has_active_entitlement(user_id, 'pro')`.
-5. Enforce rate limit.
-6. Normalize constraints.
-7. Generate deterministic candidates.
-8. If zero candidates:
+3. Check `has_active_entitlement(user_id, 'pro')`.
+4. Verify task ownership, normalize constraints, and generate deterministic
+   candidates.
+5. Enforce the atomic rate limit and create the pending request.
+6. If zero candidates:
    - persist/return controlled no-slot result
    - make zero AI requests.
-9. Create AI scheduling request.
-10. Call configured AI adapter.
-11. Validate structured result.
-12. Cross-check every proposed slot.
-13. Persist suggestions.
-14. Return proposal.
+7. Call configured AI adapter.
+8. Validate structured result.
+9. Cross-check every proposed slot.
+10. Persist suggestions.
+11. Mark the request proposed and return it.
 
 ## Failure behavior
 
@@ -1358,6 +1361,86 @@ Next exact action:
   Responses adapter, and offline fixture/grader harness without changing the
   deterministic availability authority.
 
+### 2026-09-02 — Phase 2/3 / proposal generation slice
+
+Agent/model:
+
+Codex
+
+Starting HEAD:
+
+`4678adc381cd0e85326772a5e7d6864af9589a1c`
+
+Ending HEAD:
+
+`4678adc381cd0e85326772a5e7d6864af9589a1c` (implementation remains
+uncommitted; no commit or push was requested)
+
+Work completed:
+
+- Hardened proposal validation so returned ranks must be ordered contiguously,
+  not merely contain a contiguous set.
+- Added a provider-neutral proposal orchestrator that keeps deterministic
+  candidate membership and timestamps authoritative.
+- Connected the `ai-find-time` Edge Function to the lazy OpenAI adapter path.
+  No-slot requests never construct a provider, but do consume the valid-attempt
+  quota after deterministic preparation.
+- Added server-managed request metadata, exact persisted `slot_id` mappings,
+  task/calendar snapshots, and an atomic per-user rolling attempt claim.
+- Removed the client update policy for AI requests and limited suggestion reads
+  to proposed/accepted requests.
+- Added focused orchestration tests for proposal persistence, no-slot behavior,
+  and unknown provider slot rejection.
+
+Files materially changed:
+
+- `packages/schemas/src/scheduling.schema.ts`
+- `packages/types/src/database.types.ts`
+- `supabase/functions/_shared/ai/find-time.ts`
+- `supabase/functions/_shared/ai/ranking.test.ts`
+- `supabase/functions/_shared/ai/proposal.ts`
+- `supabase/functions/_shared/ai/proposal-repository.ts`
+- `supabase/functions/_shared/ai/proposal.test.ts`
+- `supabase/functions/ai-find-time/index.ts`
+- `supabase/migrations/20260901000015_ai_proposal_runtime.sql`
+- `supabase/tests/rls.test.sql`
+- `supabase/tests/scheduling.test.sql`
+- `README.md`
+- `docs/ai-scheduling.md`
+- `docs/sprint-6-active.md`
+
+Verification:
+
+- `pnpm lint` — PASS
+- `pnpm typecheck` — PASS for all workspace projects with typecheck scripts
+- `pnpm --filter @cal/domain test` — PASS (12 files, 149 tests)
+- targeted Prettier check — PASS
+- `git diff --check` — PASS
+- `deno task check` — BLOCKED: Deno is not installed in this environment
+- `deno task test` — BLOCKED: Deno is not installed in this environment
+
+Findings:
+
+- The endpoint now reaches the Phase 3 proposal boundary, but it does not
+  schedule or confirm an event. Confirmation remains Phase 4.
+- The live Luna/Terra evaluation still has not run, so the production model
+  choice remains intentionally unset.
+
+Known blockers:
+
+- Edge Function checks/tests require Deno.
+- Live model comparison requires a server-side OpenAI key and explicit cost
+  authorization.
+- Full `pnpm verify` still has the repository-wide formatting gate and must be
+  rerun in the project’s expected tool environment before a checkpoint is
+  considered verified.
+
+Next exact action:
+
+- Run the Deno and local database/RLS tests in an environment with the expected
+  Supabase toolchain, then run the authorized Luna/Terra evaluation before
+  selecting a production default. After that, implement Phase 4 confirmation.
+
 ---
 
 # Current Decisions
@@ -1380,7 +1463,7 @@ Next exact action:
 | split-task scheduling                        | deferred | whole-duration slots only in v1                          |
 | duration                                     | final    | task estimate required; no silent profile fallback       |
 | horizon                                      | final    | deadline/bounded override, maximum 14 days               |
-| rate-limit policy                            | final    | 10 accepted attempts / rolling 60 minutes / user         |
+| rate-limit policy                            | final    | 10 claimed attempts / rolling 60 minutes / user          |
 | heuristic production fallback                | final    | none in v1; baseline/test oracle only                    |
 | cross-provider AI fallback                   | final    | none in v1                                               |
 | entity-specific event semantics in AI prompt | deferred | event content remains outside model privacy boundary     |
@@ -1419,20 +1502,23 @@ The next agent must:
 
 Current phase:
 
-`Phase 2 — ready to start; Phase 1 is implemented and verified`
+`Phase 2 foundation implemented; Phase 3 proposal implementation complete,
+verification pending`
 
 Last verified checkpoint:
 
-`33fc8d3aea6ebfc0d11f747f03349081e1f993c1` (Phase 0 and Phase 1 changes are
-verified but uncommitted)
+`4678adc381cd0e85326772a5e7d6864af9589a1c` (clean, pushed foundation
+checkpoint; current Phase 2 hardening and Phase 3 wiring are uncommitted)
 
 Current blocker:
 
-`No Phase 2 code blocker. Live model evaluation needs a server-side OpenAI key;
-RevenueCat setup is a later external gate.`
+`No known code blocker. Deno is unavailable here, and live Luna/Terra
+evaluation needs an authorized server-side OpenAI key. RevenueCat setup remains
+a later external gate.`
 
 Next exact action:
 
-Add the provider-neutral ranking interface, strict OpenAI Responses adapter,
-and offline evaluation fixture/grader harness. Preserve deterministic candidate
-membership as the sole availability authority.
+Run the Deno/Supabase migration and RLS checks in the expected toolchain,
+perform the authorized Luna/Terra evaluation, and then continue with Phase 4
+server-authoritative confirmation. Preserve deterministic candidate membership
+as the sole availability authority.

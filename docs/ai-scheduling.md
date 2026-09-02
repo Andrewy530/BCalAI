@@ -1,7 +1,7 @@
 # AI scheduling
 
-Status: **engine and deterministic server Find Time path built and tested;
-Sprint 6 Phase 2 model integration has not started.** The engine is
+Status: **engine, deterministic server Find Time path, provider foundation, and
+Phase 3 proposal implementation are built; verification is pending.** The engine is
 `packages/domain/src/scheduling/availability.ts`. The live implementation and
 handoff source of truth is [`sprint-6-active.md`](sprint-6-active.md).
 
@@ -79,15 +79,18 @@ existing meeting.
 
 ## Server-side gates
 
-Before any model call, the Edge Function checks, in order:
+After authentication and the Pro entitlement check, deterministic preparation
+validates task ownership and scheduling input, loads events, and generates the
+candidate set. A valid request then passes through the atomic server-side
+attempt limit before any model call:
 
-1. `has_active_entitlement(user_id, 'pro')` — never a client-supplied flag.
-2. Atomic per-user limit of 10 accepted attempts per rolling 60 minutes
+1. Atomic per-user limit of 10 claimed attempts per rolling 60 minutes
    (server-configurable).
-3. Constraints parse against `scheduleConstraintsSchema`.
+2. The request is persisted as pending before the provider call.
 
 If the engine returns zero slots, no model call happens at all: the answer is
-`AI_NO_VALID_SLOT`, and the UI offers to widen the window or relax the buffer.
+persisted as a failed `AI_NO_VALID_SLOT` request and counts against the valid
+attempt limit; the UI offers to widen the window or relax the buffer.
 
 ## Privacy
 

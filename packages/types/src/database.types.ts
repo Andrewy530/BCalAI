@@ -11,33 +11,66 @@ export type Database = {
     Tables: {
       ai_schedule_requests: {
         Row: {
+          candidate_count: number
           completed_at: string | null
           constraints: Json
           created_at: string
           error_code: string | null
           id: string
+          input_tokens: number | null
+          latency_ms: number | null
+          model: string | null
+          output_tokens: number | null
+          prompt_version: string | null
+          provider: string | null
+          reasoning_tokens: number | null
           status: Database["public"]["Enums"]["ai_request_status"]
           task_id: string
+          task_version: string | null
+          target_calendar_id: string | null
+          total_tokens: number | null
           user_id: string
         }
         Insert: {
+          candidate_count?: number
           completed_at?: string | null
           constraints?: Json
           created_at?: string
           error_code?: string | null
           id?: string
+          input_tokens?: number | null
+          latency_ms?: number | null
+          model?: string | null
           status?: Database["public"]["Enums"]["ai_request_status"]
+          output_tokens?: number | null
+          prompt_version?: string | null
+          provider?: string | null
+          reasoning_tokens?: number | null
           task_id: string
+          task_version?: string | null
+          target_calendar_id?: string | null
+          total_tokens?: number | null
           user_id: string
         }
         Update: {
+          candidate_count?: number
           completed_at?: string | null
           constraints?: Json
           created_at?: string
           error_code?: string | null
           id?: string
+          input_tokens?: number | null
+          latency_ms?: number | null
+          model?: string | null
+          output_tokens?: number | null
+          prompt_version?: string | null
+          provider?: string | null
+          reasoning_tokens?: number | null
           status?: Database["public"]["Enums"]["ai_request_status"]
           task_id?: string
+          task_version?: string | null
+          target_calendar_id?: string | null
+          total_tokens?: number | null
           user_id?: string
         }
         Relationships: [
@@ -46,6 +79,13 @@ export type Database = {
             columns: ["task_id"]
             isOneToOne: false
             referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_schedule_requests_target_calendar_id_fkey"
+            columns: ["target_calendar_id"]
+            isOneToOne: false
+            referencedRelation: "calendars"
             referencedColumns: ["id"]
           },
         ]
@@ -59,6 +99,7 @@ export type Database = {
           reason: string
           request_id: string
           score: number
+          slot_id: string
           start_at: string
         }
         Insert: {
@@ -69,6 +110,7 @@ export type Database = {
           reason: string
           request_id: string
           score: number
+          slot_id: string
           start_at: string
         }
         Update: {
@@ -79,6 +121,7 @@ export type Database = {
           reason?: string
           request_id?: string
           score?: number
+          slot_id?: string
           start_at?: string
         }
         Relationships: [
@@ -809,6 +852,10 @@ export type Database = {
       }
     }
     Functions: {
+      claim_ai_schedule_request: {
+        Args: { p_limit?: number; p_task_id: string; p_user_id: string }
+        Returns: string | null
+      }
       claim_sync_jobs: {
         Args: { p_limit?: number }
         Returns: {
