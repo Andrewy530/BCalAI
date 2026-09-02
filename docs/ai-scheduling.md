@@ -115,9 +115,17 @@ nor logged.
   Sprint 6 v1. The client sends a persisted suggestion ID; the server reloads
   the request, suggestion, task, profile, default calendar, and current busy
   events, then reuses the deterministic availability engine to revalidate the
-  exact persisted slot. One transaction creates the internal event, links the
-  task, marks the suggestion/request accepted, and stores the canonical event
-  ID. A repeated confirmation returns that event and creates no duplicate.
+  exact persisted slot. The final transaction also expands the supported
+  recurrence representation and provider exceptions while holding the
+  per-user event-write lock, so a recurring occurrence cannot be missed in the
+  revalidation/commit race. One transaction creates the internal event, links
+  the task, marks the suggestion/request accepted, and stores the canonical
+  event ID. A repeated confirmation returns that event and creates no duplicate.
+  Empty events do not block without a buffer, matching interval normalization;
+  a positive buffer grows an empty event into a point blocker. Pro is checked
+  when the proposal is generated; Phase 4 intentionally grandfathered that
+  persisted proposal through confirmation so it does not invent the Phase 5
+  billing dependency.
 - Provider-calendar targets are outside Sprint 6 v1. Any later provider target
   must use the existing provider-first write architecture.
 

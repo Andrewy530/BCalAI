@@ -868,6 +868,23 @@ export type Database = {
       }
     }
     Functions: {
+      ai_event_conflicts_interval: {
+        Args: {
+          p_buffer_minutes?: number
+          p_end_at: string
+          p_start_at: string
+          p_user_id: string
+        }
+        Returns: boolean
+      }
+      ai_recurrence_date_matches: {
+        Args: {
+          p_anchor_date: string
+          p_candidate_date: string
+          p_rule: string
+        }
+        Returns: boolean
+      }
       claim_ai_schedule_request: {
         Args: { p_limit?: number; p_task_id: string; p_user_id: string }
         Returns: string

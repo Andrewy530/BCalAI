@@ -1,7 +1,7 @@
 # Sprint 6 — AI Pro / Find Time
 
-Status: PHASE 4 SAFE CONFIRMATION IMPLEMENTED, VERIFIED, AND PUSHED — LIVE MODEL
-EVALUATION AND PHASE 5 REMAIN OUT OF SCOPE
+Status: PHASE 4 SAFE CONFIRMATION AND RECURRENCE HARDENING IMPLEMENTED AND
+VERIFIED — LIVE MODEL EVALUATION AND PHASE 5 REMAIN OUT OF SCOPE
 
 This file is the source of truth for Sprint 6 implementation and agent handoff.
 
@@ -769,8 +769,8 @@ Checkpoint SHA:
 
 # Phase 4 — Safe Confirmation / Scheduling
 
-Status: DOCUMENTATION RECONCILED; IMPLEMENTATION AND LOCAL VERIFICATION COMPLETE;
-CHECKPOINT PUSHED (2026-09-02)
+Status: DOCUMENTATION RECONCILED; IMPLEMENTATION AND RECURRENCE HARDENING
+VERIFIED (2026-09-02)
 
 Goal: convert a proposal into a real scheduled block safely.
 
@@ -814,10 +814,43 @@ If availability changed:
 - allow client to request fresh proposals
 
 The transactional operation also rechecks task/profile/calendar versions and
-the exact current event overlap after the Edge Function's deterministic
-revalidation. Event inserts and updates that can introduce or change a
-blocking interval participate in the same per-user lock, so a newly committed
-conflicting event cannot pass the final check concurrently.
+the exact current recurrence-aware event conflicts after the Edge Function's
+deterministic revalidation. Event inserts and updates that can introduce or
+change a blocking interval participate in the same per-user lock, so a newly
+committed conflicting event cannot pass the final check concurrently.
+
+### Recurrence race finding and hardening
+
+The Phase 4 review found a real gap in the previous final SQL predicate: it
+compared only the raw `events.start_at`/`end_at` pair. A recurring master can
+start outside the proposed interval while one of its generated occurrences is
+inside it, so a recurring event created or changed between Edge Function
+revalidation and the transaction could be missed.
+
+The root cause was a mismatch between the shared domain recurrence expansion
+and the database transaction's raw-row overlap check. The hardening migration
+adds a server-only, recurrence-aware SQL predicate for the repository's
+supported RRULE subset. It expands daily/weekly/monthly/yearly master
+occurrences in the event timezone, applies Google-style moved/cancelled
+exceptions, respects Microsoft materialized instances, and checks the
+effective occurrence against the buffered proposed interval. Unsupported or
+malformed recurrence data fails closed. The existing per-user advisory event
+write lock remains in force, so inserts/updates that could introduce an
+occurrence cannot commit between the final recurrence-aware read and the
+confirmation event insert. The domain engine remains the availability
+authority; this SQL function is only the final atomic safety boundary.
+
+The final predicate also aligns zero-duration semantics with the deterministic
+engine: an empty event is ignored with no buffer because interval normalization
+drops it; with a positive buffer, it blocks the point grown by that buffer.
+
+Entitlement is intentionally not rechecked during confirmation. Phase 4
+already requires an authoritative Pro check when the proposal is generated;
+an already-persisted proposal is grandfathered through confirmation if the
+entitlement later expires. This completes an authorized, user-confirmed action
+without inventing a Phase 5 RevenueCat dependency, and accepted retries remain
+pure idempotent reads. A future billing decision can change this only as an
+explicit product decision.
 
 ## Stale-proposal behavior
 
@@ -884,7 +917,11 @@ Focused confirmation coverage must include unauthenticated and cross-user
 access, deleted/completed/already-scheduled tasks, valid confirmation, newly
 occupied slots, changed task/profile/calendar inputs, repeated confirmation,
 double/concurrent confirmation, and rollback after a failure during the
-transaction.
+transaction. The recurrence hardening coverage additionally includes a master
+whose occurrence overlaps while its raw row does not, a recurring event
+created/changed after proposal persistence, moved and cancelled exceptions,
+ordinary one-off overlap, adjacent non-overlap, zero-duration behavior, and
+accepted-retry idempotency.
 
 ## Exit criteria
 
@@ -901,7 +938,7 @@ transaction.
 
 Checkpoint SHA:
 
-`004472669f0c9e8770709f836471461bd9610c5e`
+`Pending hardening checkpoint commit; see the closeout entry below.`
 
 ---
 
@@ -1732,6 +1769,111 @@ Next exact action:
 
 ---
 
+### 2026-09-02 — Phase 4 / recurrence-aware confirmation hardening
+
+Agent/model:
+
+Codex
+
+Starting HEAD:
+
+`52981353af23be48dc842a4cd7724c4ec621a646`
+
+Ending HEAD:
+
+`Pending hardening checkpoint commit.`
+
+Documentation corrections:
+
+- Kept the frozen internal default BCal calendar as the only Sprint 6 v1
+  confirmation target; provider-backed target calendars remain deferred.
+- Made the recurrence-aware final safety boundary, entitlement-at-confirmation
+  decision, zero-duration semantics, exact verification gates, and checkpoint
+  handoff explicit.
+
+Finding and root cause:
+
+- The independent review identified a real race: the previous final SQL check
+  compared only a recurring master's raw `start_at`/`end_at`, so an occurrence
+  introduced by a recurring event created or changed after Edge Function
+  revalidation could occupy the proposed slot without being detected.
+- The root cause was the mismatch between shared domain recurrence expansion
+  and the final database transaction's raw-row overlap predicate.
+
+Implementation completed:
+
+- Added migration `20260902000017_ai_confirmation_recurrence.sql` with a
+  server-only recurrence-aware conflict predicate and supported RRULE date
+  matcher. It expands daily, weekly, monthly, and yearly occurrences in the
+  event timezone; applies moved/cancelled provider exceptions; respects
+  Microsoft materialized instances; honors buffers and half-open adjacency;
+  and fails closed for malformed/unsupported recurrence data.
+- Replaced the final confirmation conflict decision with that predicate while
+  retaining the existing per-user advisory event-write lock, ownership/state
+  checks, atomic event/task/request/suggestion updates, idempotency, and
+  exactly-one-event behavior.
+- Added focused TypeScript and pgTAP coverage for recurring occurrence
+  overlap, recurring create/change after proposal persistence, moved and
+  cancelled exceptions, one-off overlap, adjacency, zero-duration behavior,
+  and accepted-retry idempotency.
+- Regenerated `packages/types/src/database.types.ts` for the server-only
+  database helpers.
+
+Architectural decisions/findings:
+
+- No contradiction with the frozen v1 architecture was found. The shared
+  deterministic engine remains the availability authority; the SQL recurrence
+  helper is only the final atomic transaction boundary needed because the
+  database cannot execute the TypeScript engine.
+- Entitlement is checked when the Pro proposal is generated. Phase 4
+  intentionally grandfathered an already-persisted proposal through
+  confirmation if entitlement later expires; no RevenueCat/billing behavior
+  was invented before Phase 5.
+- Zero-duration events match domain interval normalization: they do not block
+  with no buffer, and a positive buffer grows them into point blockers.
+- The clean reset used a recoverable data-only backup outside the repository;
+  no local database dump, backup, or test artifact is tracked.
+
+Files materially changed:
+
+- `docs/ai-scheduling.md`
+- `docs/sprint-6-active.md`
+- `packages/types/src/database.types.ts`
+- `supabase/functions/_shared/ai/confirmation.test.ts`
+- `supabase/migrations/20260902000017_ai_confirmation_recurrence.sql`
+- `supabase/tests/confirmation_recurrence.test.sql`
+
+Verification:
+
+- `deno test --allow-env _shared/ai/confirmation.test.ts` from
+  `supabase/functions` — PASS (11 tests)
+- `pnpm verify` — PASS (format, lint, workspace typecheck, and 149 domain
+  tests)
+- `(cd supabase/functions && deno task check)` — PASS
+- `(cd supabase/functions && deno task test)` — PASS (132 tests)
+- `supabase db reset --yes` — PASS (clean reset; all migrations through
+  `20260902000017_ai_confirmation_recurrence.sql` applied)
+- `supabase test db` — PASS (5 files, 101 pgTAP/RLS/database tests)
+- `pnpm db:types` — PASS
+- `supabase gen types typescript --local | diff - packages/types/src/database.types.ts`
+  — PASS
+- `git diff --check` — PASS
+- GitHub CI — pending the pushed hardening checkpoint
+
+Known blockers/manual items:
+
+- Authorized live Luna/Terra evaluation still requires a server-side OpenAI
+  key and explicit cost authorization.
+- Phase 5 / RevenueCat remains intentionally unstarted.
+
+Next exact action:
+
+- Commit and push this verified Phase 4 hardening checkpoint, confirm its
+  GitHub CI status, then stop and await authorized live model evaluation. Do
+  not begin Phase 5.
+
+---
+
 # Current Decisions
 
 | Decision                                     | Status   | Choice                                                   |
@@ -1791,13 +1933,13 @@ The next agent must:
 
 Current phase:
 
-`Phase 4 safe confirmation implementation and local verification complete;
-checkpoint pushed; live model evaluation pending; Phase 5 not started`
+`Phase 4 safe confirmation and recurrence hardening complete; Phase 5 not
+started`
 
 Last verified checkpoint:
 
-`004472669f0c9e8770709f836471461bd9610c5e` (clean, pushed Phase 4
-checkpoint; GitHub CI run #28 is green)
+`Pending hardening checkpoint commit; the prior clean Phase 4 checkpoint was
+004472669f0c9e8770709f836471461bd9610c5e (GitHub CI run #28 green).`
 
 Phase 3 implementation checkpoint:
 
@@ -1811,11 +1953,12 @@ and verification checkpoint; GitHub CI run #28 is green)
 
 Current blocker:
 
-`Live Luna/Terra evaluation needs an authorized server-side OpenAI key and
-explicit cost authorization. RevenueCat setup remains a later external gate.`
+`Live Luna/Terra evaluation still needs an authorized server-side OpenAI key
+and explicit cost authorization. Phase 5 / RevenueCat remains intentionally
+unstarted.`
 
 Next exact action:
 
-Await authorized Luna/Terra evaluation when its server-side key and cost
+Await authorized live model evaluation when the server-side key and cost
 authorization are available. Do not begin Phase 5. Preserve deterministic
 candidate membership as the sole availability authority.

@@ -265,6 +265,91 @@ Deno.test('rejects a slot occupied after proposal generation', async () => {
   );
 });
 
+Deno.test('revalidates a recurring master occurrence, not only its raw interval', async () => {
+  await expectCode(
+    confirmAiScheduleSuggestion(
+      { userId: USER_ID, suggestionId: SUGGESTION_ID },
+      deps({
+        repository: repository({
+          loadSuggestion: () =>
+            Promise.resolve(
+              persisted({
+                startAt: '2026-09-01T13:00:00.000Z',
+                endAt: '2026-09-01T14:00:00.000Z',
+              }),
+            ),
+        }),
+        dataSource: source({
+          loadEvents: () =>
+            Promise.resolve([
+              {
+                calendarId: CALENDAR_ID,
+                startAt: '2026-08-25T13:00:00.000Z',
+                endAt: '2026-08-25T14:00:00.000Z',
+                timezone: 'America/New_York',
+                status: 'confirmed',
+                recurrenceRule: 'FREQ=WEEKLY;BYDAY=TU',
+                sourceType: 'google',
+                providerEventId: 'series-1',
+                recurringEventId: null,
+                recurrenceOriginalStartAt: null,
+              },
+            ]),
+        }),
+      }),
+    ),
+    'AI_PROPOSAL_STALE',
+  );
+});
+
+Deno.test('honors a cancelled recurrence exception during revalidation', async () => {
+  const result = await confirmAiScheduleSuggestion(
+    { userId: USER_ID, suggestionId: SUGGESTION_ID },
+    deps({
+      repository: repository({
+        loadSuggestion: () =>
+          Promise.resolve(
+            persisted({
+              startAt: '2026-09-01T13:00:00.000Z',
+              endAt: '2026-09-01T14:00:00.000Z',
+            }),
+          ),
+      }),
+      dataSource: source({
+        loadEvents: () =>
+          Promise.resolve([
+            {
+              calendarId: CALENDAR_ID,
+              startAt: '2026-08-25T13:00:00.000Z',
+              endAt: '2026-08-25T14:00:00.000Z',
+              timezone: 'America/New_York',
+              status: 'confirmed',
+              recurrenceRule: 'FREQ=WEEKLY;BYDAY=TU',
+              sourceType: 'google',
+              providerEventId: 'series-2',
+              recurringEventId: null,
+              recurrenceOriginalStartAt: null,
+            },
+            {
+              calendarId: CALENDAR_ID,
+              startAt: '2026-09-01T13:00:00.000Z',
+              endAt: '2026-09-01T13:00:00.000Z',
+              timezone: 'America/New_York',
+              status: 'cancelled',
+              recurrenceRule: null,
+              sourceType: 'google',
+              providerEventId: 'exception-1',
+              recurringEventId: 'series-2',
+              recurrenceOriginalStartAt: '2026-09-01T13:00:00.000Z',
+            },
+          ]),
+      }),
+    }),
+  );
+
+  assertEquals(result.event.id, EVENT_ID);
+});
+
 Deno.test('rejects relevant task, profile, and calendar version changes', async () => {
   const cases: Array<Partial<FindTimeDataSource>> = [
     { loadTask: () => Promise.resolve(task({ updatedAt: '2026-08-31T11:01:00.000Z' })) },
