@@ -1,7 +1,7 @@
 # Sprint 6 — AI Pro / Find Time
 
-Status: PHASE 4 SAFE CONFIRMATION IMPLEMENTED AND LOCALLY VERIFIED — CHECKPOINT
-COMMIT/PUSH PENDING; LIVE MODEL EVALUATION AND PHASE 5 REMAIN OUT OF SCOPE
+Status: PHASE 4 SAFE CONFIRMATION IMPLEMENTED, VERIFIED, AND PUSHED — LIVE MODEL
+EVALUATION AND PHASE 5 REMAIN OUT OF SCOPE
 
 This file is the source of truth for Sprint 6 implementation and agent handoff.
 
@@ -770,7 +770,7 @@ Checkpoint SHA:
 # Phase 4 — Safe Confirmation / Scheduling
 
 Status: DOCUMENTATION RECONCILED; IMPLEMENTATION AND LOCAL VERIFICATION COMPLETE;
-CHECKPOINT COMMIT/PUSH PENDING (2026-09-02)
+CHECKPOINT PUSHED (2026-09-02)
 
 Goal: convert a proposal into a real scheduled block safely.
 
@@ -901,7 +901,7 @@ transaction.
 
 Checkpoint SHA:
 
-`pending commit`
+`004472669f0c9e8770709f836471461bd9610c5e`
 
 ---
 
@@ -1227,7 +1227,7 @@ Sprint 6 is complete only when:
 - [ ] live AI E2E passes
 - [ ] live RevenueCat sandbox E2E passes
 - [x] documentation reconciled with implementation
-- [ ] final repository state clean and pushed
+- [x] final repository state clean and pushed
 
 ---
 
@@ -1641,8 +1641,8 @@ Starting HEAD:
 
 Ending HEAD:
 
-`pending commit` (Phase 4 implementation and local verification are complete;
-the checkpoint commit and push are the next closeout action)
+`004472669f0c9e8770709f836471461bd9610c5e` (Phase 4 implementation and local
+verification checkpoint pushed to `origin/main`)
 
 Documentation corrections:
 
@@ -1702,7 +1702,8 @@ Verification:
 - `supabase gen types typescript --local | diff - packages/types/src/database.types.ts`
   — PASS
 - `git diff --check` — PASS
-- GitHub CI — pending checkpoint push
+- GitHub CI — PASS (run #28; static and Migrations/RLS jobs green):
+  https://github.com/Andrewy530/BCalAI/actions/runs/33629049121
 
 Findings:
 
@@ -1726,8 +1727,8 @@ Manual/external work remaining:
 
 Next exact action:
 
-- Commit and push this verified Phase 4 checkpoint, confirm GitHub CI, update
-  this tracker with the final SHA/status, and stop before Phase 5.
+- Await authorized live model evaluation when the server-side key and cost
+  authorization are available. Do not begin Phase 5.
 
 ---
 
@@ -1791,14 +1792,12 @@ The next agent must:
 Current phase:
 
 `Phase 4 safe confirmation implementation and local verification complete;
-checkpoint commit/push pending; live model evaluation pending; Phase 5 not
-started`
+checkpoint pushed; live model evaluation pending; Phase 5 not started`
 
 Last verified checkpoint:
 
-`37fd47622ef87af5666c7b77e192eb3537aad29b` (clean, pushed Phase 3
-verification checkpoint; Phase 4 changes are verified locally and pending
-commit/push)
+`004472669f0c9e8770709f836471461bd9610c5e` (clean, pushed Phase 4
+checkpoint; GitHub CI run #28 is green)
 
 Phase 3 implementation checkpoint:
 
@@ -1807,8 +1806,8 @@ verification checkpoint; generated database types aligned for CI)
 
 Phase 4 implementation checkpoint:
 
-`pending commit` (local implementation and full verification complete; commit
-and push are the remaining closeout actions)
+`004472669f0c9e8770709f836471461bd9610c5e` (pushed Phase 4 implementation
+and verification checkpoint; GitHub CI run #28 is green)
 
 Current blocker:
 
@@ -1817,8 +1816,6 @@ explicit cost authorization. RevenueCat setup remains a later external gate.`
 
 Next exact action:
 
-Commit and push the verified Phase 4 checkpoint, confirm its GitHub CI status,
-record the final SHA here, and stop before Phase 5. Perform the authorized
-Luna/Terra evaluation only when its server-side key and cost authorization are
-available. Preserve deterministic candidate membership as the sole
-availability authority.
+Await authorized Luna/Terra evaluation when its server-side key and cost
+authorization are available. Do not begin Phase 5. Preserve deterministic
+candidate membership as the sole availability authority.
