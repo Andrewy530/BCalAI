@@ -154,6 +154,40 @@ describe('generateCandidateSlots', () => {
     const slots = generateCandidateSlots({ constraints: constraints(), busy: [] });
     expect(new Set(slots.map((s) => s.id)).size).toBe(slots.length);
   });
+
+  it('aligns candidate slots to exact second and millisecond zero with a non-zero-millisecond clock fixture', () => {
+    // Window starts at 09:07:23.456 local (13:07:23.456Z)
+    const c1 = constraints({
+      windowStart: '2026-08-31T13:07:23.456Z',
+      granularityMinutes: 15,
+      durationMinutes: 30,
+    });
+    const slots1 = generateCandidateSlots({ constraints: c1, busy: [] });
+
+    expect(slots1.length).toBeGreaterThan(0);
+    // Every slot must have 0 seconds and 0 milliseconds
+    for (const slot of slots1) {
+      expect(slot.start % 60_000).toBe(0);
+      expect(slot.end % 60_000).toBe(0);
+      expect(new Date(slot.start).toISOString().endsWith(':00.000Z')).toBe(true);
+      expect(new Date(slot.end).toISOString().endsWith(':00.000Z')).toBe(true);
+    }
+    // First slot should be 09:15 local (13:15:00.000Z)
+    expect(new Date(slots1[0]!.start).toISOString()).toBe('2026-08-31T13:15:00.000Z');
+
+    // Simulate confirmation revalidation occurring seconds later with different milliseconds
+    const c2 = constraints({
+      windowStart: '2026-08-31T13:07:28.789Z',
+      granularityMinutes: 15,
+      durationMinutes: 30,
+    });
+    const slots2 = generateCandidateSlots({ constraints: c2, busy: [] });
+
+    // Candidate timestamps must be exactly identical despite differing milliseconds at generation/revalidation
+    expect(slots1.map((s) => ({ start: s.start, end: s.end }))).toEqual(
+      slots2.map((s) => ({ start: s.start, end: s.end })),
+    );
+  });
 });
 
 describe('rankSlotsHeuristically', () => {

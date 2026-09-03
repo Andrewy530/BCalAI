@@ -6,7 +6,7 @@
 begin;
 create extension if not exists pgtap;
 
-select plan(20);
+select plan(23);
 
 insert into auth.users (instance_id, id, aud, role, email, created_at, updated_at)
 values (
@@ -386,6 +386,67 @@ select is(
     'b1f1f1f1-1f1f-1f1f-1f1f-1f1f1f1f1f1f')),
   'stale',
   'a zero-duration event blocks when the persisted buffer grows it'
+);
+
+-- DST fall-back ambiguous local time alignment with @cal/domain
+-- 01:30 local in America/New_York on fall-back day 2026-11-01 occurs at 05:30:00Z (EDT) and 06:30:00Z (EST).
+-- @cal/domain resolves ambiguous fall-back times to the earlier (daylight) occurrence at 05:30:00Z.
+insert into public.events (
+  user_id, calendar_id, title, start_at, end_at, timezone, recurrence_rule, source_type
+)
+select '99999999-9999-9999-9999-999999999999', c.id, 'DST fall-back daily series',
+       '2026-10-30T05:30:00Z', '2026-10-30T06:30:00Z', 'America/New_York', 'FREQ=DAILY', 'internal'
+  from public.calendars c
+ where c.user_id = '99999999-9999-9999-9999-999999999999' and c.is_default;
+
+select is(
+  public.ai_event_conflicts_interval(
+    '99999999-9999-9999-9999-999999999999',
+    '2026-11-01T05:30:00Z',
+    '2026-11-01T06:00:00Z',
+    0
+  ),
+  true,
+  'DST fall-back resolves ambiguous 01:30 local to the earlier 05:30Z daylight occurrence'
+);
+
+select is(
+  public.ai_event_conflicts_interval(
+    '99999999-9999-9999-9999-999999999999',
+    '2026-11-01T06:30:00Z',
+    '2026-11-01T07:00:00Z',
+    0
+  ),
+  false,
+  'DST fall-back leaves the second 06:30Z standard hour free matching TypeScript engine'
+);
+
+-- Moved exception from outside interval into interval causes conflict
+insert into public.events (
+  user_id, calendar_id, title, start_at, end_at, timezone, recurrence_rule, source_type, provider_event_id
+)
+select '99999999-9999-9999-9999-999999999999', c.id, 'Series for moved exception',
+       '2099-04-01T09:00:00Z', '2099-04-01T10:00:00Z', 'UTC', 'FREQ=WEEKLY;BYDAY=WE', 'google', 'series-moved-outside'
+  from public.calendars c
+ where c.user_id = '99999999-9999-9999-9999-999999999999' and c.is_default;
+
+insert into public.events (
+  user_id, calendar_id, title, start_at, end_at, timezone, source_type, recurring_event_id, recurrence_original_start_at
+)
+select '99999999-9999-9999-9999-999999999999', c.id, 'Moved from April 1 to April 10',
+       '2099-04-10T14:00:00Z', '2099-04-10T15:00:00Z', 'UTC', 'google', 'series-moved-outside', '2099-04-01T09:00:00Z'
+  from public.calendars c
+ where c.user_id = '99999999-9999-9999-9999-999999999999' and c.is_default;
+
+select is(
+  public.ai_event_conflicts_interval(
+    '99999999-9999-9999-9999-999999999999',
+    '2099-04-10T14:15:00Z',
+    '2099-04-10T14:45:00Z',
+    0
+  ),
+  true,
+  'an exception moved into the checked interval from an original occurrence outside conflicts'
 );
 
 select * from finish();

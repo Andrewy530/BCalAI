@@ -78,12 +78,17 @@ export function expandSchedulingCalendarEvents<T extends SchedulingCalendarEvent
       const instances = event.providerEventId
         ? (instancesBySeriesKey.get(seriesKey(event.calendarId, event.providerEventId)) ?? [])
         : [];
-      const instanceByOriginalStart = new Map(
-        instances
-          .filter((instance) => instance.recurrenceOriginalStartAt !== null)
-          .map((instance) => [instance.recurrenceOriginalStartAt as string, instance]),
-      );
+      const instanceByOriginalStart = new Map<number, T>();
+      for (const instance of instances) {
+        if (instance.recurrenceOriginalStartAt !== null) {
+          const originalStartMs = Date.parse(instance.recurrenceOriginalStartAt);
+          if (Number.isFinite(originalStartMs)) {
+            instanceByOriginalStart.set(originalStartMs, instance);
+          }
+        }
+      }
 
+      const matchedInstances = new Set<T>();
       for (const occurrence of expandOccurrences(
         {
           start: new Date(event.startAt),
@@ -93,8 +98,9 @@ export function expandSchedulingCalendarEvents<T extends SchedulingCalendarEvent
         },
         window,
       )) {
-        const override = instanceByOriginalStart.get(new Date(occurrence.start).toISOString());
+        const override = instanceByOriginalStart.get(occurrence.start);
         if (override) {
+          matchedInstances.add(override);
           if (override.status !== 'cancelled') addOneOff(expanded, override, window);
         } else {
           expanded.push({
@@ -103,6 +109,12 @@ export function expandSchedulingCalendarEvents<T extends SchedulingCalendarEvent
             end: occurrence.end,
             occurrenceIndex: occurrence.index,
           });
+        }
+      }
+
+      for (const instance of instances) {
+        if (!matchedInstances.has(instance) && instance.status !== 'cancelled') {
+          addOneOff(expanded, instance, window);
         }
       }
       continue;

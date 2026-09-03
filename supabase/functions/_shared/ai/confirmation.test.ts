@@ -479,3 +479,58 @@ Deno.test('propagates a confirmation failure without fabricating accepted state'
   );
   assertEquals(canonicalCalls, 0);
 });
+
+Deno.test(
+  'returns stale proposal when accepted canonical event is missing or deleted',
+  async () => {
+    await expectCode(
+      confirmAiScheduleSuggestion(
+        { userId: USER_ID, suggestionId: SUGGESTION_ID },
+        deps({
+          repository: repository({
+            loadSuggestion: () =>
+              Promise.resolve(
+                persisted({
+                  requestStatus: 'accepted',
+                  acceptedEventId: EVENT_ID,
+                  acceptedAt: '2026-08-31T12:01:00.000Z',
+                }),
+              ),
+            loadCanonicalSchedule: () => Promise.resolve(null),
+          }),
+        }),
+      ),
+      'AI_PROPOSAL_STALE',
+    );
+  },
+);
+
+Deno.test(
+  'revalidates successfully when proposal and confirmation have non-zero millisecond clocks',
+  async () => {
+    // Proposal generated when clock had milliseconds: 13:07:23.456Z
+    // Candidate slot aligned to 13:15:00.000Z - 14:15:00.000Z
+    const msPersisted = persisted({
+      startAt: '2026-08-31T13:15:00.000Z',
+      endAt: '2026-08-31T14:15:00.000Z',
+      constraints: {
+        ...CONSTRAINTS,
+        windowStart: '2026-08-31T13:07:23.456Z',
+      },
+    });
+
+    // Confirmation revalidation happens later with different milliseconds: 13:07:28.789Z
+    const result = await confirmAiScheduleSuggestion(
+      { userId: USER_ID, suggestionId: SUGGESTION_ID },
+      deps({
+        now: () => new Date('2026-08-31T13:07:28.789Z'),
+        repository: repository({
+          loadSuggestion: () => Promise.resolve(msPersisted),
+        }),
+      }),
+    );
+
+    assertEquals(result.status, 'accepted');
+    assertEquals(result.event.id, EVENT_ID);
+  },
+);

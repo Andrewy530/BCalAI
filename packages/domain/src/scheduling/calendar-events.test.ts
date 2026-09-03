@@ -118,4 +118,71 @@ describe('expandSchedulingCalendarEvents', () => {
       },
     ]);
   });
+
+  it('matches recurrence exceptions with realistic database/PostgREST timestamp formats', () => {
+    const master = event({
+      recurrenceRule: 'FREQ=WEEKLY;BYDAY=TU',
+      providerEventId: 'master-formats',
+    });
+    // PostgREST format with explicit +00:00 offset instead of .000Z
+    const movedWithOffset = event({
+      id: 'event-offset',
+      recurringEventId: 'master-formats',
+      recurrenceOriginalStartAt: '2026-03-17T09:00:00+00:00',
+      startAt: '2026-03-18T11:00:00.000Z',
+      endAt: '2026-03-18T12:00:00.000Z',
+    });
+    // Explicit non-UTC timezone offset (-04:00 EDT) pointing to the same UTC instant 09:00:00Z
+    const cancelledWithTzOffset = event({
+      id: 'event-tz-offset',
+      status: 'cancelled',
+      recurringEventId: 'master-formats',
+      recurrenceOriginalStartAt: '2026-03-24T05:00:00-04:00',
+    });
+
+    const expanded = expandSchedulingCalendarEvents(
+      [master, movedWithOffset, cancelledWithTzOffset],
+      window,
+    );
+
+    expect(expanded.map((item) => item.event.id)).toEqual(['event-1', 'event-offset']);
+    expect(expanded.map((item) => new Date(item.start).toISOString())).toEqual([
+      '2026-03-10T09:00:00.000Z',
+      '2026-03-18T11:00:00.000Z',
+    ]);
+  });
+
+  it('includes a recurring exception moved into the scheduling window from outside the window', () => {
+    const master = event({
+      // Tuesday series: March 3 (outside window), March 10, March 17, March 24
+      startAt: '2026-03-03T09:00:00.000Z',
+      endAt: '2026-03-03T10:00:00.000Z',
+      recurrenceRule: 'FREQ=WEEKLY;BYDAY=TU',
+      providerEventId: 'master-outside',
+    });
+    // The March 3 occurrence is outside the window (which starts March 9).
+    // It was rescheduled into the window on Thursday March 12.
+    const movedIntoWindow = event({
+      id: 'event-moved-in',
+      recurringEventId: 'master-outside',
+      recurrenceOriginalStartAt: '2026-03-03T09:00:00.000Z',
+      startAt: '2026-03-12T14:00:00.000Z',
+      endAt: '2026-03-12T15:00:00.000Z',
+    });
+
+    const expanded = expandSchedulingCalendarEvents([master, movedIntoWindow], window);
+
+    expect(expanded.map((item) => item.event.id)).toEqual([
+      'event-1', // March 10
+      'event-moved-in', // March 12 (moved from March 3)
+      'event-1', // March 17
+      'event-1', // March 24
+    ]);
+    expect(expanded.map((item) => new Date(item.start).toISOString())).toEqual([
+      '2026-03-10T09:00:00.000Z',
+      '2026-03-12T14:00:00.000Z',
+      '2026-03-17T09:00:00.000Z',
+      '2026-03-24T09:00:00.000Z',
+    ]);
+  });
 });

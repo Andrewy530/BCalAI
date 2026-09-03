@@ -1873,6 +1873,56 @@ Next exact action:
 - Checkpoint is committed, pushed, and CI-green. Stop and await authorized live
   model evaluation. Do not begin Phase 5.
 
+### 2026-09-03 — Phase 4 safe confirmation, recurrence, and availability review hardening
+
+Agent/model: Antigravity / Gemini 3.8 Flash (High)  
+Starting HEAD: `e06b22c66d216f4077ea41a27e77bfa1684c3bb2`  
+Ending HEAD: `9986d4e6a0b280104c2feb6e04110aadf90cd2e0`
+
+Accomplished in this slice:
+
+- Investigated, reproduced, and confirmed all 7 review findings in the full Mac verification toolchain (Docker/PostgreSQL, Deno, pnpm, Vitest, pgTAP).
+- **Finding 1 (Candidate slot millisecond preservation)**:
+  - Reproduced: `alignToGrid` in `packages/domain/src/scheduling/availability.ts` preserved non-zero milliseconds from `new Date()` clock fixtures. Because proposal generation and confirmation revalidation execute at different milliseconds, generated candidate timestamps differed at the millisecond level, causing exact-instant comparisons (`sameInstant`) to fail and erroneously return 409 `AI_PROPOSAL_STALE`.
+  - Fix: Updated `alignToGrid` to extract sub-second milliseconds and subtract elapsed milliseconds within the block, ensuring all generated candidate slots land on exact `:00.000Z` boundaries.
+  - Regression tests: Added tests with non-zero millisecond clock fixtures to `packages/domain/src/scheduling/availability.test.ts` and `supabase/functions/_shared/ai/confirmation.test.ts`.
+- **Finding 2 (Recurrence exception matching format fragility)**:
+  - Reproduced: `packages/domain/src/scheduling/calendar-events.ts` compared raw database strings (`recurrenceOriginalStartAt`) against `new Date(occurrence.start).toISOString()`. PostgREST / database representations with explicit timezone offsets (e.g. `+00:00`, `-04:00`), space separators, or non-millisecond strings failed string equality in the Map lookup.
+  - Fix: Keyed `instanceByOriginalStart` Map by canonical numeric epoch milliseconds (`Date.parse(...)`) and looked up with numeric `occurrence.start`.
+  - Regression tests: Added tests with explicit `+00:00` and non-UTC `-04:00` timestamp formats to `packages/domain/src/scheduling/calendar-events.test.ts`.
+- **Finding 3 (Materialized recurring exception moved into window from outside)**:
+  - Reproduced: `expandSchedulingCalendarEvents` skipped all exceptions of a known master, expecting the master's `expandOccurrences` loop to handle them. However, `expandOccurrences(..., window)` only yields occurrences whose original start was within `window`. A non-cancelled exception whose original start was outside the window but whose effective moved start was inside the window was omitted by TypeScript, while SQL confirmation detected the conflict.
+  - Fix: Tracked matched instances during `expandOccurrences`. Any non-cancelled exception in `instances` not matched by `expandOccurrences` is added via `addOneOff(expanded, instance, window)`.
+  - Regression tests: Added test for exception moved into window from outside to `packages/domain/src/scheduling/calendar-events.test.ts` and `supabase/tests/confirmation_recurrence.test.sql`.
+- **Finding 4 (SQL recurrence conflict helper performance)**:
+  - Investigated & profiled: Benchmarked `ai_event_conflicts_interval` on representative datasets (5,000 past events + 50 past recurring series). The baseline execution took ~1,334 ms.
+  - Root cause: (1) `pg_catalog.pg_timezone_names` view query inside the PL/pgSQL loop scanned the OS filesystem on every recurring event (1,274 ms); (2) outer query scanned all user events without index filtering on non-overlapping one-offs; (3) series with `COUNT` or `UNTIL` that ended in the past were scanned day-by-day.
+  - Fix in migration `20260903000018_ai_confirmation_hardening.sql`: Replaced `pg_timezone_names` scan with PostgreSQL internal timezone resolution in a `begin ... perform now() at time zone tz; exception ... end;` block (0.66 ms, 2000x faster); filtered outer query to overlapping one-offs, exceptions, and series; added early exit for expired recurring series before scan start date.
+  - Benchmark result: Execution time dropped from 1,334 ms to 3.14 ms (425x speedup).
+- **Finding 5 (Edge Function fast path error consistency)**:
+  - Reproduced: In `supabase/functions/_shared/ai/confirmation.ts`, `finishAccepted` threw 500 `UNKNOWN` when `!canonical`, whereas SQL RPC returns `'stale'` (409 `AI_PROPOSAL_STALE`) if the accepted event row is deleted.
+  - Fix: Updated `finishAccepted` to throw `staleProposal()` (409 `AI_PROPOSAL_STALE`) when `!canonical`.
+  - Regression tests: Added test to `supabase/functions/_shared/ai/confirmation.test.ts`.
+- **Finding 6 (SQL confirmation defense-in-depth for elapsed suggestion start time)**:
+  - Reproduced: `confirm_ai_schedule_suggestion` did not check `v_suggestion.start_at <= now()` during the proposed path. If suggestion start time elapsed between Edge revalidation and transaction execution, a past event could be accepted.
+  - Fix in migration `20260903000018_ai_confirmation_hardening.sql`: Added `if v_suggestion.start_at <= now() then return query select 'stale'::text, null::uuid; return; end if;` to proposed path in `confirm_ai_schedule_suggestion`.
+  - Regression tests: Added test to `supabase/tests/confirmation.test.sql`.
+- **Finding 7 (DST fall-back ambiguous local time alignment)**:
+  - Reproduced: Targeted test on 2026-11-01 at 01:30 local in `America/New_York` showed TypeScript `zonedWallClockToUtc` resolved to 05:30Z (first/daylight occurrence, EDT), whereas PostgreSQL `AT TIME ZONE` resolved to 06:30Z (second/standard occurrence, EST). This caused TS availability to deem 06:30Z free and propose it, but SQL confirmation evaluated 06:30Z as conflicting and rejected the proposal as stale.
+  - Fix in migration `20260903000018_ai_confirmation_hardening.sql`: In `ai_event_conflicts_interval`, detected fall-back ambiguous local time when `(v_occurrence_start - interval '1 hour') at time zone tz = (v_cursor_date::timestamp + v_anchor_time)` (or 30 mins) and adjusted `v_occurrence_start` by subtracting the interval, aligning PostgreSQL with `@cal/domain`.
+  - Regression tests: Added test to `supabase/tests/confirmation_recurrence.test.sql`.
+
+Exact verification commands and results:
+- `pnpm -F @cal/domain test` — PASS (12 files, 152 tests)
+- `(cd supabase/functions && deno test --allow-env _shared/ai/confirmation.test.ts)` — PASS (13 tests)
+- `(cd supabase/functions && deno task check)` — PASS
+- `(cd supabase/functions && deno task test)` — PASS (134 tests)
+- `supabase db reset --yes` — PASS (clean replay through migration `20260903000018`)
+- `supabase test db` — PASS (5 test files, 105 tests)
+- `supabase gen types typescript --local | diff - packages/types/src/database.types.ts` — PASS (zero diff)
+- `pnpm verify` — PASS (Prettier, ESLint, 6 workspace typechecks, domain vitests)
+- `git diff --check` — PASS
+
 ---
 
 # Current Decisions
@@ -1939,8 +1989,8 @@ started`
 
 Last verified checkpoint:
 
-`682d1d5f8f91e001d93e11a746fec06ab2596957` (Phase 4 recurrence-hardening
-checkpoint; GitHub CI run #30 is green)
+`9986d4e6a0b280104c2feb6e04110aadf90cd2e0` (Phase 4 review hardening
+checkpoint; all local verifications pass)
 
 Phase 3 implementation checkpoint:
 

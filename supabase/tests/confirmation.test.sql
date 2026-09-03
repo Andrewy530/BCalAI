@@ -6,7 +6,7 @@
 begin;
 create extension if not exists pgtap;
 
-select plan(28);
+select plan(29);
 
 insert into auth.users (instance_id, id, aud, role, email, created_at, updated_at)
 values
@@ -255,6 +255,24 @@ select is(
       and title = 'Occupied confirmation task'),
   0,
   'an occupied proposal creates no event'
+);
+
+-- Defense-in-depth: if suggestion start time elapsed prior to RPC execution, it is stale
+update public.ai_schedule_suggestions
+   set start_at = now() - interval '5 minutes',
+       end_at = now() + interval '25 minutes'
+ where id = 'b2222222-2222-2222-2222-222222222222';
+
+delete from public.events
+ where user_id = 'dddddddd-dddd-dddd-dddd-dddddddddddd'
+   and title = 'Newly conflicting event';
+
+select is(
+  (select status from public.confirm_ai_schedule_suggestion(
+    'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    'b2222222-2222-2222-2222-222222222222')),
+  'stale',
+  'a proposal whose start time has already passed is rejected as stale'
 );
 
 update public.tasks

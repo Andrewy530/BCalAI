@@ -197,8 +197,10 @@ export function generateCandidateSlots(input: AvailabilityInput): CandidateSlot[
 function alignToGrid(instant: number, granularityMinutes: number, timeZone: string): number {
   const parts = getZonedParts(new Date(instant), timeZone);
   const remainder = parts.minute % granularityMinutes;
-  if (remainder === 0 && parts.second === 0) return instant;
-  return instant + ((granularityMinutes - remainder) * MINUTE_MS - parts.second * 1000);
+  const ms = new Date(instant).getMilliseconds();
+  if (remainder === 0 && parts.second === 0 && ms === 0) return instant;
+  const elapsedMs = (remainder * 60 + parts.second) * 1000 + ms;
+  return instant + (granularityMinutes * MINUTE_MS - elapsedMs);
 }
 
 /**

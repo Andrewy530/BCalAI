@@ -151,7 +151,7 @@ async function finishAccepted(
     persisted.taskId,
   );
   if (!canonical) {
-    throw new EdgeError('UNKNOWN', 'The accepted schedule could not be loaded.', 500);
+    throw staleProposal();
   }
   return {
     status: 'accepted',
