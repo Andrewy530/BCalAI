@@ -1913,6 +1913,7 @@ Accomplished in this slice:
   - Regression tests: Added test to `supabase/tests/confirmation_recurrence.test.sql`.
 
 Exact verification commands and results:
+
 - `pnpm -F @cal/domain test` — PASS (12 files, 152 tests)
 - `(cd supabase/functions && deno test --allow-env _shared/ai/confirmation.test.ts)` — PASS (13 tests)
 - `(cd supabase/functions && deno task check)` — PASS
