@@ -769,8 +769,8 @@ Checkpoint SHA:
 
 # Phase 4 — Safe Confirmation / Scheduling
 
-Status: DOCUMENTATION RECONCILED; IMPLEMENTATION AND RECURRENCE HARDENING
-VERIFIED; CHECKPOINT PUSHED (2026-09-02)
+Status: DOCUMENTATION RECONCILED; REVIEW HARDENING AND RECURRENCE
+VERIFIED; CHECKPOINTS PUSHED AND CI GREEN (2026-09-03)
 
 Goal: convert a proposal into a real scheduled block safely.
 
@@ -938,8 +938,9 @@ accepted-retry idempotency.
 
 Checkpoint SHA:
 
-`682d1d5f8f91e001d93e11a746fec06ab2596957` (implementation checkpoint;
-tracker closeout pushed separately)
+`222e7652ec948c63172728a478c36acde5b52096` (review hardening implementation;
+formatting fix `20b75bed4ea163eb1d983a6495cf7b9137b3fa46` CI run #33 green;
+earlier recurrence checkpoint `682d1d5f8f91e001d93e11a746fec06ab2596957`)
 
 ---
 
@@ -1877,7 +1878,7 @@ Next exact action:
 
 Agent/model: Antigravity / Gemini 3.8 Flash (High)  
 Starting HEAD: `e06b22c66d216f4077ea41a27e77bfa1684c3bb2`  
-Ending HEAD: `9986d4e6a0b280104c2feb6e04110aadf90cd2e0`
+Ending HEAD: `222e7652ec948c63172728a478c36acde5b52096` (public pushed review hardening checkpoint; earlier draft referenced local pre-push SHA `9986d4e6a0b280104c2feb6e04110aadf90cd2e0`)
 
 Accomplished in this slice:
 
@@ -1923,6 +1924,31 @@ Exact verification commands and results:
 - `supabase gen types typescript --local | diff - packages/types/src/database.types.ts` — PASS (zero diff)
 - `pnpm verify` — PASS (Prettier, ESLint, 6 workspace typechecks, domain vitests)
 - `git diff --check` — PASS
+- GitHub CI on `222e7652ec948c63172728a478c36acde5b52096`: Run #32 (https://github.com/Andrewy530/BCalAI/actions/runs/33726421649) — `Migrations and RLS` passed; `Lint, types, unit tests` failed at `Format` step with exit code 1 due to Prettier Markdown list formatting in `docs/sprint-6-active.md`.
+- Follow-up formatting fix: `20b75bed4ea163eb1d983a6495cf7b9137b3fa46` (`chore: fix formatting in sprint-6-active.md`).
+- GitHub CI on `20b75bed4ea163eb1d983a6495cf7b9137b3fa46`: Run #33 (https://github.com/Andrewy530/BCalAI/actions/runs/33727292639) — PASS (all jobs green).
+
+### 2026-09-03 — Phase 4 final closeout and tracker reconciliation
+
+Agent/model: Antigravity / Gemini 3.8 Flash (High)
+Starting HEAD: `20b75bed4ea163eb1d983a6495cf7b9137b3fa46`
+Ending HEAD: Pending closeout commit push
+
+Accomplished in this slice:
+
+- Investigated and reproduced the root cause of GitHub CI run #32 failure on commit `222e7652ec948c63172728a478c36acde5b52096`:
+  Prettier format check failed with exit code 1 due to `docs/sprint-6-active.md` lacking a blank line before the Markdown unordered list item under "Exact verification commands and results:".
+- Confirmed commit `20b75bed4ea163eb1d983a6495cf7b9137b3fa46` resolved the formatting defect, resulting in fully green GitHub CI run #33 (https://github.com/Andrewy530/BCalAI/actions/runs/33727292639).
+- Reconciled the Sprint 6 tracker so `docs/sprint-6-active.md` accurately identifies the public pushed review hardening lineage (`222e7652ec948c63172728a478c36acde5b52096` -> `20b75bed4ea163eb1d983a6495cf7b9137b3fa46`) rather than the stale unpushed local SHA `9986d4e6a0b280104c2feb6e04110aadf90cd2e0`.
+- Verified no unintended product changes were introduced.
+- Executed the complete Phase 4 verification gate suite from clean `main`:
+  - `pnpm verify` — PASS (Prettier, ESLint, 6 workspace typechecks, 152 domain vitests)
+  - `(cd supabase/functions && deno task check)` — PASS
+  - `(cd supabase/functions && deno task test)` — PASS (134 tests)
+  - `supabase db reset --yes` — PASS (clean replay through migration `20260903000018`)
+  - `supabase test db` — PASS (5 test files, 105 pgTAP tests)
+  - `supabase gen types typescript --local | diff - packages/types/src/database.types.ts` — PASS (zero diff)
+  - `git diff --check` — PASS
 
 ---
 
@@ -1990,8 +2016,9 @@ started`
 
 Last verified checkpoint:
 
-`9986d4e6a0b280104c2feb6e04110aadf90cd2e0` (Phase 4 review hardening
-checkpoint; all local verifications pass)
+`20b75bed4ea163eb1d983a6495cf7b9137b3fa46` (Phase 4 review hardening
+and formatting checkpoint; public commit 222e7652ec948c63172728a478c36acde5b52096;
+GitHub CI run #33 is green)
 
 Phase 3 implementation checkpoint:
 
@@ -2002,6 +2029,16 @@ Phase 4 implementation checkpoint:
 
 `004472669f0c9e8770709f836471461bd9610c5e` (pushed Phase 4 implementation
 and verification checkpoint; GitHub CI run #28 is green)
+
+Phase 4 recurrence-hardening checkpoint:
+
+`682d1d5f8f91e001d93e11a746fec06ab2596957` (pushed recurrence hardening
+checkpoint; GitHub CI run #30 is green)
+
+Phase 4 review-hardening checkpoint:
+
+`222e7652ec948c63172728a478c36acde5b52096` (review hardening; CI #32) followed
+by `20b75bed4ea163eb1d983a6495cf7b9137b3fa46` (formatting fix; GitHub CI run #33 green)
 
 Current blocker:
 
