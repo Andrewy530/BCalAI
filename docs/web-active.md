@@ -52,10 +52,10 @@ This document is the single source of truth for web client implementation, archi
   - ESLint passing with web architectural boundary enforcement
   - Production Vite build passing (`dist/` asset bundles generated cleanly)
   - Full repo verification passing (`pnpm verify`)
-- **Pushed SHA:** Pending
-- **CI:** Pending
+- **Pushed SHA:** `6c1bfc61fc9bd78b24d6a354df5b6896a0282dcf`
+- **CI:** PASS — [CI run 33909446293](https://github.com/Andrewy530/BCalAI/actions/runs/33909446293)
 - **Blockers:** None
-- **Next Action:** Push checkpoint to main and monitor CI
+- **Next Action:** Evaluated and verified; proceed to Web Phase 2 planning
 
 ---
 
@@ -73,8 +73,8 @@ This document is the single source of truth for web client implementation, archi
   - Foundation routes: `/login`, `/today`, `/calendar`, `/tasks`, `/search`, `/settings`
 - **Tests / Verification:**
   - Typecheck, lint, formatting, production build (`pnpm verify`) all passing
-- **Pushed SHA:** Pending
-- **CI:** Pending
+- **Pushed SHA:** `6c1bfc61fc9bd78b24d6a354df5b6896a0282dcf`
+- **CI:** PASS — [CI run 33909446293](https://github.com/Andrewy530/BCalAI/actions/runs/33909446293)
 - **Blockers:** None
 - **Next Action:** Pre-Phase 2 Evaluate shared data-access extraction
 
