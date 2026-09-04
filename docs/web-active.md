@@ -1,6 +1,6 @@
 # Web Application — Active Implementation Tracker
 
-Status: WEB PHASE 0/1 COMPLETED — READY FOR PUSH
+Status: WEB PHASE 2 COMPLETED — READY FOR PUSH
 
 This document is the single source of truth for web client implementation, architecture boundaries, and handoff.
 
@@ -82,22 +82,41 @@ This document is the single source of truth for web client implementation, archi
 
 ### Architectural Checkpoint: Evaluate Shared Data-Access Extraction
 
-> [!IMPORTANT]
-> Before implementing Web Phase 2 (Tasks / Inbox) and duplicating substantial mapper/repository logic between `apps/mobile/src/features/*/api` and `apps/web/src/features/*/api`, evaluate whether pure row mapping and repository primitives should be extracted into a platform-neutral package (e.g., `@cal/data` or within `@cal/domain`).
+- **Evaluation:** Inspected `apps/mobile/src/features/tasks/api/tasks.api.ts`. The task data access layer consists of ~150 lines of PostgREST queries plus Zod row-to-domain schemas. Pure domain logic (`bucketTasks`, `compareTasks`, `formatDueDate`, `formatDuration`) is already shared via `@cal/domain`. Data schemas and types are already shared via `@cal/schemas` and `@cal/types`.
+- **Decision:** Leave `apps/mobile` unchanged and implement web-specific task APIs under `apps/web/src/features/tasks/api`.
+- **Rationale:** Creating a shared `@cal/data` package or abstracting Supabase clients across mobile (Expo/SecureStore/AsyncStorage) and web (Vite/localStorage) introduces heavy ceremony, client injection complexity, and cross-package versioning without providing tangible architectural benefits for a few lightweight PostgREST queries. Strict isolation between mobile and web is maintained.
 
 ---
 
 ### Web Phase 2 — Tasks / Inbox
 
-- **Goal:** Desktop task list, task CRUD, completion toggle, snooze/due handling, lists/tags, and desktop task editor.
-- **Status:** Planned
-- **Starting SHA:** TBD
-- **Implementation Completed:** TBD
-- **Tests / Verification:** TBD
+- **Goal:** Desktop task list, task CRUD, completion toggle, snooze/due handling, lists/tags, and desktop task inspector.
+- **Status:** Completed
+- **Starting SHA:** `d80ff85a5c8dc0a6810b9f76beeb85df8466bd19`
+- **Architectural Decision:** Implemented web-specific task APIs under `apps/web/src/features/tasks/api/tasks.api.ts` using web's typed Supabase client and `@cal/schemas`, leaving `apps/mobile` unchanged and maintaining strict isolation.
+- **Implementation Completed:**
+  - Extended centralized `queryKeys.tasks` with `lists` and `tags` helpers (`apps/web/src/lib/query/query-client.ts`).
+  - Web tasks API module (`apps/web/src/features/tasks/api/tasks.api.ts`): row mapping schemas, PostgREST queries for `fetchTasks`, `fetchTask`, `fetchTaskLists`, `fetchTags`, `createTask`, `updateTask`, `setTaskCompleted` (with atomic status/completed_at constraint compliance), `deleteTask`, `snoozeTask`, `createTaskList`, `deleteTaskList`.
+  - TanStack Query hooks (`apps/web/src/features/tasks/hooks/useTasks.ts`): queries with 30s stale time, optimistic completion toggle and deletion with error rollback, invalidation on settle.
+  - Task grouping hook (`apps/web/src/features/tasks/hooks/useTaskBuckets.ts`): consuming `@cal/domain`'s `bucketTasks` and `compareTasks` to group work into overdue, due today, upcoming, someday, and completed.
+  - Desktop-first UI components:
+    - `TaskRow` (`apps/web/src/features/tasks/components/TaskRow.tsx` + CSS Module): accessible row with completion checkbox, title strike-through, priority badges, due date badges with semantic tones, duration pills, list indicators, fixed status, and hover quick actions (snooze, delete).
+    - `TaskListPane` (`apps/web/src/features/tasks/components/TaskListPane.tsx` + CSS Module): desktop left pane with view tabs (Inbox, All, Done), list selector, quick-add form, section headers with item counts, empty and loading states.
+    - `TaskInspector` (`apps/web/src/features/tasks/components/TaskInspector.tsx` + CSS Module): desktop right-side inspector panel for viewing and editing task title, notes, due date & time, duration presets, priority, list assignment, tag assignment, flexibility flag, snooze, delete, and save/cancel actions.
+    - `TasksView` (`apps/web/src/features/tasks/components/TasksView.tsx` + CSS Module): 2-pane desktop workspace container with responsive layout.
+    - AppShell integration (`apps/web/src/components/layout/AppShell.tsx` + CSS Module): full-bleed content layout for `/tasks`.
+    - Page integration (`apps/web/src/pages/TasksPage.tsx`): mounts `TasksView`.
+- **Tests / Verification:**
+  - Automated unit tests in `apps/web/src/features/tasks/api/tasks.api.test.ts` (6 tests: row transformations, schema validation, invalid input rejection).
+  - Automated unit tests in `apps/web/src/features/tasks/hooks/useTaskBuckets.test.ts` (3 tests: partitioning, priority/due-date ordering, list filtering).
+  - Full repo verification passing (`pnpm verify`: format check, lint, typecheck, 165 unit tests, production build).
+  - Production build passing (`pnpm --filter @cal/web build`).
+  - Git whitespace check passing (`git diff --check`).
 - **Pushed SHA:** TBD
 - **CI:** TBD
-- **Blockers:** Pre-Phase 2 data-access evaluation
-- **Next Action:** Pending Phase 0/1 completion
+- **Blockers:** None
+- **Remaining Work:** Web Phase 3 — Calendar Read Surface
+- **Next Action:** Push Web Phase 2 commit and verify CI
 
 ---
 

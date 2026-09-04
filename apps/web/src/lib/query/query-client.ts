@@ -55,6 +55,8 @@ export const queryKeys = {
     all: () => ['tasks'] as const,
     list: (openOnly: boolean) => ['tasks', 'list', openOnly] as const,
     detail: (id: string) => ['tasks', 'detail', id] as const,
+    lists: () => ['tasks', 'lists'] as const,
+    tags: () => ['tasks', 'tags'] as const,
   },
   search: (query: string) => ['search', query] as const,
 } as const;

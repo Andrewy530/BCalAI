@@ -229,7 +229,9 @@ export function AppShell() {
           <h1 className={styles.pageTitle}>{currentTitle}</h1>
         </header>
 
-        <main className={styles.contentArea}>
+        <main
+          className={location.pathname === '/tasks' ? styles.contentAreaFull : styles.contentArea}
+        >
           <Outlet />
         </main>
       </div>

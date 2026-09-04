@@ -1,0 +1,216 @@
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background-color: var(--color-bg-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
+  user-select: none;
+  position: relative;
+}
+
+.row:hover {
+  background-color: var(--color-bg-surface-elevated);
+  border-color: var(--color-border);
+}
+
+.rowSelected {
+  background-color: var(--color-bg-surface-elevated);
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 1px var(--color-accent);
+}
+
+.rowCompleted {
+  opacity: 0.65;
+}
+
+.rowCompleted .title {
+  text-decoration: line-through;
+  color: var(--color-text-tertiary);
+}
+
+.checkboxBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--color-border-strong);
+  background-color: transparent;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  transition:
+    border-color var(--transition-fast),
+    background-color var(--transition-fast);
+}
+
+.checkboxBtn:hover {
+  border-color: var(--color-accent);
+}
+
+.checkboxChecked {
+  background-color: var(--color-success);
+  border-color: var(--color-success);
+  color: #ffffff;
+}
+
+.checkboxCheckmark {
+  width: 12px;
+  height: 12px;
+}
+
+.content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.mainLine {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.title {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.metaLine {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--font-size-xs);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+}
+
+.priorityUrgent {
+  background-color: var(--color-danger-subtle);
+  color: var(--color-danger);
+}
+
+.priorityHigh {
+  background-color: var(--color-warning-subtle);
+  color: var(--color-warning);
+}
+
+.priorityNormal {
+  background-color: var(--color-bg-surface-pressed);
+  color: var(--color-text-secondary);
+}
+
+.priorityLow {
+  background-color: var(--color-bg-surface-pressed);
+  color: var(--color-text-tertiary);
+}
+
+.dueOverdue {
+  background-color: var(--color-danger-subtle);
+  color: var(--color-danger);
+  font-weight: var(--font-weight-semibold);
+}
+
+.dueToday {
+  background-color: var(--color-warning-subtle);
+  color: var(--color-warning);
+  font-weight: var(--font-weight-semibold);
+}
+
+.dueSoon {
+  background-color: var(--color-accent-subtle);
+  color: var(--color-accent);
+}
+
+.dueLater {
+  background-color: var(--color-bg-surface-pressed);
+  color: var(--color-text-secondary);
+}
+
+.durationBadge {
+  background-color: var(--color-bg-surface-pressed);
+  color: var(--color-text-secondary);
+}
+
+.listBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.listDot {
+  width: 7px;
+  height: 7px;
+  border-radius: var(--radius-full);
+}
+
+.fixedBadge {
+  background-color: var(--color-bg-surface-pressed);
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-xs);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.row:hover .actions,
+.row:focus-within .actions {
+  opacity: 1;
+}
+
+.actionBtn {
+  background: transparent;
+  border: none;
+  padding: var(--space-1);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-xs);
+  transition:
+    background-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.actionBtn:hover {
+  background-color: var(--color-bg-surface-pressed);
+  color: var(--color-text-primary);
+}
+
+.actionBtnDanger:hover {
+  background-color: var(--color-danger-subtle);
+  color: var(--color-danger);
+}
