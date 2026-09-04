@@ -2154,6 +2154,52 @@ Remaining manual/external work:
 
 ---
 
+### 2026-09-04 — Phase 3 adversarial hardening
+
+Starting HEAD: `322a9562e9299e788741a4b90484848f6dc0da3f`
+
+Confirmed findings and fixes:
+
+1. **`updateRequest` in `proposal-repository.ts` silently succeeded on 0 rows updated.**
+   PostgREST updates matching 0 rows (e.g. non-existent request ID or mismatched
+   user ID) return `error: null` and `data: null`. As a result,
+   `updateRequest` resolved without error, falsely reporting successful state
+   transition (e.g. `pending`, `proposed`, or `failed`).
+   Fix: Chained `.select('id')` to the update query and asserted `data` is
+   non-empty (`data && data.length > 0`), throwing `persistenceError('update', 'not_found')`
+   (500 UNKNOWN EdgeError) if no matching row was modified.
+   Regression tests: Added tests in `_shared/ai/proposal.test.ts` verifying that
+   `supabaseAiScheduleRepository.updateRequest` rejects 0-row matches with a 500
+   UNKNOWN EdgeError and succeeds with proper filters when a row matches.
+
+Suspected cases investigated and verified safe:
+
+- Zero-candidate early exit: Verified that if candidate slot count is 0, the
+  endpoint records a `failed` request with `AI_NO_VALID_SLOT`, throws 422
+  `AI_NO_VALID_SLOT`, and completely bypasses `createProvider()`.
+- Deterministic candidate-only ranking: Verified that `validateAiRankingProposal`
+  enforces contiguous ranks 1..N matching only candidate IDs from the deterministic
+  engine, rejecting unknown slots, duplicate slots, timestamp generation, and extra fields.
+- Atomic rate limiting / advisory lock: Verified that `claim_ai_schedule_request`
+  uses `pg_advisory_xact_lock(hashtextextended(p_user_id::text, 0))` for serial
+  per-user concurrency control, returning `null` and failing with 429 `AI_RATE_LIMITED`
+  when the rolling quota is exceeded.
+- Suggestion persistence: Verified that `insertSuggestions` parses inserted rows
+  with Zod, asserts row count equality against generated suggestions, and maintains
+  rank ordering.
+- Failure containment: Verified that errors during candidate loading, provider ranking,
+  or persistence trigger `markRequestFailed` with the exact error code without
+  corrupting existing state.
+
+Verification:
+
+- `pnpm verify` — PASS (Prettier, ESLint, 6 workspace typechecks, 156 domain tests)
+- `(cd supabase/functions && deno task check)` — PASS
+- `(cd supabase/functions && deno task test)` — PASS (143 tests)
+- `git diff --check` — PASS
+
+---
+
 # Current Decisions
 
 | Decision                                     | Status   | Choice                                                   |
@@ -2218,9 +2264,8 @@ started`
 
 Last verified checkpoint:
 
-`df570091486c04e7fcf0166e59118855457f7655` (Phase 1 adversarial hardening
-closeout; GitHub CI run #35 is green; followed by Phase 2 adversarial hardening
-checkpoint)
+`322a9562e9299e788741a4b90484848f6dc0da3f` (Phase 2 hardening checkpoint; GitHub CI
+run #36 is green)
 
 Phase 1 hardening checkpoint:
 
@@ -2231,6 +2276,10 @@ Phase 2 hardening checkpoint:
 
 `c6a5fca6e180f92d790d8865ef6a9e035c9c823b` (pushed Phase 2 adversarial
 hardening and documentation provenance cleanup; GitHub CI run #36 is green)
+
+Phase 3 hardening checkpoint:
+
+Pending push (hardened `updateRequest` row match verification; zero-candidate early exit, deterministic candidate ranking validation, suggestion persistence invariants verified)
 
 Phase 3 implementation checkpoint:
 

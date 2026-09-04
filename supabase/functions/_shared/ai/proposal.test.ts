@@ -1,8 +1,13 @@
 import { assertEquals, assertRejects } from 'jsr:@std/assert@^1.0.0';
 import type { AiRankingProvider } from './ranking.ts';
 import { generateAiFindTimeProposal, type GenerateAiFindTimeProposalDeps } from './proposal.ts';
-import type { AiScheduleRepository, AiSuggestionToPersist } from './proposal-repository.ts';
+import {
+  supabaseAiScheduleRepository,
+  type AiScheduleRepository,
+  type AiSuggestionToPersist,
+} from './proposal-repository.ts';
 import { type FindTimeDataSource, type FindTimeProfile, type FindTimeTask } from './find-time.ts';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { EdgeError } from '../errors/index.ts';
 
 const USER_ID = '11111111-1111-1111-1111-111111111111';
@@ -277,3 +282,67 @@ Deno.test('marks a request failed when a provider proposes an unknown slot', asy
   assertEquals(updates.at(-1)?.status, 'failed');
   assertEquals(updates.at(-1)?.errorCode, 'AI_INVALID_OUTPUT');
 });
+
+Deno.test('supabaseAiScheduleRepository.updateRequest throws 500 when no row matches', async () => {
+  const admin = {
+    from(table: string) {
+      assertEquals(table, 'ai_schedule_requests');
+      return {
+        update(_payload: Record<string, unknown>) {
+          return this;
+        },
+        eq(_column: string, _value: unknown) {
+          return this;
+        },
+        select(_columns: string) {
+          return Promise.resolve({ data: [], error: null });
+        },
+      };
+    },
+  } as unknown as SupabaseClient;
+
+  const repo = supabaseAiScheduleRepository(admin);
+  const error = await assertRejects(
+    () =>
+      repo.updateRequest(USER_ID, REQUEST_ID, { status: 'failed', errorCode: 'AI_INVALID_OUTPUT' }),
+    EdgeError,
+  );
+
+  assertEquals(error.code, 'UNKNOWN');
+  assertEquals(error.status, 500);
+});
+
+Deno.test(
+  'supabaseAiScheduleRepository.updateRequest succeeds when target row matches',
+  async () => {
+    const filters: Array<[string, unknown]> = [];
+    let selectedColumns: string | null = null;
+    const admin = {
+      from(table: string) {
+        assertEquals(table, 'ai_schedule_requests');
+        return {
+          update(_payload: Record<string, unknown>) {
+            return this;
+          },
+          eq(column: string, value: unknown) {
+            filters.push([column, value]);
+            return this;
+          },
+          select(columns: string) {
+            selectedColumns = columns;
+            return Promise.resolve({ data: [{ id: REQUEST_ID }], error: null });
+          },
+        };
+      },
+    } as unknown as SupabaseClient;
+
+    const repo = supabaseAiScheduleRepository(admin);
+    await repo.updateRequest(USER_ID, REQUEST_ID, { status: 'proposed' });
+
+    assertEquals(selectedColumns, 'id');
+    assertEquals(filters, [
+      ['id', REQUEST_ID],
+      ['user_id', USER_ID],
+    ]);
+  },
+);

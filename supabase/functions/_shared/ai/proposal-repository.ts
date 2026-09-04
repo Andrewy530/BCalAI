@@ -100,12 +100,16 @@ export function supabaseAiScheduleRepository(admin: SupabaseClient): AiScheduleR
       if (patch.completedAt !== undefined) payload.completed_at = patch.completedAt;
       if (Object.keys(payload).length === 0) return;
 
-      const { error } = await admin
+      const { data, error } = await admin
         .from('ai_schedule_requests')
         .update(payload)
         .eq('id', requestId)
-        .eq('user_id', userId);
+        .eq('user_id', userId)
+        .select('id');
       if (error) throw persistenceError('update', error.code);
+      if (!data || data.length === 0) {
+        throw persistenceError('update', 'not_found');
+      }
     },
 
     async insertSuggestions(requestId, suggestions) {
