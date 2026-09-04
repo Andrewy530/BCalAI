@@ -2045,9 +2045,11 @@ remain out of scope.
 
 Starting HEAD: `df570091486c04e7fcf0166e59118855457f7655`
 
-Implementation/pushed SHA: `<pending push>`
+Implementation/pushed SHA: `c6a5fca6e180f92d790d8865ef6a9e035c9c823b`
 
-GitHub CI: `<pending push>`
+GitHub CI: PASS — [CI run 33822750795](https://github.com/Andrewy530/BCalAI/actions/runs/33822750795).
+Both `Lint, types, unit tests` and the hosted `Migrations and RLS` job
+completed successfully.
 
 Confirmed findings and fixes:
 
@@ -2227,8 +2229,8 @@ checkpoint; GitHub CI run #35 is green)
 
 Phase 2 hardening checkpoint:
 
-`<pending push>` (Phase 2 adversarial hardening and documentation provenance
-cleanup)
+`c6a5fca6e180f92d790d8865ef6a9e035c9c823b` (pushed Phase 2 adversarial
+hardening and documentation provenance cleanup; GitHub CI run #36 is green)
 
 Phase 3 implementation checkpoint:
 
