@@ -84,11 +84,37 @@ describe('expandSchedulingCalendarEvents', () => {
       endAt: '2026-03-17T10:30:00.000Z',
     });
 
-    const expanded = expandSchedulingCalendarEvents([master, first, second], window);
+    const expanded = expandSchedulingCalendarEvents([master, first, second], {
+      ...window,
+      end: new Date('2026-03-20T00:00:00.000Z'),
+    });
 
     expect(expanded.map((item) => item.event.providerEventId)).toEqual([
       'occurrence-1',
       'occurrence-2',
+    ]);
+  });
+
+  it('fills gaps when Microsoft occurrence materialization is sparse', () => {
+    const master = event({
+      sourceType: 'microsoft',
+      recurrenceRule: 'FREQ=WEEKLY;BYDAY=TU',
+      providerEventId: 'master-sparse',
+    });
+    const first = event({
+      id: 'event-materialized',
+      sourceType: 'microsoft',
+      providerEventId: 'occurrence-1',
+      recurringEventId: 'master-sparse',
+      recurrenceOriginalStartAt: '2026-03-10T09:00:00.000Z',
+    });
+
+    const expanded = expandSchedulingCalendarEvents([master, first], window);
+
+    expect(expanded.map((item) => new Date(item.start).toISOString())).toEqual([
+      '2026-03-10T09:00:00.000Z',
+      '2026-03-17T09:00:00.000Z',
+      '2026-03-24T09:00:00.000Z',
     ]);
   });
 
@@ -184,5 +210,18 @@ describe('expandSchedulingCalendarEvents', () => {
       '2026-03-17T09:00:00.000Z',
       '2026-03-24T09:00:00.000Z',
     ]);
+  });
+
+  it('fails closed when persisted recurrence data is unsupported', () => {
+    const malformedMaster = event({
+      startAt: '2020-03-10T09:00:00.000Z',
+      endAt: '2020-03-10T10:00:00.000Z',
+      recurrenceRule: 'FREQ=WEEKLY;BYSETPOS=1;BYDAY=TU',
+      providerEventId: 'unsupported-master',
+    });
+
+    expect(() => schedulingEventsToBusyIntervals([malformedMaster], window)).toThrow(
+      'Unsupported calendar recurrence rule',
+    );
   });
 });

@@ -50,11 +50,13 @@ export function expandOccurrences(
 
   const anchor = getZonedParts(event.start, event.timeZone);
   const results: Occurrence[] = [];
-  let index = 0;
   let iterations = 0;
 
-  for (const parts of generateDates(rule, anchor, window, event.timeZone)) {
-    if (++iterations > MAX_ITERATIONS) break;
+  for (const generated of generateDates(rule, anchor, window, event.timeZone)) {
+    if (++iterations > MAX_ITERATIONS) {
+      throw new RangeError('Recurrence expansion exceeded safe iteration limit');
+    }
+    const { parts, index } = generated;
 
     const start = zonedWallClockToUtc(
       {
@@ -63,6 +65,8 @@ export function expandOccurrences(
         day: parts.day,
         hour: anchor.hour,
         minute: anchor.minute,
+        second: anchor.second,
+        millisecond: event.start.getMilliseconds(),
       },
       event.timeZone,
     );
@@ -75,7 +79,6 @@ export function expandOccurrences(
       end: start.getTime() + durationMs,
       index,
     };
-    index += 1;
 
     if (occurrence.start >= window.end.getTime()) break;
     if (overlapsWindow(occurrence, window)) {
@@ -94,6 +97,11 @@ interface DateParts {
   year: number;
   month: number; // 1-12
   day: number; // 1-31
+}
+
+interface GeneratedDate {
+  parts: DateParts;
+  index: number;
 }
 
 interface AnchorParts extends DateParts {
@@ -116,15 +124,15 @@ function compareDate(left: DateParts, right: DateParts): number {
 
 /**
  * Yield candidate dates in chronological order. The generator is lazy so the
- * caller can stop at the window, and it skips whole periods before that window
- * when COUNT is not present.
+ * caller can stop at the window. Daily and weekly rules retain enough index
+ * information to skip whole periods even when COUNT is present.
  */
 function* generateDates(
   rule: RecurrenceRule,
   anchor: AnchorParts,
   window: { start: Date; end: Date },
   timeZone: string,
-): Generator<DateParts> {
+): Generator<GeneratedDate> {
   const windowStartParts = getZonedParts(window.start, timeZone);
 
   switch (rule.freq) {
@@ -132,12 +140,17 @@ function* generateDates(
       const anchorDay = daysFromEpoch(anchor);
       const windowDay = daysFromEpoch(windowStartParts);
       const skip =
-        rule.count === undefined && windowDay > anchorDay
+        windowDay > anchorDay
           ? Math.max(0, Math.floor((windowDay - anchorDay) / rule.interval) - 1)
           : 0;
+      let occurrenceIndex = rule.count === undefined ? 0 : skip;
 
       for (let step = skip; ; step += 1) {
-        yield fromEpochDays(anchorDay + step * rule.interval);
+        yield {
+          parts: fromEpochDays(anchorDay + step * rule.interval),
+          index: occurrenceIndex,
+        };
+        occurrenceIndex += 1;
       }
     }
 
@@ -155,16 +168,26 @@ function* generateDates(
       const windowDay = daysFromEpoch(windowStartParts);
       const windowWeekStart = windowDay - weekdayOffset(dateWeekday(windowDay), rule.wkst);
       const skipWeeks =
-        rule.count === undefined && windowWeekStart > anchorWeekStart
+        windowWeekStart > anchorWeekStart
           ? Math.max(0, Math.floor((windowWeekStart - anchorWeekStart) / (rule.interval * 7)) - 1)
           : 0;
+      const firstWeekCount = days.filter(
+        (day) => anchorWeekStart + weekdayOffset(day.weekday, rule.wkst) >= anchorDay,
+      ).length;
+      let occurrenceIndex =
+        rule.count === undefined
+          ? 0
+          : skipWeeks === 0
+            ? 0
+            : firstWeekCount + (skipWeeks - 1) * days.length;
 
       for (let step = skipWeeks; ; step += 1) {
         const weekStart = anchorWeekStart + step * rule.interval * 7;
         for (const day of days) {
           const dayNumber = weekStart + weekdayOffset(day.weekday, rule.wkst);
           if (dayNumber < anchorDay) continue;
-          yield fromEpochDays(dayNumber);
+          yield { parts: fromEpochDays(dayNumber), index: occurrenceIndex };
+          occurrenceIndex += 1;
         }
       }
     }
@@ -176,6 +199,7 @@ function* generateDates(
         rule.count === undefined && windowMonths > anchorMonths
           ? Math.max(0, Math.floor((windowMonths - anchorMonths) / rule.interval) - 1)
           : 0;
+      let occurrenceIndex = 0;
 
       for (let step = skip; ; step += 1) {
         const absolute = anchorMonths + step * rule.interval;
@@ -185,7 +209,8 @@ function* generateDates(
         if (rule.byDay.length > 0) {
           const day = ordinalWeekdayInMonth(year, month, rule.byDay[0]!);
           if (day !== null && isOnOrAfterAnchor({ year, month, day }, anchor)) {
-            yield { year, month, day };
+            yield { parts: { year, month, day }, index: occurrenceIndex };
+            occurrenceIndex += 1;
           }
           continue;
         }
@@ -195,7 +220,8 @@ function* generateDates(
         for (const day of monthDays) {
           if (day > daysInMonth(year, month)) continue;
           if (!isOnOrAfterAnchor({ year, month, day }, anchor)) continue;
-          yield { year, month, day };
+          yield { parts: { year, month, day }, index: occurrenceIndex };
+          occurrenceIndex += 1;
         }
       }
     }
@@ -205,6 +231,7 @@ function* generateDates(
         rule.count === undefined && windowStartParts.year > anchor.year
           ? Math.max(0, Math.floor((windowStartParts.year - anchor.year) / rule.interval) - 1)
           : 0;
+      let occurrenceIndex = 0;
 
       for (let step = skip; ; step += 1) {
         const year = anchor.year + step * rule.interval;
@@ -215,7 +242,8 @@ function* generateDates(
             : (rule.byMonthDay[0] ?? anchor.day);
         if (day === null || day > daysInMonth(year, month)) continue;
         if (!isOnOrAfterAnchor({ year, month, day }, anchor)) continue;
-        yield { year, month, day };
+        yield { parts: { year, month, day }, index: occurrenceIndex };
+        occurrenceIndex += 1;
       }
     }
   }

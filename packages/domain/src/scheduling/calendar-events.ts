@@ -1,4 +1,5 @@
 import { expandOccurrences } from '../recurrence/expand.ts';
+import { parseRRule } from '../recurrence/rrule.ts';
 
 /**
  * The minimal normalized event shape needed to decide which instants are busy.
@@ -36,7 +37,6 @@ export function expandSchedulingCalendarEvents<T extends SchedulingCalendarEvent
 ): ExpandedSchedulingEvent<T>[] {
   const mastersBySeriesKey = new Map<string, T>();
   const instancesBySeriesKey = new Map<string, T[]>();
-  const materializedMicrosoftSeries = new Set<string>();
 
   for (const event of events) {
     if (event.recurrenceRule && event.providerEventId) {
@@ -47,7 +47,6 @@ export function expandSchedulingCalendarEvents<T extends SchedulingCalendarEvent
       const instances = instancesBySeriesKey.get(key) ?? [];
       instances.push(event);
       instancesBySeriesKey.set(key, instances);
-      if (event.sourceType === 'microsoft') materializedMicrosoftSeries.add(key);
     }
   }
 
@@ -56,10 +55,7 @@ export function expandSchedulingCalendarEvents<T extends SchedulingCalendarEvent
     if (event.status === 'cancelled') continue;
 
     if (event.recurringEventId) {
-      if (
-        mastersBySeriesKey.has(seriesKey(event.calendarId, event.recurringEventId)) &&
-        event.sourceType !== 'microsoft'
-      ) {
+      if (mastersBySeriesKey.has(seriesKey(event.calendarId, event.recurringEventId))) {
         continue;
       }
       addOneOff(expanded, event, window);
@@ -67,14 +63,6 @@ export function expandSchedulingCalendarEvents<T extends SchedulingCalendarEvent
     }
 
     if (event.recurrenceRule) {
-      if (
-        event.sourceType === 'microsoft' &&
-        event.providerEventId &&
-        materializedMicrosoftSeries.has(seriesKey(event.calendarId, event.providerEventId))
-      ) {
-        continue;
-      }
-
       const instances = event.providerEventId
         ? (instancesBySeriesKey.get(seriesKey(event.calendarId, event.providerEventId)) ?? [])
         : [];
@@ -130,6 +118,16 @@ export function schedulingEventsToBusyIntervals(
   events: readonly SchedulingCalendarEvent[],
   window: { start: Date; end: Date },
 ): { start: number; end: number }[] {
+  if (
+    events.some(
+      (event) =>
+        event.status !== 'cancelled' &&
+        event.recurrenceRule !== null &&
+        !parseRRule(event.recurrenceRule),
+    )
+  ) {
+    throw new Error('Unsupported calendar recurrence rule');
+  }
   return expandSchedulingCalendarEvents(events, window).map(({ start, end }) => ({ start, end }));
 }
 

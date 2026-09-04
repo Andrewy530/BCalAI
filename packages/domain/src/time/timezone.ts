@@ -88,7 +88,15 @@ export function getOffsetMinutes(instant: Date, timeZone: string): number {
  *   occurrence.
  */
 export function zonedWallClockToUtc(
-  parts: { year: number; month: number; day: number; hour?: number; minute?: number },
+  parts: {
+    year: number;
+    month: number;
+    day: number;
+    hour?: number;
+    minute?: number;
+    second?: number;
+    millisecond?: number;
+  },
   timeZone: string,
 ): Date {
   const naive = Date.UTC(
@@ -97,7 +105,8 @@ export function zonedWallClockToUtc(
     parts.day,
     parts.hour ?? 0,
     parts.minute ?? 0,
-    0,
+    parts.second ?? 0,
+    parts.millisecond ?? 0,
   );
 
   // First guess using the offset that applies at the naive instant, then

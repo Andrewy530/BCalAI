@@ -92,7 +92,10 @@ describe('expandCalendarEvents', () => {
       endAt: '2026-03-17T10:30:00.000Z',
     });
 
-    const expanded = expandCalendarEvents([master, first, second], window);
+    const expanded = expandCalendarEvents([master, first, second], {
+      ...window,
+      end: new Date('2026-03-20T00:00:00.000Z'),
+    });
 
     expect(expanded).toHaveLength(2);
     expect(expanded.map((item) => item.event.providerEventId)).toEqual([

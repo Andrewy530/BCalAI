@@ -165,6 +165,25 @@ describe('expandOccurrences — DST stability', () => {
       expect(occurrence.end - occurrence.start).toBe(30 * 60_000);
     }
   });
+
+  it('preserves the anchor second and millisecond across occurrences', () => {
+    const precise: RecurringEventInput = {
+      start: new Date('2026-08-31T13:00:30.456Z'),
+      end: new Date('2026-08-31T13:30:30.456Z'),
+      timeZone: NY,
+      recurrenceRule: 'FREQ=DAILY;COUNT=2',
+    };
+
+    const occurrences = expandOccurrences(precise, {
+      start: new Date('2026-08-31T00:00:00Z'),
+      end: new Date('2026-09-03T00:00:00Z'),
+    });
+
+    expect(occurrences.map((occurrence) => new Date(occurrence.start).toISOString())).toEqual([
+      '2026-08-31T13:00:30.456Z',
+      '2026-09-01T13:00:30.456Z',
+    ]);
+  });
 });
 
 describe('expandOccurrences — weekly', () => {
@@ -432,5 +451,22 @@ describe('expandOccurrences — bounds', () => {
     });
 
     expect(result).toHaveLength(1);
+  });
+
+  it('fast-forwards a long-lived COUNT series without dropping a valid occurrence', () => {
+    const oldDaily: RecurringEventInput = {
+      start: new Date('2010-01-01T09:00:00.000Z'),
+      end: new Date('2010-01-01T10:00:00.000Z'),
+      timeZone: 'UTC',
+      recurrenceRule: 'FREQ=DAILY;COUNT=7000',
+    };
+
+    const result = expandOccurrences(oldDaily, {
+      start: new Date('2026-09-01T00:00:00.000Z'),
+      end: new Date('2026-09-02T00:00:00.000Z'),
+    });
+
+    expect(result).toHaveLength(1);
+    expect(new Date(result[0]!.start).toISOString()).toBe('2026-09-01T09:00:00.000Z');
   });
 });

@@ -1953,6 +1953,122 @@ Accomplished in this slice:
 
 ---
 
+### 2026-09-03 — Phase 1 adversarial hardening
+
+Agent/model: Codex / GPT-5. The requested `Gemini 3.8 Flash Medium` label was
+not recorded as the executor because that would not reflect the agent that
+performed this pass.
+
+Starting HEAD: `2200d4100f101445ddfc30f02bf2dda52fe6838b`
+
+Ending/pushed SHA: pending commit and push
+
+Confirmed findings and fixes:
+
+1. **Read-only internal default reached proposal preparation.** The calendars
+   table permits an internal default to be read-only, the repository query did
+   not exclude it, and deterministic preparation checked only for a missing
+   row. The repository now explicitly filters for an internal source, the
+   default flag, and a false read-only flag; preparation repeats all three
+   checks as a server-boundary invariant and returns
+   `AI_DEFAULT_CALENDAR_MISSING` without selecting a fallback.
+2. **Positive buffers missed events just outside the raw scheduling window.**
+   Events were loaded and recurrence-expanded only over the unbuffered window,
+   then padded afterward, so an event ending shortly before the window or
+   starting shortly after it could create false availability at the boundary.
+   Event loading and expansion now use the authoritative window expanded by the
+   validated buffer while candidate generation remains clipped to the original
+   window.
+3. **The blocking-event query could be silently truncated.** A single
+   PostgREST result depended on the configured maximum row count while the
+   correctness-preserving recurrence query intentionally includes masters whose
+   raw interval is outside the window. The repository now pages with an exact
+   count and stable `start_at, id` ordering, advances by the number of rows
+   actually returned, and fails closed on a missing count or incomplete page.
+4. **Sparse Microsoft materialization dropped busy occurrences.** The presence
+   of any Microsoft instance caused the whole master to be skipped, assuming
+   complete materialization. Shared provider-neutral expansion now treats every
+   matching materialized instance as an override and expands the master to fill
+   missing occurrences, without duplicating materialized rows.
+5. **Recurring occurrences lost sub-second precision.** Expansion rebuilt wall
+   clock starts with hour/minute only, shifting provider or persisted series
+   whose anchor had seconds or milliseconds. The shared timezone conversion and
+   recurrence expansion now preserve both fields.
+6. **Long-lived finite series could become falsely free.** `COUNT` prevented the
+   daily/weekly fast-forward path, and the 5,000-iteration safety guard silently
+   stopped before a later valid occurrence. Daily and weekly rules now
+   fast-forward with the correct global occurrence index; exhausting the guard
+   throws instead of silently returning incomplete availability.
+7. **Unsupported persisted RRULEs could become falsely free.** Generic
+   recurrence display fallback treats an unsupported rule as one occurrence,
+   which is safe for rendering but unsafe for server availability when the
+   master began outside the query window. The scheduling-to-busy boundary now
+   rejects unsupported non-cancelled rules before candidate generation.
+
+Regression coverage added:
+
+- Deno orchestration coverage for writable target-calendar invariants and
+  buffer-aware event loading at the window boundary.
+- Deno repository coverage for the exact default-calendar filters and complete
+  pagination even when the server returns fewer rows than requested.
+- Domain coverage for sparse Microsoft materialization, unsupported-rule
+  fail-closed behavior, recurrence anchor seconds/milliseconds, and a valid
+  7,000-occurrence daily series whose current occurrence lies beyond the old
+  iteration ceiling.
+- The existing mobile shared-recurrence test was tightened to verify that
+  materialized instances replace matching generated occurrences without
+  duplicates.
+
+Suspected cases found already safe and left unchanged:
+
+- The strict public request schema exposes only task ID, note, bounded window,
+  buffer, local minute band, and time-of-day preference; engine-owned fields
+  remain rejected.
+- Task ownership is scoped in the repository query, all non-open/non-flexible
+  or linked tasks are rejected, duration comes only from the task estimate, and
+  database integer/range constraints plus server validation reject invalid
+  durations.
+- Horizon normalization clamps past starts to now and caps the end by the exact
+  timed/date-only deadline, explicit end, and 14 local-day boundary.
+- Working-hour intervals, local minute bands including 00:00/24:00, overlapping
+  windows, half-open adjacency, zero-duration/buffer behavior, DST conversion,
+  and candidate uniqueness remain enforced by the shared schemas/domain engine.
+- All owned event sources and hidden calendars remain blocking; only cancelled
+  effective occurrences are excluded. Moved/cancelled Google exceptions and
+  provider timestamp-offset equivalence remain handled by shared expansion.
+- AI receives only sanitized task/ranking context and opaque candidate IDs;
+  event content, calendar visibility, attendees, locations, and provider
+  credentials are neither queried for preparation nor sent to the model.
+- Phase 3 candidate membership/persistence and Phase 4 exact-slot revalidation,
+  snapshot, recurrence, zero-duration, and idempotency contracts remain intact.
+
+Verification completed without Docker:
+
+- Focused domain recurrence/scheduling/timezone tests — PASS (73 tests).
+- Focused Deno Find Time orchestration/repository tests — PASS (17 tests).
+- Focused mobile shared recurrence test — PASS (3 tests).
+- `pnpm verify` — PASS (Prettier, ESLint, six workspace typechecks, 156 domain
+  tests).
+- `(cd supabase/functions && deno task check)` — PASS.
+- `(cd supabase/functions && deno task test)` — PASS (138 tests).
+
+Verification pending by explicit user direction after Docker Desktop failed to
+start with the recurring `sailor-ingest.sock` stale-socket error:
+
+- `supabase db reset --yes`
+- `supabase test db`
+- exact generated Supabase TypeScript types comparison against
+  `packages/types/src/database.types.ts`
+
+No Docker reset, reinstall, socket deletion, or configuration change was
+performed. The blocking-event query remains intentionally recurrence-correct
+and therefore grows with the number of stored series masters; pagination now
+preserves correctness, but a production-scale query benchmark remains pending
+with the Docker/database gates. Live Luna/Terra evaluation and Phase 5 remain
+out of scope.
+
+---
+
 # Current Decisions
 
 | Decision                                     | Status   | Choice                                                   |

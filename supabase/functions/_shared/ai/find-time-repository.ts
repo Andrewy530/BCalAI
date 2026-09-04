@@ -91,8 +91,9 @@ const TASK_COLUMNS =
   'id, title, status, priority, due_at, has_due_time, estimated_minutes, ' +
   'scheduled_event_id, is_flexible, updated_at';
 const EVENT_COLUMNS =
-  'calendar_id, start_at, end_at, timezone, status, recurrence_rule, source_type, ' +
+  'id, calendar_id, start_at, end_at, timezone, status, recurrence_rule, source_type, ' +
   'provider_event_id, recurring_event_id, recurrence_original_start_at';
+const EVENT_PAGE_SIZE = 1_000;
 
 export function supabaseFindTimeDataSource(admin: SupabaseClient): FindTimeDataSource {
   return {
@@ -124,6 +125,7 @@ export function supabaseFindTimeDataSource(admin: SupabaseClient): FindTimeDataS
         .eq('user_id', userId)
         .eq('source_type', 'internal')
         .eq('is_default', true)
+        .eq('is_read_only', false)
         .maybeSingle();
       if (error) throw databaseReadError('default calendar', error.code);
       return data ? targetCalendarRowSchema.parse(data) : null;
@@ -132,19 +134,34 @@ export function supabaseFindTimeDataSource(admin: SupabaseClient): FindTimeDataS
     async loadEvents(userId, window) {
       const start = window.start.toISOString();
       const end = window.end.toISOString();
-      const { data, error } = await admin
-        .from('events')
-        .select(EVENT_COLUMNS)
-        .eq('user_id', userId)
-        .or(
-          `and(status.neq.cancelled,start_at.lt.${end},end_at.gt.${start}),` +
-            'recurrence_rule.not.is.null,' +
-            `and(recurring_event_id.not.is.null,recurrence_original_start_at.gte.${start},` +
-            `recurrence_original_start_at.lt.${end})`,
-        )
-        .order('start_at');
-      if (error) throw databaseReadError('calendar events', error.code);
-      return z.array(eventRowSchema).parse(data ?? []);
+      const rows: unknown[] = [];
+      let offset = 0;
+
+      for (;;) {
+        const { data, error, count } = await admin
+          .from('events')
+          .select(EVENT_COLUMNS, { count: 'exact' })
+          .eq('user_id', userId)
+          .or(
+            `and(status.neq.cancelled,start_at.lt.${end},end_at.gt.${start}),` +
+              'recurrence_rule.not.is.null,' +
+              `and(recurring_event_id.not.is.null,recurrence_original_start_at.gte.${start},` +
+              `recurrence_original_start_at.lt.${end})`,
+          )
+          .order('start_at')
+          .order('id')
+          .range(offset, offset + EVENT_PAGE_SIZE - 1);
+        if (error) throw databaseReadError('calendar events', error.code);
+        if (count === null) throw databaseReadError('calendar events', 'missing_count');
+
+        const page = data ?? [];
+        rows.push(...page);
+        offset += page.length;
+        if (offset >= count) break;
+        if (page.length === 0) throw databaseReadError('calendar events', 'incomplete_page');
+      }
+
+      return z.array(eventRowSchema).parse(rows);
     },
   };
 }

@@ -15,8 +15,8 @@ export interface ExpandedCalendarEvent {
  * Google stores a series master plus only changed instances. Microsoft
  * calendarView/delta may store every occurrence in the configured window.
  * The provider-neutral recurrence metadata lets both representations coexist:
- * an instance replaces the matching generated occurrence, while a Microsoft
- * series with materialized instances does not get expanded a second time.
+ * an instance replaces the matching generated occurrence, while the master
+ * fills any gaps left by sparse provider materialization.
  */
 export function expandCalendarEvents(
   events: readonly CalendarEvent[],

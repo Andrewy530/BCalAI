@@ -103,10 +103,15 @@ export async function prepareDeterministicFindTime(
   requireSupportedTimeZone(profile.timezone);
 
   const targetCalendar = await source.loadTargetCalendar(input.userId);
-  if (!targetCalendar) {
+  if (
+    !targetCalendar ||
+    targetCalendar.sourceType !== 'internal' ||
+    !targetCalendar.isDefault ||
+    targetCalendar.isReadOnly
+  ) {
     throw new EdgeError(
       'AI_DEFAULT_CALENDAR_MISSING',
-      'Create or restore your default BCal calendar before finding time.',
+      'Create or restore a writable default BCal calendar before finding time.',
       409,
     );
   }
@@ -127,8 +132,13 @@ export async function prepareDeterministicFindTime(
     preferredTimeOfDay: input.request.preferredTimeOfDay ?? 'any',
   });
 
-  const events = await source.loadEvents(input.userId, window);
-  const busy = schedulingEventsToBusyIntervals(events, window);
+  const bufferMs = constraints.bufferMinutes * 60_000;
+  const eventWindow = {
+    start: new Date(window.start.getTime() - bufferMs),
+    end: new Date(window.end.getTime() + bufferMs),
+  };
+  const events = await source.loadEvents(input.userId, eventWindow);
+  const busy = schedulingEventsToBusyIntervals(events, eventWindow);
   const generated = generateCandidateSlots({ constraints, busy });
   if (generated.length === 0 && !input.allowNoValidSlot) {
     throw new EdgeError(

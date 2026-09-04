@@ -249,6 +249,45 @@ Deno.test('allows exact adjacency but applies requested event buffers', async ()
   assertEquals(adjacent.candidates[0]?.minutesUntilNextBusy, 0);
 });
 
+Deno.test(
+  'loads enough surrounding event time to apply buffers at the window boundary',
+  async () => {
+    const now = new Date('2026-08-31T13:00:00.000Z'); // 09:00 New York.
+    const meeting = {
+      calendarId: CALENDAR_ID,
+      startAt: '2026-08-31T12:30:00.000Z',
+      endAt: '2026-08-31T12:50:00.000Z',
+      timezone: 'America/New_York',
+      status: 'confirmed' as const,
+      recurrenceRule: null,
+      sourceType: 'internal' as const,
+      providerEventId: null,
+      recurringEventId: null,
+      recurrenceOriginalStartAt: null,
+    };
+    const source = dataSource({
+      loadEvents: (_userId, queryWindow) =>
+        Promise.resolve(
+          new Date(meeting.endAt) > queryWindow.start && new Date(meeting.startAt) < queryWindow.end
+            ? [meeting]
+            : [],
+        ),
+    });
+
+    const result = await prepareDeterministicFindTime(
+      {
+        userId: USER_ID,
+        request: { ...request(), bufferMinutes: 15 },
+        now,
+      },
+      source,
+      candidateId,
+    );
+
+    assertEquals(result.candidates[0]?.startAt, '2026-08-31T13:15:00.000Z');
+  },
+);
+
 Deno.test('returns no-slot for a fully booked window', async () => {
   await expectCode(
     prepareDeterministicFindTime(
@@ -316,6 +355,44 @@ Deno.test(
     );
   },
 );
+
+Deno.test('rejects a read-only or otherwise invalid default target calendar', async () => {
+  for (const invalidCalendar of [
+    {
+      id: CALENDAR_ID,
+      name: 'Personal',
+      sourceType: 'internal' as const,
+      isDefault: true,
+      isReadOnly: true,
+      updatedAt: '2026-08-31T10:30:00.000Z',
+    },
+    {
+      id: CALENDAR_ID,
+      name: 'Personal',
+      sourceType: 'google' as const,
+      isDefault: true,
+      isReadOnly: false,
+      updatedAt: '2026-08-31T10:30:00.000Z',
+    },
+    {
+      id: CALENDAR_ID,
+      name: 'Personal',
+      sourceType: 'internal' as const,
+      isDefault: false,
+      isReadOnly: false,
+      updatedAt: '2026-08-31T10:30:00.000Z',
+    },
+  ]) {
+    await expectCode(
+      prepareDeterministicFindTime(
+        { userId: USER_ID, request: request(), now: NOW },
+        dataSource({ loadTargetCalendar: () => Promise.resolve(invalidCalendar) }),
+        candidateId,
+      ),
+      'AI_DEFAULT_CALENDAR_MISSING',
+    );
+  }
+});
 
 Deno.test('request schema rejects engine-owned overrides and inverted local bands', () => {
   assertEquals(
