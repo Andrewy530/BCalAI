@@ -2158,6 +2158,12 @@ Remaining manual/external work:
 
 Starting HEAD: `322a9562e9299e788741a4b90484848f6dc0da3f`
 
+Implementation/pushed SHA: `fca72669c4501ee8f97ba3236165db2c482c1b54`
+
+GitHub CI: PASS — [CI run 33839322098](https://github.com/Andrewy530/BCalAI/actions/runs/33839322098).
+Both `Lint, types, unit tests` and the hosted `Migrations and RLS` job
+completed successfully.
+
 Confirmed findings and fixes:
 
 1. **`updateRequest` in `proposal-repository.ts` silently succeeded on 0 rows updated.**
@@ -2264,8 +2270,8 @@ started`
 
 Last verified checkpoint:
 
-`322a9562e9299e788741a4b90484848f6dc0da3f` (Phase 2 hardening checkpoint; GitHub CI
-run #36 is green)
+`fca72669c4501ee8f97ba3236165db2c482c1b54` (Phase 3 hardening checkpoint; GitHub CI
+run #40 is green)
 
 Phase 1 hardening checkpoint:
 
@@ -2279,7 +2285,8 @@ hardening and documentation provenance cleanup; GitHub CI run #36 is green)
 
 Phase 3 hardening checkpoint:
 
-Pending push (hardened `updateRequest` row match verification; zero-candidate early exit, deterministic candidate ranking validation, suggestion persistence invariants verified)
+`fca72669c4501ee8f97ba3236165db2c482c1b54` (pushed Phase 3 adversarial
+hardening; GitHub CI run #40 is green)
 
 Phase 3 implementation checkpoint:
 
