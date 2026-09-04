@@ -39,6 +39,9 @@ jobs:
       - name: Unit tests
         run: pnpm test
 
+      - name: Web build
+        run: pnpm --filter @cal/web build
+
   database:
     name: Migrations and RLS
     runs-on: ubuntu-latest

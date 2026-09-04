@@ -8,8 +8,11 @@
   },
   "scripts": {
     "mobile": "pnpm --filter @cal/mobile start",
+    "web": "pnpm --filter @cal/web dev",
     "ios": "pnpm --filter @cal/mobile ios",
     "android": "pnpm --filter @cal/mobile android",
+    "build": "pnpm -r --if-present build",
+    "build:web": "pnpm --filter @cal/web build",
     "typecheck": "pnpm -r --if-present typecheck",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
@@ -21,7 +24,7 @@
     "db:reset": "supabase db reset",
     "db:diff": "supabase db diff -f",
     "db:types": "supabase gen types typescript --local > packages/types/src/database.types.ts",
-    "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test"
+    "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build"
   },
   "devDependencies": {
     "@eslint/js": "^9.12.0",

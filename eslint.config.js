@@ -86,6 +86,44 @@ module.exports = tseslint.config(
     },
   },
 
+  // Web architectural boundaries: Web UI isolated from mobile, no @cal/ui, no native packages.
+  {
+    files: ['apps/web/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@cal/ui', 'react-native*', 'expo*', '**/apps/mobile/**'],
+              message:
+                'apps/web must remain isolated from mobile UI. Do not import @cal/ui, React Native, Expo, or mobile code.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+
+  // Web routes and pages must not talk to Supabase directly; call a feature hook/API.
+  {
+    files: ['apps/web/src/pages/**/*.{ts,tsx}', 'apps/web/src/routes.tsx'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@supabase/*', '**/lib/supabase/*'],
+              message:
+                'Web route/page components must not talk to Supabase directly. Call a feature hook/API from src/features/*.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+
   // Domain packages stay pure: no React, no network, no platform APIs.
   {
     files: ['packages/domain/**/*.ts', 'packages/schemas/**/*.ts'],

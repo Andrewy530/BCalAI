@@ -118,6 +118,12 @@ that, day to day:
 pnpm mobile
 ```
 
+To run the desktop web client:
+
+```bash
+pnpm web
+```
+
 Sign in with the seeded account: `dev@example.com` / `password123`.
 
 ## Checks
@@ -126,22 +132,25 @@ Sign in with the seeded account: `dev@example.com` / `password123`.
 pnpm verify
 ```
 
-Runs format check, lint, typecheck, and unit tests — the same set CI runs.
+Runs format check, lint, typecheck, unit tests, and production web build — the same set CI runs.
 Database tests need the local stack running:
 
 ```bash
 supabase test db
 ```
 
-Sprint 6 decisions and handoff are recorded in
-[`docs/sprint-6-active.md`](docs/sprint-6-active.md). Exact Sprint 5 verification
-evidence remains in [`docs/sprint-5-active.md`](docs/sprint-5-active.md).
+Active tracks:
+
+- Mobile Sprint 6 decisions and handoff: [`docs/sprint-6-active.md`](docs/sprint-6-active.md).
+- Web application architecture and roadmap: [`docs/web-active.md`](docs/web-active.md).
+- Historical Sprint 5 verification evidence: [`docs/sprint-5-active.md`](docs/sprint-5-active.md).
 
 ## Layout
 
 ```
-apps/mobile/        Expo app. app/ is routes only; src/ holds features.
-packages/ui/        Design system: tokens, primitives, ThemeProvider.
+apps/mobile/        Expo iOS/Android app. app/ is routes only; src/ holds features.
+apps/web/           Desktop React web client. Vite + React Router + plain CSS.
+packages/ui/        Mobile design system: tokens, primitives, ThemeProvider.
 packages/domain/    Pure logic: time, availability engine, layout, grouping.
 packages/schemas/   Zod schemas — the single source of truth for shapes.
 packages/types/     Generated database types and shared result/error types.

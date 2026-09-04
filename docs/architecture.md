@@ -14,21 +14,23 @@ engine already generated.
 ## Layers
 
 ```
-Route (apps/mobile/app/**)        params, composition, navigation
+Route (apps/mobile/app/** | apps/web/src/routes.tsx)  params, composition, navigation
         │
-Feature screen                    layout and interaction
+Feature screen / page                                 layout and interaction
         │
-Feature hook                      TanStack Query, mutations, side effects
+Feature hook                                          TanStack Query, mutations, side effects
         │
-Feature API module                Supabase calls, snake_case ↔ camelCase
+Feature API module                                    Supabase calls, snake_case ↔ camelCase
         │
-Supabase                          Postgres + RLS, Edge Functions, Cron, Vault
+Supabase                                              Postgres + RLS, Edge Functions, Cron, Vault
         │
-Provider adapters                 Google Calendar, Microsoft Graph
+Provider adapters                                     Google Calendar, Microsoft Graph
 ```
 
 Each arrow is one-directional. A screen never reaches past its hook; an API
-module never imports a component.
+module never imports a component. Mobile (`apps/mobile`) and Web (`apps/web`)
+are independent presentation clients over the shared Supabase backend, `@cal/domain`
+deterministic logic, `@cal/schemas` contracts, and `@cal/types`.
 
 ## Where state lives
 
@@ -36,7 +38,7 @@ module never imports a component.
 | ------------- | ------------------------------ | -------------------------------------------- |
 | Server state  | TanStack Query                 | events, tasks, profile, entitlement          |
 | UI-only state | Zustand                        | current view mode, selected date, open sheet |
-| Form state    | React Hook Form                | the event editor being filled in             |
+| Form state    | React Hook Form / local state  | the event editor being filled in             |
 | Session       | Supabase Auth + `AuthProvider` | who is signed in                             |
 
 Database rows are never mirrored into Zustand. If two components need the same
@@ -50,8 +52,8 @@ row, they use the same query key.
 - `@cal/domain` — pure functions: time-zone conversion, interval math, the
   availability engine, calendar layout, task bucketing. No React, no network,
   no platform APIs. This is where the unit tests are.
-- `@cal/ui` — design tokens and primitives. Owns the theme so a future web or
-  admin surface can adopt the same scale.
+- `@cal/ui` — design tokens and primitives for mobile. Web maintains its own
+  CSS custom properties and CSS Modules under `apps/web`.
 - `@cal/types` — generated database types plus the shared `Result`/`AppError`.
 
 ## Decision A — source of truth
