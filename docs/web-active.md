@@ -112,11 +112,11 @@ This document is the single source of truth for web client implementation, archi
   - Full repo verification passing (`pnpm verify`: format check, lint, typecheck, 165 unit tests, production build).
   - Production build passing (`pnpm --filter @cal/web build`).
   - Git whitespace check passing (`git diff --check`).
-- **Pushed SHA:** TBD
-- **CI:** TBD
+- **Pushed SHA:** `d8c3eb9e1754bae19f25c702699ee23506af67a8`
+- **CI:** PASS — [CI run 33929579271](https://github.com/Andrewy530/BCalAI/actions/runs/33929579271)
 - **Blockers:** None
 - **Remaining Work:** Web Phase 3 — Calendar Read Surface
-- **Next Action:** Push Web Phase 2 commit and verify CI
+- **Next Action:** Proceed to Web Phase 3 planning
 
 ---
 
