@@ -1961,7 +1961,12 @@ performed this pass.
 
 Starting HEAD: `2200d4100f101445ddfc30f02bf2dda52fe6838b`
 
-Ending/pushed SHA: pending commit and push
+Implementation/pushed SHA:
+`56860bfb56efc562dc87711722c5bba46044dd31`
+
+GitHub CI: PASS — [CI run 33820931605](https://github.com/Andrewy530/BCalAI/actions/runs/33820931605).
+Both `Lint, types, unit tests` and the hosted `Migrations and RLS` job
+completed successfully.
 
 Confirmed findings and fixes:
 
@@ -2052,20 +2057,24 @@ Verification completed without Docker:
 - `(cd supabase/functions && deno task check)` — PASS.
 - `(cd supabase/functions && deno task test)` — PASS (138 tests).
 
-Verification pending by explicit user direction after Docker Desktop failed to
-start with the recurring `sailor-ingest.sock` stale-socket error:
+Windows-native verification pending by explicit user direction after Docker
+Desktop failed to start with the recurring `sailor-ingest.sock` stale-socket
+error:
 
 - `supabase db reset --yes`
 - `supabase test db`
 - exact generated Supabase TypeScript types comparison against
   `packages/types/src/database.types.ts`
 
-No Docker reset, reinstall, socket deletion, or configuration change was
+The hosted CI job independently started Supabase, applied migrations from
+scratch, passed database tests, and passed its exact generated-types check. It
+does not replace the specifically requested Windows-native evidence above. No
+Docker reset, reinstall, socket deletion, or configuration change was
 performed. The blocking-event query remains intentionally recurrence-correct
 and therefore grows with the number of stored series masters; pagination now
 preserves correctness, but a production-scale query benchmark remains pending
-with the Docker/database gates. Live Luna/Terra evaluation and Phase 5 remain
-out of scope.
+with the local Docker/database gates. Live Luna/Terra evaluation and Phase 5
+remain out of scope.
 
 ---
 
