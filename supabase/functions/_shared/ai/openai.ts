@@ -33,12 +33,13 @@ export interface OpenAiRankingDeps {
 
 const responseUsageSchema = z
   .object({
-    input_tokens: z.number().int().min(0),
-    output_tokens: z.number().int().min(0),
-    total_tokens: z.number().int().min(0),
+    input_tokens: z.number().int().min(0).nullable().optional(),
+    output_tokens: z.number().int().min(0).nullable().optional(),
+    total_tokens: z.number().int().min(0).nullable().optional(),
     output_tokens_details: z
-      .object({ reasoning_tokens: z.number().int().min(0).optional() })
+      .object({ reasoning_tokens: z.number().int().min(0).nullable().optional() })
       .passthrough()
+      .nullable()
       .optional(),
   })
   .passthrough();
@@ -146,7 +147,7 @@ export function createOpenAiRankingProvider(
 export function openAiRankingConfigFromEnv(
   getEnv: (name: string) => string | undefined = (name) => Deno.env.get(name),
 ): OpenAiRankingConfig {
-  const provider = getEnv('AI_PROVIDER') ?? 'openai';
+  const provider = (getEnv('AI_PROVIDER') ?? 'openai').trim();
   if (provider !== 'openai') {
     throw new EdgeError(
       'AI_PROVIDER_UNAVAILABLE',
@@ -155,12 +156,15 @@ export function openAiRankingConfigFromEnv(
     );
   }
 
-  const apiKey = getEnv('OPENAI_API_KEY');
+  const rawApiKey = getEnv('OPENAI_API_KEY');
+  const apiKey = rawApiKey?.trim();
   if (!apiKey) throw new EdgeError('AI_PROVIDER_UNAVAILABLE', 'AI ranking is not configured.', 503);
 
-  const reasoningEffort = reasoningEffortSchema.safeParse(getEnv('AI_REASONING_EFFORT') ?? 'low');
-  const timeoutMs = parseInteger(getEnv('AI_TIMEOUT_MS') ?? String(DEFAULT_TIMEOUT_MS));
-  const model = getEnv('AI_MODEL') ?? 'gpt-5.6-luna';
+  const reasoningEffortRaw = (getEnv('AI_REASONING_EFFORT') ?? 'low').trim();
+  const reasoningEffort = reasoningEffortSchema.safeParse(reasoningEffortRaw);
+  const timeoutMsRaw = (getEnv('AI_TIMEOUT_MS') ?? String(DEFAULT_TIMEOUT_MS)).trim();
+  const timeoutMs = parseInteger(timeoutMsRaw);
+  const model = (getEnv('AI_MODEL') ?? 'gpt-5.6-luna').trim();
   if (
     !reasoningEffort.success ||
     !Number.isFinite(timeoutMs) ||
@@ -262,7 +266,10 @@ function parseOutputJson(response: z.infer<typeof openAiResponseSchema>): unknow
     for (const content of message.data.content) {
       if (refusalSchema.safeParse(content).success) throw providerUnavailable();
       const parsedText = outputTextSchema.safeParse(content);
-      if (parsedText.success) outputText = parsedText.data.text;
+      if (parsedText.success) {
+        if (outputText !== null) throw invalidOutput();
+        outputText = parsedText.data.text;
+      }
     }
   }
 

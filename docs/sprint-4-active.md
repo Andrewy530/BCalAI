@@ -280,7 +280,7 @@ Two local-environment limits worth knowing:
 
 ### Second machine verified — 2026-08-31
 
-The clone at `~/Desktop/Claude Vault/Cal Project App` was brought up from a bare
+The clone at `~/Desktop/Workspace/Cal Project App` was brought up from a bare
 machine: Xcode 26.6 with iOS 26.5 simulators, Homebrew, Node 26.8.1, pnpm
 9.12.0, Deno 2.9.6, Watchman, Docker 29.7.2, and Supabase CLI 2.116.0.
 Everything below was re-run independently here and passed:

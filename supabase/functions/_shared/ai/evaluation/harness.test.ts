@@ -2,7 +2,7 @@ import { assertAlmostEquals, assertEquals } from 'jsr:@std/assert@^1.0.0';
 import { aiRankCandidateSlotsInputSchema } from '@cal/schemas/scheduling';
 
 import { EdgeError } from '../../errors/index.ts';
-import type { AiRankingProvider } from '../ranking.ts';
+import type { AiRankingProvider, AiRankingResult } from '../ranking.ts';
 import { AI_EVALUATION_FIXTURES } from './fixtures.ts';
 import { gradeFixture, runAiRankingEvaluation } from './harness.ts';
 
@@ -105,3 +105,78 @@ Deno.test('counts rejected unsafe model output as safe rejection but not a valid
     passed: false,
   });
 });
+
+Deno.test(
+  'mechanical grading rejects proposals with unknown slots, duplicates, or malformed schema',
+  () => {
+    const fixture = AI_EVALUATION_FIXTURES.find((candidate) => candidate.id === 'morning');
+    if (!fixture) throw new Error('Missing fixture.');
+
+    const topId = fixture.acceptableTopCandidateIds[0]!;
+    const nextValidId = fixture.acceptableTopCandidateIds[1]!;
+
+    const dummyMetadata = {
+      provider: 'openai',
+      model: 'gpt-5.6-luna',
+      responseId: 'resp_test',
+      promptVersion: 'find-time-ranker-v1',
+      latencyMs: 50,
+      usage: { inputTokens: 100, outputTokens: 20, reasoningTokens: null, totalTokens: 120 },
+    };
+
+    // Unknown slot at rank 2
+    const unknownSlotResult: AiRankingResult = {
+      proposal: {
+        suggestions: [
+          { slotId: topId, rank: 1, score: 0.95, reason: 'Valid top.' },
+          { slotId: 'unknown_slot_xyz', rank: 2, score: 0.8, reason: 'Unknown slot.' },
+        ],
+      },
+      metadata: dummyMetadata,
+    };
+    const unknownGrade = gradeFixture(fixture, unknownSlotResult, null, true);
+    assertEquals(unknownGrade.candidateSafetyPassed, false);
+    assertEquals(unknownGrade.invariantPassed, false);
+    assertEquals(unknownGrade.passed, false);
+
+    // Duplicate slot ID
+    const duplicateSlotResult: AiRankingResult = {
+      proposal: {
+        suggestions: [
+          { slotId: topId, rank: 1, score: 0.95, reason: 'First.' },
+          { slotId: topId, rank: 2, score: 0.8, reason: 'Duplicate slot.' },
+        ],
+      },
+      metadata: dummyMetadata,
+    };
+    const duplicateSlotGrade = gradeFixture(fixture, duplicateSlotResult, null, true);
+    assertEquals(duplicateSlotGrade.schemaValid, false);
+    assertEquals(duplicateSlotGrade.candidateSafetyPassed, false);
+    assertEquals(duplicateSlotGrade.passed, false);
+
+    // Duplicate rank
+    const duplicateRankResult = {
+      proposal: {
+        suggestions: [
+          { slotId: topId, rank: 1, score: 0.95, reason: 'First.' },
+          { slotId: nextValidId, rank: 1, score: 0.8, reason: 'Duplicate rank.' },
+        ],
+      },
+      metadata: dummyMetadata,
+    } as unknown as AiRankingResult;
+    const duplicateRankGrade = gradeFixture(fixture, duplicateRankResult, null, true);
+    assertEquals(duplicateRankGrade.schemaValid, false);
+    assertEquals(duplicateRankGrade.passed, false);
+
+    // Malformed proposal (score > 1)
+    const malformedScoreResult = {
+      proposal: {
+        suggestions: [{ slotId: topId, rank: 1, score: 1.5, reason: 'Bad score.' }],
+      },
+      metadata: dummyMetadata,
+    } as unknown as AiRankingResult;
+    const malformedGrade = gradeFixture(fixture, malformedScoreResult, null, true);
+    assertEquals(malformedGrade.schemaValid, false);
+    assertEquals(malformedGrade.passed, false);
+  },
+);

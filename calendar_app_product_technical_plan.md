@@ -2103,7 +2103,7 @@ implementation. The current sprint handoff is `docs/sprint-6-active.md`;
 2. `docs/design-system.md` — exact visual tokens and reusable UI component rules.
 3. `docs/sync-engine.md` — complete Google/Microsoft sync state machine.
 4. `docs/ai-scheduling.md` — deterministic slot algorithm + AI function schemas.
-5. `AGENTS.md` — coding rules for both developers and AI coding agents.
+5. `AGENTS.md` — engineering and architecture rules for repository development.
 6. `README.md` — setup instructions so either developer can clone and run the app quickly.
 
 They are reference documents, not a replacement for the live sprint handoff or

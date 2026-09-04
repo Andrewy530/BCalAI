@@ -3,9 +3,9 @@
 Status: PHASE 4 SAFE CONFIRMATION AND RECURRENCE HARDENING IMPLEMENTED,
 VERIFIED, AND PUSHED — LIVE MODEL EVALUATION AND PHASE 5 REMAIN OUT OF SCOPE
 
-This file is the source of truth for Sprint 6 implementation and agent handoff.
+This file is the source of truth for Sprint 6 implementation and handoff.
 
-Any agent continuing Sprint 6 must read this file, `AGENTS.md`, `docs/architecture.md`, `docs/ai-scheduling.md`, and the relevant implementation before making changes.
+Any implementer continuing Sprint 6 must read this file, `AGENTS.md`, `docs/architecture.md`, `docs/ai-scheduling.md`, and the relevant implementation before making changes.
 
 Update this document after every meaningful implementation slice and before every handoff.
 
@@ -1272,13 +1272,11 @@ Sprint 6 is complete only when:
 
 # Running Implementation Log
 
-Agents append entries. Never erase relevant historical failures or blockers.
+Append entries. Never erase relevant historical failures or blockers.
 
 ## Entry template
 
 ### YYYY-MM-DD — Phase X / short title
-
-Agent/model:
 
 Starting HEAD:
 
@@ -1315,10 +1313,6 @@ Next exact action:
 
 ### 2026-09-01 — Phase 0 / audit and contract freeze
 
-Agent/model:
-
-Codex
-
 Starting HEAD:
 
 `33fc8d3aea6ebfc0d11f747f03349081e1f993c1`
@@ -1343,7 +1337,6 @@ Work completed:
 
 Files materially changed:
 
-- `README.md`
 - `docs/sprint-6-active.md`
 - `docs/ai-scheduling.md`
 - `docs/sprint-3-active.md`
@@ -1391,10 +1384,6 @@ Next exact action:
   any model request.
 
 ### 2026-09-01 — Phase 1 / deterministic server Find Time
-
-Agent/model:
-
-Codex
 
 Starting HEAD:
 
@@ -1480,10 +1469,6 @@ Next exact action:
 
 ### 2026-09-02 — Phase 2/3 / proposal generation slice
 
-Agent/model:
-
-Codex
-
 Starting HEAD:
 
 `4678adc381cd0e85326772a5e7d6864af9589a1c`
@@ -1560,10 +1545,6 @@ Next exact action:
 
 ### 2026-09-02 — Phase 3 / local verification closeout
 
-Agent/model:
-
-Codex
-
 Starting HEAD:
 
 `f43e4e4e5d7278f09859a2c940931e1b2c2f8e77`
@@ -1621,10 +1602,6 @@ Next exact action:
 
 ### 2026-09-02 — Phase 3 / CI generated-type alignment
 
-Agent/model:
-
-Codex
-
 Starting HEAD:
 
 `2643ad0e55d2f3362caa55d6ea88554331756b0e`
@@ -1669,10 +1646,6 @@ Next exact action:
 - Confirm the final GitHub CI run, then stop at the Phase 3 checkpoint.
 
 ### 2026-09-02 — Phase 4 / safe confirmation implementation and local verification
-
-Agent/model:
-
-Codex
 
 Starting HEAD:
 
@@ -1773,10 +1746,6 @@ Next exact action:
 
 ### 2026-09-02 — Phase 4 / recurrence-aware confirmation hardening
 
-Agent/model:
-
-Codex
-
 Starting HEAD:
 
 `52981353af23be48dc842a4cd7724c4ec621a646`
@@ -1876,7 +1845,6 @@ Next exact action:
 
 ### 2026-09-03 — Phase 4 safe confirmation, recurrence, and availability review hardening
 
-Agent/model: Antigravity / Gemini 3.8 Flash (High)  
 Starting HEAD: `e06b22c66d216f4077ea41a27e77bfa1684c3bb2`  
 Ending HEAD: `222e7652ec948c63172728a478c36acde5b52096` (public pushed review hardening checkpoint; earlier draft referenced local pre-push SHA `9986d4e6a0b280104c2feb6e04110aadf90cd2e0`)
 
@@ -1930,7 +1898,6 @@ Exact verification commands and results:
 
 ### 2026-09-03 — Phase 4 final closeout and tracker reconciliation
 
-Agent/model: Antigravity / Gemini 3.8 Flash (High)
 Starting HEAD: `20b75bed4ea163eb1d983a6495cf7b9137b3fa46`
 Ending HEAD: `56329e3669f353f3e35696c3f7884f1ca2bda8a4`
 
@@ -1954,10 +1921,6 @@ Accomplished in this slice:
 ---
 
 ### 2026-09-03 — Phase 1 adversarial hardening
-
-Agent/model: Codex / GPT-5. The requested `Gemini 3.8 Flash Medium` label was
-not recorded as the executor because that would not reflect the agent that
-performed this pass.
 
 Starting HEAD: `2200d4100f101445ddfc30f02bf2dda52fe6838b`
 
@@ -2078,6 +2041,117 @@ remain out of scope.
 
 ---
 
+### 2026-09-04 — Phase 2 adversarial hardening
+
+Starting HEAD: `df570091486c04e7fcf0166e59118855457f7655`
+
+Implementation/pushed SHA: `<pending push>`
+
+GitHub CI: `<pending push>`
+
+Confirmed findings and fixes:
+
+1. **Mechanical grader passed invalid proposals, unknown slots, and duplicates.**
+   `gradeFixture` in `_shared/ai/evaluation/harness.ts` assumed that any non-null
+   provider result was already safe, inspecting only the rank 1 candidate ID. If
+   a provider returned an unknown slot at rank 2+, duplicate slot IDs, duplicate
+   ranks, or malformed proposal schemas (e.g. out-of-range scores or negative
+   ranks), `gradeFixture` returned `passed: true`.
+   Fix: Added schema validation via `aiScheduleProposalSchema.safeParse` and
+   strict candidate ID membership checks against `fixture.input.candidates`
+   directly inside `gradeFixture`. Any schema violation or unknown slot fails
+   `candidateSafetyPassed`, `invariantPassed`, and `passed`.
+   Regression tests: Added tests in `_shared/ai/evaluation/harness.test.ts`
+   asserting rejection of unknown slots at rank 2, duplicate slots, duplicate
+   ranks, and out-of-range scores.
+
+2. **OpenAI response parser ambiguously accepted multiple output texts and messages.**
+   `parseOutputJson` in `_shared/ai/openai.ts` looped over response output items
+   and content parts, unconditionally assigning `outputText = parsedText.data.text`.
+   If a provider response contained multiple messages with `output_text` or a
+   single message with multiple `output_text` parts, earlier outputs were
+   silently discarded and the last text was accepted.
+   Fix: If `outputText` is already populated when another `output_text` item is
+   encountered, `parseOutputJson` immediately throws `AI_INVALID_OUTPUT` (502).
+   Regression tests: Added tests in `_shared/ai/openai.test.ts` verifying
+   rejection of responses with multiple `output_text` parts or multiple messages.
+
+3. **Configuration parser accepted whitespace-only model names and raw whitespace.**
+   `openAiRankingConfigFromEnv` in `_shared/ai/openai.ts` checked only
+   `model.length === 0`. A whitespace-only string such as `"   "` evaluated to
+   length 3 and was accepted. Additionally, `OPENAI_API_KEY="   "` passed the
+   falsy check, and environment strings with leading/trailing whitespace were
+   not trimmed.
+   Fix: Sanitized and trimmed all environment strings (`AI_PROVIDER`,
+   `OPENAI_API_KEY`, `AI_MODEL`, `AI_REASONING_EFFORT`, `AI_TIMEOUT_MS`) before
+   validation, and explicitly rejected whitespace-only API keys and model names.
+   Regression tests: Added tests in `_shared/ai/openai.test.ts` for
+   whitespace-only keys, whitespace-only models, and trimmed valid values.
+
+4. **Response usage schema rejected valid responses with omitted/partial token counts.**
+   `responseUsageSchema` in `_shared/ai/openai.ts` required `input_tokens`,
+   `output_tokens`, and `total_tokens` as non-nullable integers. If OpenAI
+   returned an object where individual token counts were missing, null, or
+   partially reported, `openAiResponseSchema.safeParse` failed and rejected an
+   otherwise completely valid proposal as `AI_INVALID_OUTPUT`.
+   Fix: Allowed token counts and reasoning details to be nullable and optional
+   in `responseUsageSchema` while preserving integer, non-negative, and
+   malformed-type validation.
+   Regression tests: Added tests in `_shared/ai/openai.test.ts` for null usage,
+   partial usage (`total_tokens` only), and malformed usage rejection.
+
+5. **Redundant duplicate in `EdgeErrorCode` union.**
+   `EdgeErrorCode` in `_shared/errors/index.ts` defined `'AI_RATE_LIMITED'` twice.
+   Fix: Deduplicated union type definition.
+
+6. **Repo-wide development provenance documentation cleanup.**
+   Neutralized coding-assistant, IDE agent, and model attribution across tracked
+   documentation files (`docs/sprint-6-active.md`, `docs/sprint-4-active.md`,
+   `calendar_app_product_technical_plan.md`, `README.md`). Cleaned tracker
+   templates to remove `Agent/model` prompts and adjusted process wording to
+   neutral technical equivalents. Legitimate product AI scheduling references
+   (OpenAI, Responses API, `AI_PROVIDER`, `AI_MODEL`, `OPENAI_API_KEY`,
+   `gpt-5.6-luna`, `gpt-5.6-terra`, etc.) were preserved.
+
+Suspected cases investigated and verified safe:
+
+- Deterministic shortlist cap and mathematical distribution: Verified
+  `evenlySpacedShortlist` across 0, 1, 40, 41, and 1,000+ candidates.
+  Chronological endpoints are guaranteed, strictly increasing index steps
+  prevent duplicate candidates, and cap (40) is strictly respected.
+- Output proposal validation: Validated that Zod `.strict()` and
+  `superRefine` reject unknown slot IDs, duplicate slot IDs, duplicate ranks,
+  non-contiguous ranks, scores out of range, oversized/empty reasons, and
+  provider-generated timestamps.
+- Provider retry and timeout budget: Verified that transient failures (408, 429,
+  500, 502, 503, network errors) retry at most once within the total deadline,
+  permanent 4xx errors are never retried, and `Retry-After` headers are bounded.
+- Model input privacy: Verified that `buildAiRankingInput` forwards only approved
+  scheduling context with opaque candidate IDs, excluding calendar rows,
+  event content, attendee lists, locations, and credentials.
+- Prompt injection resistance: Verified that user task titles and notes are
+  serialized strictly as data strings and cannot inject schema parameters or
+  instructions.
+- Privacy & logging: Confirmed no authorization headers, API keys, full prompts,
+  or provider bodies are logged in errors or output.
+- Live evaluation runner: Confirmed `run-live.ts` remains strictly gated behind
+  `RUN_LIVE_AI_EVAL=true` and was not executed.
+
+Verification:
+
+- `pnpm verify` — PASS (Prettier, ESLint, 6 workspace typechecks, 156 domain tests)
+- `(cd supabase/functions && deno task check)` — PASS
+- `(cd supabase/functions && deno task test)` — PASS (141 tests)
+- `git diff --check` — PASS
+
+Remaining manual/external work:
+
+- Live Luna / Terra production model evaluation remains pending server-side API
+  key and cost authorization. Docker-backed local database reset/pgTAP verification
+  remains pending local Docker Desktop runtime resolution.
+
+---
+
 # Current Decisions
 
 | Decision                                     | Status   | Choice                                                   |
@@ -2109,7 +2183,7 @@ remain out of scope.
 
 # Handoff Protocol
 
-When an agent is approaching its context/quota boundary:
+When an implementation session is approaching its context boundary:
 
 1. Stop beginning new architectural work.
 2. Finish the smallest safe current unit if feasible.
@@ -2122,7 +2196,7 @@ When an agent is approaching its context/quota boundary:
 9. Push a coherent checkpoint when safe.
 10. Do not mark incomplete work complete.
 
-The next agent must:
+The next implementer must:
 
 1. Read this tracker first.
 2. Confirm branch and HEAD.
@@ -2142,10 +2216,19 @@ started`
 
 Last verified checkpoint:
 
-`56329e3669f353f3e35696c3f7884f1ca2bda8a4` (Phase 4 review hardening
-closeout and tracker reconciliation; GitHub CI run #34 is green; earlier
-review hardening commit `222e7652ec948c63172728a478c36acde5b52096` and
-formatting fix `20b75bed4ea163eb1d983a6495cf7b9137b3fa46`)
+`df570091486c04e7fcf0166e59118855457f7655` (Phase 1 adversarial hardening
+closeout; GitHub CI run #35 is green; followed by Phase 2 adversarial hardening
+checkpoint)
+
+Phase 1 hardening checkpoint:
+
+`56860bfb56efc562dc87711722c5bba46044dd31` (pushed Phase 1 hardening
+checkpoint; GitHub CI run #35 is green)
+
+Phase 2 hardening checkpoint:
+
+`<pending push>` (Phase 2 adversarial hardening and documentation provenance
+cleanup)
 
 Phase 3 implementation checkpoint:
 

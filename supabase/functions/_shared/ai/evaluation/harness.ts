@@ -1,3 +1,5 @@
+import { aiScheduleProposalSchema } from '@cal/schemas/scheduling';
+
 import { EdgeError, type EdgeErrorCode } from '../../errors/index.ts';
 import type { AiRankingProvider, AiRankingResult } from '../ranking.ts';
 import { AI_EVALUATION_FIXTURES, type AiEvaluationFixture } from './fixtures.ts';
@@ -133,13 +135,26 @@ export function gradeFixture(
   }
 
   const completed = result !== null;
-  const schemaValid = result !== null;
-  // Successful results passed the adapter's candidate-set validation. An
-  // AI_INVALID_OUTPUT error also proves an unsafe output was rejected.
-  const candidateSafetyPassed = result !== null || errorCode === 'AI_INVALID_OUTPUT';
-  const topCandidateId = result?.proposal.suggestions[0]?.slotId ?? null;
+  const parsedProposal =
+    result !== null ? aiScheduleProposalSchema.safeParse(result.proposal) : null;
+  const schemaValid = parsedProposal?.success ?? false;
+
+  const candidateIds = new Set(fixture.input.candidates.map((candidate) => candidate.id));
+  const hasUnknownCandidate =
+    parsedProposal !== null &&
+    (!parsedProposal.success ||
+      parsedProposal.data.suggestions.some((suggestion) => !candidateIds.has(suggestion.slotId)));
+
+  const candidateSafetyPassed =
+    (result !== null && schemaValid && !hasUnknownCandidate) || errorCode === 'AI_INVALID_OUTPUT';
+  const topCandidateId = parsedProposal?.success
+    ? (parsedProposal.data.suggestions[0]?.slotId ?? null)
+    : null;
   const invariantPassed =
-    topCandidateId !== null && fixture.acceptableTopCandidateIds.includes(topCandidateId);
+    topCandidateId !== null &&
+    !hasUnknownCandidate &&
+    schemaValid &&
+    fixture.acceptableTopCandidateIds.includes(topCandidateId);
   const noProviderCallPassed = providerCalled;
 
   return {

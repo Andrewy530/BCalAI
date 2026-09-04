@@ -249,35 +249,111 @@ Deno.test('rejects a malformed provider envelope without exposing its contents',
   assertEquals(error.message.includes('provider payload'), false);
 });
 
-Deno.test('validates server-only environment configuration', () => {
-  const values: Record<string, string> = {
-    OPENAI_API_KEY: 'secret',
-    AI_MODEL: 'gpt-5.6-terra',
-    AI_REASONING_EFFORT: 'high',
-    AI_TIMEOUT_MS: '15000',
-  };
-  const config = openAiRankingConfigFromEnv((name) => values[name]);
-  assertEquals(config, {
-    apiKey: 'secret',
-    model: 'gpt-5.6-terra',
-    reasoningEffort: 'high',
-    timeoutMs: 15_000,
-  });
+Deno.test(
+  'validates server-only environment configuration and rejects whitespace-only values',
+  () => {
+    const values: Record<string, string> = {
+      OPENAI_API_KEY: '  secret  ',
+      AI_MODEL: '  gpt-5.6-terra  ',
+      AI_REASONING_EFFORT: '  high  ',
+      AI_TIMEOUT_MS: '  15000  ',
+      AI_PROVIDER: '  openai  ',
+    };
+    const config = openAiRankingConfigFromEnv((name) => values[name]);
+    assertEquals(config, {
+      apiKey: 'secret',
+      model: 'gpt-5.6-terra',
+      reasoningEffort: 'high',
+      timeoutMs: 15_000,
+    });
 
-  const invalidOverrides: Array<Record<string, string>> = [
-    { OPENAI_API_KEY: '' },
-    { AI_PROVIDER: 'other' },
-    { AI_REASONING_EFFORT: 'extreme' },
-    { AI_TIMEOUT_MS: 'forever' },
-  ];
-  for (const overrides of invalidOverrides) {
-    const error = assertThrows(
-      () => openAiRankingConfigFromEnv((name) => ({ ...values, ...overrides })[name]),
-      EdgeError,
-    );
-    assertEquals(error.code, 'AI_PROVIDER_UNAVAILABLE');
-  }
-});
+    const invalidOverrides: Array<Record<string, string>> = [
+      { OPENAI_API_KEY: '' },
+      { OPENAI_API_KEY: '   ' },
+      { AI_PROVIDER: 'other' },
+      { AI_MODEL: '' },
+      { AI_MODEL: '   ' },
+      { AI_REASONING_EFFORT: 'extreme' },
+      { AI_TIMEOUT_MS: 'forever' },
+      { AI_TIMEOUT_MS: '500' },
+      { AI_TIMEOUT_MS: '70000' },
+    ];
+    for (const overrides of invalidOverrides) {
+      const error = assertThrows(
+        () => openAiRankingConfigFromEnv((name) => ({ ...values, ...overrides })[name]),
+        EdgeError,
+      );
+      assertEquals(error.code, 'AI_PROVIDER_UNAVAILABLE');
+    }
+  },
+);
+
+Deno.test(
+  'rejects ambiguous responses with multiple output items or multiple output_text content items',
+  async () => {
+    const multipleContentResponse = openAiContentResponse([
+      { type: 'output_text', text: JSON.stringify(VALID_PROPOSAL) },
+      { type: 'output_text', text: JSON.stringify(VALID_PROPOSAL) },
+    ]);
+    const multipleMessageResponse = jsonResponse({
+      ...openAiBody(VALID_PROPOSAL),
+      output: [
+        {
+          type: 'message',
+          content: [{ type: 'output_text', text: JSON.stringify(VALID_PROPOSAL) }],
+        },
+        {
+          type: 'message',
+          content: [{ type: 'output_text', text: JSON.stringify(VALID_PROPOSAL) }],
+        },
+      ],
+    });
+    for (const response of [multipleContentResponse, multipleMessageResponse]) {
+      const provider = createOpenAiRankingProvider(CONFIG, {
+        fetch: () => Promise.resolve(response),
+      });
+      await expectCode(() => provider.rankCandidateSlots(INPUT), 'AI_INVALID_OUTPUT');
+    }
+  },
+);
+
+Deno.test(
+  'accepts null, omitted, or partial token counts in usage but rejects malformed usage',
+  async () => {
+    const nullUsageBody = openAiBody(VALID_PROPOSAL);
+    nullUsageBody.usage = null;
+    const nullUsageProvider = createOpenAiRankingProvider(CONFIG, {
+      fetch: () => Promise.resolve(jsonResponse(nullUsageBody)),
+    });
+    const nullResult = await nullUsageProvider.rankCandidateSlots(INPUT);
+    assertEquals(nullResult.metadata.usage, {
+      inputTokens: null,
+      outputTokens: null,
+      reasoningTokens: null,
+      totalTokens: null,
+    });
+
+    const partialUsageBody = openAiBody(VALID_PROPOSAL);
+    partialUsageBody.usage = { total_tokens: 42 };
+    const partialProvider = createOpenAiRankingProvider(CONFIG, {
+      fetch: () => Promise.resolve(jsonResponse(partialUsageBody)),
+    });
+    const partialResult = await partialProvider.rankCandidateSlots(INPUT);
+    assertEquals(partialResult.metadata.usage, {
+      inputTokens: null,
+      outputTokens: null,
+      reasoningTokens: null,
+      totalTokens: 42,
+    });
+
+    const malformedUsageBody = openAiBody(VALID_PROPOSAL);
+    malformedUsageBody.usage = { total_tokens: 'forty-two' };
+    const malformedProvider = createOpenAiRankingProvider(CONFIG, {
+      fetch: () => Promise.resolve(jsonResponse(malformedUsageBody)),
+    });
+    await expectCode(() => malformedProvider.rankCandidateSlots(INPUT), 'AI_INVALID_OUTPUT');
+  },
+);
 
 function openAiResponse(proposal: unknown): Response {
   return jsonResponse(openAiBody(proposal));
